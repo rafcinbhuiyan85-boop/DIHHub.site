@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIH HUB - System Status</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=5" />
+  <link rel="shortcut icon" href="/favicon.ico?v=5" type="image/x-icon" />
+  <link rel="apple-touch-icon" href="/favicon.png?v=5" />
+  
+  <!-- Tailwind CSS Play CDN for beautiful zero-config styling on GitHub Pages -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts for elite typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Premium glow mesh animations */
+    @keyframes pulse-slow {
+      0%, 100% { transform: scale(1); opacity: 0.2; }
+      50% { transform: scale(1.15); opacity: 0.35; }
+    }
+    .animate-pulse-slow {
+      animation: pulse-slow 8s ease-in-out infinite;
+    }
+    .text-glow {
+      text-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+  </style>
+</head>
+<body class="h-full bg-[#030712] text-white font-sans overflow-x-hidden">
+
+  <!-- BACKGROUND ELEMENTS (Sleek ambient meshes) -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-40 -left-40 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse-slow"></div>
+    <div class="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-pink-600/15 rounded-full blur-[140px] animate-pulse-slow" style="animation-delay: 3s;"></div>
+  </div>
+
+  <!-- CONTAINER -->
+  <div class="relative z-10 min-h-screen flex flex-col justify-between p-4 sm:p-8">
+    
+    <!-- HEADER -->
+    <header class="w-full max-w-7xl mx-auto flex items-center justify-between py-4 border-b border-white/5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-pink-500 p-0.5 flex items-center justify-center shadow-lg">
+          <div class="bg-[#0b0f19] w-full h-full rounded-[10px] flex items-center justify-center font-extrabold text-[#ffeeff] tracking-tighter text-sm">
+            DIH
+          </div>
+        </div>
+        <div>
+          <span class="font-extrabold tracking-tight text-white block">DIH HUB</span>
+          <span class="text-[9px] text-[#8e9bb4] uppercase tracking-widest font-mono font-bold block">Status Controller</span>
+        </div>
+      </div>
+      
+      <!-- Current State Badge -->
+      <div>
+        <div id="status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-white/10 text-xs font-mono font-bold">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+          <span>INITIALIZING...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN VIEWS (Flipped by maintenanceMode state) -->
+    <main class="flex-1 flex items-center justify-center py-12 max-w-4xl mx-auto w-full">
+      
+      <!-- VIEW 1: UNDER MAINTENANCE (Shows when maintenanceMode = true) -->
+      <div id="maintenance-view" class="w-full text-center space-y-8" style="display: none;">
+        <!-- Icon Container -->
+        <div class="relative mx-auto w-24 h-24 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-2xl group">
+          <svg class="w-12 h-12 text-amber-500 animate-[spin_8s_linear_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <div class="absolute inset-0 rounded-3xl border border-amber-500/50 animate-ping opacity-25"></div>
+        </div>
+
+        <!-- Announcement -->
+        <div class="space-y-3">
+          <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[10px] font-bold uppercase tracking-[0.2em] rounded-full">
+            SYSTEM MAINTENANCE MODE
+          </span>
+          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white uppercase text-glow">
+            Under Maintenance
+          </h1>
+          <p class="text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+            DIH HUB is currently undergoing scheduled backend operations and visual modifications to deliver a better user experience. Please check back in a few minutes!
+          </p>
+        </div>
+
+        <!-- System Logs / Details container -->
+        <div class="max-w-md mx-auto p-4 rounded-2xl bg-slate-900/60 border border-white/5 font-mono text-left space-y-1.5 text-xs text-slate-400">
+          <div class="flex justify-between border-b border-white/5 pb-1.5 mb-2">
+            <span class="text-slate-500 font-bold uppercase">System Metric</span>
+            <span class="text-indigo-400">ONLINE</span>
+          </div>
+          <div><span class="text-slate-600">&gt;</span> ENVIRONMENT: <span class="text-slate-200">Production (static)</span></div>
+          <div><span class="text-slate-600">&gt;</span> PROVIDER: <span class="text-slate-200">Firebase Firestore Realtime</span></div>
+          <div><span class="text-slate-600">&gt;</span> LIVE SNAPSHOT: <span class="text-emerald-400">CONNECTED</span></div>
+          <div><span class="text-slate-600">&gt;</span> MODE INITIATED: <span class="text-amber-400">true</span></div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: NORMAL WEBSITE (Shows when maintenanceMode = false) -->
+      <div id="normal-view" class="w-full space-y-8" style="display: none;">
+        <!-- Banner container -->
+        <div class="text-center space-y-4">
+          <div class="inline-flex p-3 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 animate-bounce mb-2">
+            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-3.064 3.42 3.42 0 004.438 0 3.42 3.42 0 001.947 3.064 3.42 3.42 0 012.003 2.003 3.42 3.42 0 003.064 1.947 3.42 3.42 0 000 4.438 3.42 3.42 0 01-3.064 1.947 3.42 3.42 0 00-2.003 2.003 3.42 3.42 0 00-1.947 3.064 3.42 3.42 0 00-4.438 0 3.42 3.42 0 00-1.946-3.064 3.42 3.42 0 01-2.003-2.003 3.42 3.42 0 00-3.064-1.947 3.42 3.42 0 000-4.438 3.42 3.42 0 013.064-1.947 3.42 3.42 0 002.003-2.003z"></path>
+            </svg>
+          </div>
+          <span class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold uppercase tracking-[0.2em] rounded-full">
+            SYSTEMS NOMINAL - WEB LIVE
+          </span>
+          <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-none">
+            DIH HUB SUITE
+          </h1>
+          <p class="text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+            Welcome to the Next-Generation Digital Innovation House Hub. All systems are fully active, optimized, and ready to serve you.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          <div class="p-5 rounded-2xl bg-slate-900/40 border border-white/5 space-y-2">
+            <h3 class="text-sm font-bold text-slate-200">🚀 Rapid Tools</h3>
+            <p class="text-xs text-slate-400">QR Tools, base64 encryption, background removal, and media utilities active.</p>
+          </div>
+          <div class="p-5 rounded-2xl bg-slate-900/40 border border-white/5 space-y-2">
+            <h3 class="text-sm font-bold text-slate-200">🎙️ AI Integration</h3>
+            <p class="text-xs text-slate-400">High performance Gemini voice systems, 10Min.ai practice active.</p>
+          </div>
+          <div class="p-5 rounded-2xl bg-slate-900/40 border border-white/5 space-y-2">
+            <h3 class="text-sm font-bold text-slate-200">🎞️ Premier Cinema</h3>
+            <p class="text-xs text-slate-400">Dynamic movie indexing engines and streaming services live.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- SECRET CONTROL SHELF (Authoritative maintenance switch hidden by default) -->
+    <div class="max-w-4xl mx-auto w-full mb-4">
+      <div class="bg-[#0b0f19] border border-white/5 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+        <div class="absolute -right-20 -bottom-20 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl"></div>
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-100 flex items-center gap-1.5 font-mono">
+              <span class="text-indigo-400">&gt;_</span> CONSOLE CONTROLLER
+            </h3>
+            <p class="text-xs text-slate-400">
+              Change status live in Firestore. Connects directly using Firebase SDK.
+            </p>
+          </div>
+          
+          <!-- Trigger Buttons -->
+          <div class="flex items-center gap-2">
+            <button onclick="enableMaintenance()" class="px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-mono text-xs font-bold uppercase rounded-xl transition-all border border-amber-500/35 active:scale-95">
+              Force Maintenance
+            </button>
+            <button onclick="disableMaintenance()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold uppercase rounded-xl transition-all shadow-md shadow-indigo-600/30 active:scale-95">
+              Restore Hub
+            </button>
+          </div>
+        </div>
+
+        <!-- Connection Details debug console line -->
+        <div class="mt-4 border-t border-white/5 pt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-500">
+          <div>
+            DATABASE COLLECTION: <span class="text-slate-300">/maintenance/config</span>
+          </div>
+          <div id="firestore-ping-indicator">
+            STATUS: <span class="text-[#8e9bb4]">CONNECTING...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between py-4 border-t border-white/5 text-xs text-slate-500 font-medium">
+      <div>
+        &copy; 2026 DIH HUB &bull; Realtime Maintenance Logic
+      </div>
+      <div class="flex items-center gap-4 mt-2 sm:mt-0 font-mono">
+        <a href="#console" class="hover:text-white transition-colors">Developer Logs</a>
+        <span class="text-white/10">|</span>
+        <span class="text-slate-400">SDK v9+ ES Module</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- FIREBASE SDK V9+ MODULAR INTEGRATION -->
+  <script type="module">
+    // 1. Connect Firebase correctly using modular SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // User provided configurations
+    const firebaseConfig = {
+      apiKey: "AIzaSyByy_xAzqyF_R-8glT_Oa5po1pNsmOJa5E",
+      authDomain: "dih-hub.firebaseapp.com",
+      projectId: "dih-hub",
+      storageBucket: "dih-hub.firebasestorage.app",
+      messagingSenderId: "722588001797",
+      appId: "1:722588001797:web:51af2c6228ad4cdb37de6c",
+      measurementId: "G-Q0RV9ZL5JP"
+    };
+
+    // Initialize Firebase
+    console.log("[Firebase] Initializing application...");
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Target Document in Firestore
+    const maintenanceDocRef = doc(db, "maintenance", "config");
+    const siteDocRef = doc(db, "site", "settings");
+
+    // 2. enableMaintenance() function
+    window.enableMaintenance = async function() {
+      console.log("[Firebase] Enabling maintenanceMode...");
+      updateBadgeUI("SAVING...", "bg-amber-600");
+      try {
+        await setDoc(maintenanceDocRef, { maintenanceMode: true, maintenance: true }, { merge: true });
+        await setDoc(siteDocRef, { maintenanceMode: true, maintenance: true }, { merge: true });
+        console.log("[Firebase] Set maintenanceMode = true successfully!");
+      } catch (err) {
+        console.error("[Firebase] Error enabling maintenance:", err);
+        alert("Firestore Permission Denied. Ensure your firestore.rules accept writes!");
+      }
+    };
+
+    // 3. disableMaintenance() function
+    window.disableMaintenance = async function() {
+      console.log("[Firebase] Disabling maintenanceMode...");
+      updateBadgeUI("SAVING...", "bg-indigo-600");
+      try {
+        await setDoc(maintenanceDocRef, { maintenanceMode: false, maintenance: false }, { merge: true });
+        await setDoc(siteDocRef, { maintenanceMode: false, maintenance: false }, { merge: true });
+        console.log("[Firebase] Set maintenanceMode = false successfully!");
+      } catch (err) {
+        console.error("[Firebase] Error disabling maintenance:", err);
+        alert("Firestore Permission Denied. Ensure your firestore.rules accept writes!");
+      }
+    };
+
+    // Helper UI modifiers
+    function updateBadgeUI(text, colorClass) {
+      const badge = document.getElementById("status-badge");
+      badge.className = `flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono font-bold ${colorClass}`;
+      badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full ${colorClass === 'bg-rose-600' ? 'bg-white' : 'bg-white animate-ping'}"></span><span>${text}</span>`;
+    }
+
+    // 4. getMaintenanceStatus(): Set up the real-time onSnapshot listener
+    function getMaintenanceStatus() {
+      console.log("[Firebase] Subscribing to real-time status...");
+      
+      // Listen to 'site/settings' by default as shown in real Firestore database setup
+      onSnapshot(siteDocRef, (snapshot) => {
+        const timestamp = new Date().toLocaleTimeString();
+        document.getElementById("firestore-ping-indicator").innerHTML = `LAST SYNC: <span class="text-emerald-400 font-bold">${timestamp}</span>`;
+
+        let modeVal = false;
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          modeVal = data.maintenance === true || data.maintenanceMode === true;
+          console.log("[Firebase] Snapshot received (site/settings). maintenance =", modeVal);
+          applyMode(modeVal);
+        } else {
+          // Fallback to maintenance/config if site/settings doesn't exist
+          onSnapshot(maintenanceDocRef, (mSnap) => {
+            if (mSnap.exists()) {
+              const mData = mSnap.data();
+              modeVal = mData.maintenanceMode === true || mData.maintenance === true;
+              console.log("[Firebase] Snapshot received (maintenance/config). maintenance =", modeVal);
+              applyMode(modeVal);
+            } else {
+              applyMode(false);
+            }
+          });
+        }
+      }, (error) => {
+        console.error("[Firebase] Subscription error:", error);
+        document.getElementById("firestore-ping-indicator").innerHTML = `STATUS: <span class="text-rose-500 font-bold">ERROR</span>`;
+        updateBadgeUI("ACCESS DENIED", "bg-rose-600");
+      });
+    }
+
+    function applyMode(modeVal) {
+      if (modeVal) {
+        document.getElementById("maintenance-view").style.display = "block";
+        document.getElementById("normal-view").style.display = "none";
+        updateBadgeUI("MAINTENANCE ACTIVED", "bg-amber-600/25 text-amber-400 border-amber-500/20");
+      } else {
+        document.getElementById("maintenance-view").style.display = "none";
+        document.getElementById("normal-view").style.display = "block";
+        updateBadgeUI("SYSTEMS ONLINE", "bg-emerald-600/20 text-emerald-400 border-emerald-500/20");
+      }
+    }
+
+    // Begin getMaintenanceStatus()
+    getMaintenanceStatus();
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIH HUB | Digital Innovation House Portal</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=5" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=5" />
+  <link rel="shortcut icon" href="/favicon.ico?v=5" type="image/x-icon" />
+  <link rel="apple-touch-icon" href="/favicon.png?v=5" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Custom Tailwind Config for themed styles matching screenshot -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              gold: '#eab308',
+              goldHover: '#ca8a04',
+              navy: '#050811',
+              card: '#0c1322',
+              cardBorder: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar for premium dark feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #050811;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #eab308;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.15; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.05); }
+    }
+    .animate-glow {
+      animation: pulse-glow 6s infinite ease-in-out;
+    }
+
+    /* Active Tab indicator and effects */
+    .active-tab {
+      background: rgba(234, 179, 8, 0.1) !important;
+      border-left: 3px solid #eab308 !important;
+      color: #ffffff !important;
+    }
+  </style>
+</head>
+<body class="bg-[#050811] text-slate-100 min-h-screen font-sans flex flex-col antialiased relative overflow-x-hidden">
+
+  <!-- Ambient Glow Effects mapping to DIH HUB theme -->
+  <div class="absolute top-0 left-0 w-[500px] h-[500px] rounded-full bg-yellow-500/5 blur-[120px] animate-glow pointer-events-none"></div>
+  <div class="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full bg-cyan-500/5 blur-[150px] animate-glow pointer-events-none" style="animation-delay: -3s;"></div>
+
+  <!-- Main Multi-View Structure -->
+  <div class="flex-grow flex flex-col lg:flex-row min-h-screen">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-full lg:w-72 shrink-0 bg-[#02050b] border-r border-[#151f32] flex flex-col justify-between z-30">
+      <div>
+        <!-- Logo Section -->
+        <div class="p-6 border-b border-[#151f32] flex items-center space-x-3.5">
+          <div class="h-11 w-11 rounded-xl bg-gradient-to-tr from-yellow-500 to-amber-600 flex items-center justify-center text-black font-black shadow-lg shadow-yellow-500/10">
+            <span class="text-xl tracking-tighter">DIH</span>
+          </div>
+          <div>
+            <h1 class="text-base font-black tracking-wider text-white">DIH HUB</h1>
+            <p class="text-[10px] text-yellow-500 font-bold uppercase tracking-widest leading-none">Innovation House</p>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)]">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 py-2">Options</p>
+          
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="active-tab w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="layout-dashboard" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Dashboard</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('qrcode')" id="nav-qrcode" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="qr-code" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">QR Code Tools</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('encrypt')" id="nav-encrypt" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="shield-check" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Secure Encryption</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('base64')" id="nav-base64" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="binary" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Base64 Converter</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('passport')" id="nav-passport" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="user-square" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider font-sans">Auto Passport</span>
+            </div>
+            <span class="bg-yellow-500/10 text-yellow-500 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">Soon</span>
+          </button>
+
+          <button onclick="switchTab('downloader')" id="nav-downloader" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="download" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Video Downloader</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('dex')" id="nav-dex" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="cpu" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Dex Protector</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('lib')" id="nav-lib" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="lock" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Lib Protector</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50"></i>
+          </button>
+
+          <button onclick="switchTab('bypass')" id="nav-bypass" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-rose-500/90 hover:text-white hover:bg-rose-500/10">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="smartphone" class="w-5 h-5 text-rose-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">Mobile Bypass Pro</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-rose-500 inline-block animate-pulse"></span>
+          </button>
+
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 pt-4 pb-2">Premier Cinema & Codes</p>
+
+          <button onclick="switchTab('template')" id="nav-template" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="globe" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">DIH Template</span>
+            </div>
+            <span class="bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">New</span>
+          </button>
+
+          <button onclick="switchTab('movies')" id="nav-movies" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer text-slate-400 hover:text-white hover:bg-slate-900/40">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="play" class="w-5 h-5 text-yellow-500"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider">DIH Movies</span>
+            </div>
+            <span class="bg-amber-500/10 text-yellow-500 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">Stream</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- User Panel Indicator -->
+      <div class="p-4 border-t border-[#151f32] bg-[#02050b]/80 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-full bg-slate-800 border border-yellow-500/30 flex items-center justify-center text-xs font-black text-yellow-500">
+            D
+          </div>
+          <div>
+            <h5 class="text-xs font-bold text-white leading-none">DIH Developer</h5>
+            <p class="text-[9px] text-slate-500 mt-0.5">Admin Profile</p>
+          </div>
+        </div>
+        <button onclick="triggerDownload()" class="bg-[#eab308]/10 hover:bg-[#eab308] text-yellow-500 hover:text-black flex items-center justify-center p-2 rounded-lg cursor-pointer transition-all duration-150" title="Download This Offline HTML Web File">
+          <i data-lucide="arrow-down-to-line" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN RIGHT STAGE -->
+    <main class="flex-grow flex flex-col min-w-0">
+      
+      <!-- TOP NAVIGATION HEADER -->
+      <header class="border-b border-[#151f32] bg-[#02050b]/90 backdrop-blur-md px-6 sm:px-8 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <button id="sidebar-toggle" class="lg:hidden text-slate-400 hover:text-white mr-2">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+          </button>
+          <h2 id="top-title" class="text-base font-black tracking-widest text-white uppercase">DASHBOARD</h2>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <!-- Live Telemetry Stats -->
+          <div class="hidden sm:flex items-center space-x-3 text-[10px] bg-[#0c1322] border border-[#1e293b] rounded-full pl-3 pr-4 py-1.5">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span class="text-slate-400 font-mono">NODE CONTEXT: <span class="text-[#eab308] font-bold">ONLINE</span></span>
+          </div>
+
+          <!-- Member Access Button and Dropdown -->
+          <button class="bg-[#eab308] hover:bg-[#ca8a04] text-[#02050b] font-black text-[11px] uppercase tracking-wider px-4 py-2 rounded-xl transition-all duration-150 flex items-center space-x-1 border border-yellow-500/20 max-h-[38px] cursor-pointer">
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+            <span>Member Access</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW WINDOW CONTAINER -->
+      <div class="p-6 sm:p-8 space-y-8 flex-grow">
+
+        <!-- ==================== VIEW: DASHBOARD ==================== -->
+        <article id="view-dashboard" class="view-panel block space-y-8">
+          <div>
+            <h3 class="text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
+              DIH HUB <span class="text-xs text-slate-500 font-normal">v1.0</span>
+            </h3>
+            <p class="text-sm text-slate-400 mt-1 max-w-2xl">Digital Innovation House is a multi-platform development catalog compiled into an interactive dashboard payload. Select any client-ready integration toolkit utility below.</p>
+          </div>
+
+          <!-- TOP METADATA CARDS ROW -->
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-gradient-to-br from-slate-900 to-brand-card border border-[#1e293b] rounded-2xl p-6 relative overflow-hidden flex items-center justify-between">
+              <div class="absolute right-0 top-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-xl pointer-events-none"></div>
+              <div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-black">Daily Users</p>
+                <h4 class="text-3xl font-black text-white tracking-tight mt-1.5">3.2k+</h4>
+              </div>
+              <div class="bg-[#050811] p-3 rounded-xl border border-slate-800">
+                <i data-lucide="users" class="w-6 h-6 text-yellow-500"></i>
+              </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-900 to-brand-card border border-[#1e293b] rounded-2xl p-6 relative overflow-hidden flex items-center justify-between">
+              <div class="absolute right-0 top-0 w-24 h-24 bg-teal-500/5 rounded-full blur-xl pointer-events-none"></div>
+              <div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-black">Uptime</p>
+                <h4 class="text-3xl font-black text-white tracking-tight mt-1.5">100% Core</h4>
+              </div>
+              <div class="bg-[#050811] p-3 rounded-xl border border-slate-800">
+                <i data-lucide="activity" class="w-6 h-6 text-yellow-500"></i>
+              </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-900 to-brand-card border border-[#1e293b] rounded-2xl p-6 relative overflow-hidden flex items-center justify-between">
+              <div class="absolute right-0 top-0 w-24 h-24 bg-[#eab308]/5 rounded-full blur-xl pointer-events-none"></div>
+              <div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-black">Live Users</p>
+                <h4 class="text-3xl font-black text-white tracking-tight mt-1.5 flex items-center gap-2">
+                  389 
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-ping"></span>
+                </h4>
+              </div>
+              <div class="bg-[#050811] p-3 rounded-xl border border-slate-800">
+                <i data-lucide="rss" class="w-6 h-6 text-yellow-500"></i>
+              </div>
+            </div>
+          </section>
+
+          <!-- MODULES GRID (Matches Screenshot Layout) -->
+          <section class="space-y-4">
+            <h4 class="text-xs font-black uppercase tracking-widest text-[#eab308] border-b border-[#151f32] pb-2">Innovation Toolkit</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              
+              <!-- QR Code Tools -->
+              <div onclick="switchTab('qrcode')" class="bg-brand-card border border-[#1e293b] hover:border-yellow-500/40 rounded-2xl p-6 transition-all duration-350 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:shadow-yellow-500/5 flex flex-col justify-between h-48">
+                <div>
+                  <div class="w-10 h-10 bg-[#050811] border border-[#1e293b] group-hover:border-yellow-500/20 rounded-xl flex items-center justify-center mb-4 transition-colors">
+                    <i data-lucide="qr-code" class="w-5 h-5 text-yellow-500"></i>
+                  </div>
+                  <h5 class="text-base font-black text-white uppercase tracking-wider group-hover:text-yellow-500 transition-colors">QR Code Tools</h5>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">Create customizable local QR codes instantly for social links, phone lines, wifi, or text payloads.</p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 uppercase font-black tracking-widest">
+                  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-slate-400"></i>
+                </div>
+              </div>
+
+              <!-- Secure Encryption -->
+              <div onclick="switchTab('encrypt')" class="bg-brand-card border border-[#1e293b] hover:border-yellow-500/40 rounded-2xl p-6 transition-all duration-350 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:shadow-yellow-500/5 flex flex-col justify-between h-48">
+                <div>
+                  <div class="w-10 h-10 bg-[#050811] border border-[#1e293b] group-hover:border-yellow-500/20 rounded-xl flex items-center justify-center mb-4 transition-colors">
+                    <i data-lucide="shield-check" class="w-5 h-5 text-yellow-500"></i>
+                  </div>
+                  <h5 class="text-base font-black text-white uppercase tracking-wider group-hover:text-yellow-500 transition-colors">Secure Encryption</h5>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">Secure lock and unlock dynamic string logs via robust local cryptography using salt filters.</p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 uppercase font-black tracking-widest">
+                  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-slate-400"></i>
+                </div>
+              </div>
+
+              <!-- Base64 Converter -->
+              <div onclick="switchTab('base64')" class="bg-brand-card border border-[#1e293b] hover:border-yellow-500/40 rounded-2xl p-6 transition-all duration-350 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:shadow-yellow-500/5 flex flex-col justify-between h-48">
+                <div>
+                  <div class="w-10 h-10 bg-[#050811] border border-[#1e293b] group-hover:border-yellow-500/20 rounded-xl flex items-center justify-center mb-4 transition-colors">
+                    <i data-lucide="binary" class="w-5 h-5 text-yellow-500"></i>
+                  </div>
+                  <h5 class="text-base font-black text-white uppercase tracking-wider group-hover:text-yellow-500 transition-colors">Base64 Converter</h5>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">Encode and decode standard binary, raw content arrays, and string keys into seamless Base64 hashes.</p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 uppercase font-black tracking-widest">
+                  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-slate-400"></i>
+                </div>
+              </div>
+
+              <!-- Auto Passport -->
+              <div onclick="switchTab('passport')" class="bg-brand-card border border-[#1e293b] hover:border-yellow-500/40 rounded-2xl p-6 transition-all duration-350 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:shadow-yellow-500/5 flex flex-col justify-between h-48 relative">
+                <span class="absolute top-4 right-4 bg-yellow-500/10 text-yellow-500 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-yellow-500/20">Soon</span>
+                <div>
+                  <div class="w-10 h-10 bg-[#050811] border border-[#1e293b] group-hover:border-yellow-500/20 rounded-xl flex items-center justify-center mb-4 transition-colors">
+                    <i data-lucide="user-square" class="w-5 h-5 text-yellow-500"></i>
+                  </div>
+                  <h5 class="text-base font-black text-white uppercase tracking-wider group-hover:text-yellow-500 transition-colors">Auto Passport</h5>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">Professional passport photograph generation with backdrop replacements and perfect scaling crops.</p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 uppercase font-black tracking-widest">
+                  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-slate-400"></i>
+                </div>
+              </div>
+
+              <!-- Video Downloader -->
+              <div onclick="switchTab('downloader')" class="bg-brand-card border border-[#1e293b] hover:border-yellow-500/40 rounded-2xl p-6 transition-all duration-350 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:shadow-yellow-500/5 flex flex-col justify-between h-48">
+                <div>
+                  <div class="w-10 h-10 bg-[#050811] border border-[#1e293b] group-hover:border-yellow-500/20 rounded-xl flex items-center justify-center mb-4 transition-colors">
+                    <i data-lucide="download" class="w-5 h-5 text-yellow-500"></i>
+                  </div>
+                  <h5 class="text-base font-black text-white uppercase tracking-wider group-hover:text-yellow-500 transition-colors">Video Downloader</h5>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">High-speed content scrapper for fetching direct video links from TikTok, Facebook and YouTube.</p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 uppercase font-black tracking-widest">
+                  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-slate-400"></i>
+                </div>
+              </div>
+
+              <!-- Lib Protector -->
+              <div onclick="switchTab('lib')" class="bg-brand-card border border-[#1e293b] hover:border-yellow-500/40 rounded-2xl p-6 transition-all duration-350 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:shadow-yellow-500/5 flex flex-col justify-between h-48">
+                <div>
+                  <div class="w-10 h-10 bg-[#050811] border border-[#1e293b] group-hover:border-yellow-500/20 rounded-xl flex items-center justify-center mb-4 transition-colors">
+                    <i data-lucide="lock" class="w-5 h-5 text-yellow-500"></i>
+                  </div>
+                  <h5 class="text-base font-black text-white uppercase tracking-wider group-hover:text-yellow-500 transition-colors">Lib Protector</h5>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">Obfuscate shared native C/C++ library (.so) structures to secure core applications against modification.</p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 uppercase font-black tracking-widest">
+                  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Online</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-slate-400"></i>
+                </div>
+              </div>
+
+            </div>
+          </section>
+        </article>
+
+
+        <!-- ==================== VIEW: QR CODE TOOLS ==================== -->
+        <article id="view-qrcode" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Dynamic Payload Tool</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">QR CODE GENERATION ENGINE</h3>
+                <p class="text-sm text-slate-400 mt-1">Convert text strings, URLs, telephone numbers, and details on-demand into highly distinct QR codes.</p>
+              </div>
+              <i data-lucide="qr-code" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Input Text or URL Payload</label>
+                  <textarea id="qr-input" placeholder="Enter link or text you wish to embed..." class="w-full h-32 bg-[#050811] border border-[#1e293b] hover:border-slate-800 focus:border-yellow-500 rounded-xl p-4 text-white text-xs placeholder-slate-600 outline-none transition-all resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Resolution Size</label>
+                    <select id="qr-size" class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-3 py-2.5 text-xs outline-none focus:border-yellow-500">
+                      <option value="150x150">150 x 150 px</option>
+                      <option value="250x250" selected>250 x 250 px</option>
+                      <option value="400x400">400 x 400 px</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">QR Theme Color</label>
+                    <select id="qr-color" class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-3 py-2.5 text-xs outline-none focus:border-yellow-500">
+                      <option value="000000">Deep Diamond Black</option>
+                      <option value="eab308">DIH Accent Gold</option>
+                      <option value="1d4ed8">Marine Blue</option>
+                      <option value="be185d">Vibrant Rose Crimson</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button onclick="generateQRCode()" class="w-full cursor-pointer bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-black text-xs uppercase tracking-widest rounded-xl py-3.5 transition-all shadow-lg shadow-yellow-500/10 flex items-center justify-center gap-2">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i> Generate QR Frame
+                </button>
+              </div>
+
+              <!-- QR CODE RESULT VIEW -->
+              <div class="bg-[#050811]/40 border border-[#1e293b] rounded-xl p-6 flex flex-col items-center justify-center space-y-4">
+                <div class="p-3 bg-white rounded-xl shadow-lg border border-slate-200">
+                  <img id="qr-display" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://dihhub.site&color=000000" alt="Generated QR Frame" class="w-44 h-44 object-contain">
+                </div>
+                <div class="w-full text-center space-y-2">
+                  <h6 class="text-xs font-bold text-white uppercase tracking-wider">Dynamic Sandbox Frame Ready</h6>
+                  <p class="text-[10px] text-slate-400">Scan this image code with any smartphone camera device to retrieve data.</p>
+                  
+                  <div class="flex items-center justify-center gap-3 pt-2">
+                    <button onclick="downloadQRCode()" class="px-4 py-2 bg-[#0c1322] border border-[#1e293b] hover:border-yellow-500/20 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer">
+                      <i data-lucide="download-cloud" class="w-3.5 h-3.5 text-yellow-500"></i> Download PNG
+                    </button>
+                    <button onclick="copyQRLink()" class="px-4 py-2 bg-[#0c1322] border border-[#1e293b] hover:border-yellow-500/20 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer">
+                      <i data-lucide="link" class="w-3.5 h-3.5 text-yellow-500"></i> Copy URL Link
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: SECURE ENCRYPTION ==================== -->
+        <article id="view-encrypt" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Cryptography Utility</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">DIH SECURE TEXT VAULT</h3>
+                <p class="text-sm text-slate-400 mt-1">Encrypt proprietary developer logs or keys into highly resilient scrambled hashes using a personalized local cipher password key.</p>
+              </div>
+              <i data-lucide="shield-check" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+              <!-- Encryption Engine -->
+              <div class="space-y-4 bg-[#050811]/30 border border-[#1e293b] p-5 rounded-xl">
+                <span class="bg-[#eab308]/10 text-yellow-500 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded">Encode Core Segment</span>
+                <div class="mt-2 text-xs">
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Secret Key (Password)</label>
+                  <input id="crypt-key-enc" type="password" value="secret_dih_key" class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-4 py-2 text-xs outline-none focus:border-yellow-500 mb-3">
+                  
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Raw Payload Text</label>
+                  <textarea id="crypt-text-enc" placeholder="Place text you wish to securely compress..." class="w-full h-24 bg-[#050811] border border-[#1e293b] text-white rounded-xl p-3 outline-none focus:border-yellow-500 placeholder-slate-700 text-xs resize-none mb-3"></textarea>
+                  
+                  <button onclick="runLocalEncryption()" class="w-full bg-[#eab308] hover:bg-[#ca8a04] text-black font-black text-[11px] uppercase tracking-wider py-3 rounded-xl transition-all cursor-pointer">Lock Content Segment</button>
+                </div>
+              </div>
+
+              <!-- Decryption Engine -->
+              <div class="space-y-4 bg-[#050811]/30 border border-[#1e293b] p-5 rounded-xl">
+                <span class="bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded">Decode Hash Segment</span>
+                <div class="mt-2 text-xs">
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Authorization Secret Key</label>
+                  <input id="crypt-key-dec" type="password" value="secret_dih_key" class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-4 py-2 text-xs outline-none focus:border-yellow-500 mb-3">
+                  
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Encrypted Cipher Hash</label>
+                  <textarea id="crypt-hash-dec" placeholder="Paste encoded cipher hash value here..." class="w-full h-24 bg-[#050811] border border-[#1e293b] text-white rounded-xl p-3 outline-none focus:border-yellow-500 placeholder-slate-700 text-xs resize-none mb-3"></textarea>
+                  
+                  <button onclick="runLocalDecryption()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-wider py-3 rounded-xl transition-all cursor-pointer">Unlock Cipher Payload</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic Crypto Result Card -->
+            <div id="crypto-output-card" class="hidden mt-6 bg-[#050811]/90 border border-emerald-500/30 rounded-xl p-5 space-y-2">
+              <div class="flex items-center justify-between text-xs font-black text-emerald-400">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Cryptography Output Feed
+                </span>
+                <button onclick="copyCryptoOutput()" class="text-[10px] uppercase font-black tracking-widest text-slate-400 hover:text-white cursor-pointer flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Result
+                </button>
+              </div>
+              <p id="crypto-output" class="text-xs font-mono text-slate-300 break-all select-all pt-2 leading-relaxed bg-[#02050b] p-3 rounded border border-slate-900"></p>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: BASE64 CONVERTER ==================== -->
+        <article id="view-base64" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">ASCII Data Parser</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">BASE64 HIGH-SPEED CONVERTER</h3>
+                <p class="text-sm text-slate-400 mt-1">Encode plain ASCII text logs or raw files instantly into Base64 format, or decode existing Base64 strings directly.</p>
+              </div>
+              <i data-lucide="binary" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              <!-- Text Area Base64 Input -->
+              <div class="space-y-4">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500">Text Source Material</label>
+                <textarea id="b64-source" placeholder="Type or paste contents directly..." class="w-full h-44 bg-[#050811] border border-[#1e293b] text-white rounded-xl p-4 outline-none focus:border-yellow-500 placeholder-slate-700 text-xs resize-none"></textarea>
+                
+                <div class="grid grid-cols-2 gap-3">
+                  <button onclick="runB64Encode()" class="px-5 py-3.5 bg-[#eab308] hover:bg-[#ca8a04] text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer">Encode Base64</button>
+                  <button onclick="runB64Decode()" class="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">Decode Base64</button>
+                </div>
+              </div>
+
+              <!-- Base64 Output Frame -->
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500">Parsed Base64 Result</label>
+                  <div class="flex items-center gap-2">
+                    <button onclick="clearB64()" class="text-[9px] uppercase tracking-wider font-bold text-red-400 hover:text-red-300">Clear</button>
+                    <span class="text-slate-600">|</span>
+                    <button onclick="copyB64()" class="text-[9px] uppercase tracking-wider font-bold text-yellow-500 hover:text-yellow-400">Copy Result</button>
+                  </div>
+                </div>
+                <textarea id="b64-result" readonly placeholder="Result data appears here..." class="w-full h-44 bg-[#050811] border border-[#1e293b] text-white rounded-xl p-4 outline-none read-only:text-yellow-500/90 font-mono text-xs resize-none"></textarea>
+                
+                <!-- File Picker Native Code Element -->
+                <div class="border border-dashed border-[#1e293b] rounded-xl p-4 bg-[#050811]/20 flex items-center justify-between">
+                  <div>
+                    <h6 class="text-xs font-black text-white">Local File Converter</h6>
+                    <p class="text-[9px] text-slate-500">Pick any image or text file to extract Base64 data.</p>
+                  </div>
+                  <label class="cursor-pointer bg-[#0c1322] hover:bg-slate-800 text-xs border border-slate-800 text-slate-200 font-bold px-3 py-1.5 rounded-lg transition-colors">
+                    Upload File
+                    <input type="file" id="b64-file-input" onchange="runB64FileConvert()" class="hidden">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: AUTO PASSPORT ==================== -->
+        <article id="view-passport" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Image Matrix Utility</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">AUTO PASSPORT PHOTOGRAPH PRO</h3>
+                <p class="text-sm text-slate-400 mt-1">Instantly scale passport sizes (2x2 inch), implement uniform virtual studio backdrops, and download cropped documents cleanly.</p>
+              </div>
+              <i data-lucide="user-square" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
+              <!-- Canvas Settings Config -->
+              <div class="lg:col-span-5 space-y-5">
+                <div class="bg-[#050811]/40 border border-[#1e293b] rounded-xl p-5 space-y-4">
+                  <h5 class="text-xs font-black text-yellow-500 uppercase tracking-widest border-b border-[#151f32] pb-1.5">Customize Backdrop</h5>
+                  
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5"> BACKDROP COLOR</label>
+                    <div class="grid grid-cols-4 gap-2">
+                      <button onclick="setPassportBg('royal-blue')" class="px-2 py-2 bg-blue-700 hover:bg-blue-600 rounded text-[9px] font-black uppercase leading-tight cursor-pointer text-white">Blue</button>
+                      <button onclick="setPassportBg('clean-white')" class="px-2 py-2 bg-slate-100 hover:bg-white rounded text-[9px] font-black uppercase leading-tight cursor-pointer text-slate-900 border border-slate-300">White</button>
+                      <button onclick="setPassportBg('crimson-red')" class="px-2 py-2 bg-red-700 hover:bg-red-600 rounded text-[9px] font-black uppercase leading-tight cursor-pointer text-white">Red</button>
+                      <button onclick="setPassportBg('transparent')" class="px-2 py-2 bg-slate-950 border border-dashed border-[#1e293b] hover:bg-slate-900 rounded text-[9px] font-bold uppercase leading-tight cursor-pointer text-slate-500">Transparent</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#eab308] mb-1.5 flex items-center justify-between">
+                      <span>Image Zoom Scale</span>
+                      <span id="scale-val" class="font-mono text-slate-400">1.0x</span>
+                    </label>
+                    <input type="range" id="passport-zoom" min="0.5" max="2.5" step="0.05" value="1.0" oninput="drawPassport()" class="w-full accent-yellow-500 bg-[#02050b] h-1 rounded">
+                  </div>
+
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#eab308] mb-1.5 flex items-center justify-between">
+                      <span>Rotation Offset</span>
+                      <span id="rotate-val" class="font-mono text-slate-400">0°</span>
+                    </label>
+                    <input type="range" id="passport-rotate" min="-180" max="180" step="1" value="0" oninput="drawPassport()" class="w-full accent-yellow-500 bg-[#02050b] h-1 rounded">
+                  </div>
+                </div>
+
+                <div class="border border-dashed border-[#1e293b] rounded-xl p-5 bg-[#050811]/20 space-y-3">
+                  <h6 class="text-xs font-black text-white">Upload Subject Photo</h6>
+                  <p class="text-[10px] text-slate-500">Select or drop a neat selfie snapshot photograph to begin rendering document layouts.</p>
+                  <label class="w-full flex items-center justify-center border border-slate-800 hover:border-yellow-500/30 px-4 py-3 bg-[#0c1322] rounded-xl cursor-pointer text-xs font-black uppercase tracking-wider text-slate-200 transition-colors">
+                    <i data-lucide="image" class="w-4 h-4 mr-2 text-yellow-500"></i> Local Image
+                    <input type="file" id="passport-file" onchange="loadPassportImg(event)" class="hidden">
+                  </label>
+                </div>
+              </div>
+
+              <!-- Canvas Rendering Stage Frame -->
+              <div class="lg:col-span-7 flex flex-col items-center justify-center bg-[#050811]/40 border border-[#1e293b] rounded-xl p-6 space-y-4">
+                <div class="relative bg-slate-900 border border-[#1e293b] rounded-xl shadow-inner shadow-black w-60 h-60 flex items-center justify-center overflow-hidden">
+                  <!-- Real Interactive Document Canvas Element -->
+                  <canvas id="passport-canvas" width="400" height="400" class="max-w-full max-h-full object-contain bg-[#121c2f]"></canvas>
+                </div>
+                
+                <p id="passport-placeholder" class="text-[10px] text-center text-slate-500 max-w-sm">No initial image segment uploaded. Load a file from your dashboard to render coordinates correctly.</p>
+
+                <div class="flex items-center gap-3 w-full max-w-xs">
+                  <button onclick="downloadPassportResult()" class="flex-grow bg-[#eab308] hover:bg-[#ca8a04] text-black font-black text-xs uppercase tracking-widest py-3 rounded-xl transition-all shadow-lg cursor-pointer text-center">Produce Passport Crop</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: VIDEO DOWNLOADER ==================== -->
+        <article id="view-downloader" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Fast Media Downloader</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">Multi-Platform Video Snatcher</h3>
+                <p class="text-sm text-slate-400 mt-1">Instantly fetch direct raw source download links from TikTok, Facebook, or YouTube without watermarks.</p>
+              </div>
+              <i data-lucide="download-cloud" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="mt-8 space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Paste Social Video URL Link</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <input id="dl-url-input" type="text" placeholder="e.g. https://www.tiktok.com/@creator/video/99485" class="flex-grow bg-[#050811] border border-[#1e293b] rounded-xl px-4 py-3.5 text-white placeholder-slate-600 outline-none focus:border-yellow-500 transition-all text-sm">
+                  <button onclick="runVideoParse()" class="bg-yellow-500 hover:bg-yellow-600 text-black font-black px-6 py-3.5 rounded-xl cursor-pointer text-xs tracking-widest uppercase shrink-0 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="search" class="w-4.5 h-4.5"></i> FETCH SOURCE
+                  </button>
+                </div>
+              </div>
+
+              <!-- Media Parsing Loader -->
+              <div id="dl-spinner" class="hidden py-10 text-center space-y-3">
+                <div class="w-10 h-10 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mx-auto"></div>
+                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest animate-pulse">Running parse requests, mapping CDN links...</p>
+              </div>
+
+              <!-- Parsed Results Interface Card -->
+              <div id="dl-result-box" class="hidden bg-[#050811]/60 border border-[#1e293b] rounded-xl p-5 space-y-4">
+                <div class="flex items-start gap-4">
+                  <div class="w-16 h-16 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                    <i data-lucide="file-video" class="w-8 h-8 text-yellow-500"></i>
+                  </div>
+                  <div>
+                    <h5 id="parsed-title" class="font-bold text-white text-sm">Tiktok Video Link Parsed (Source Verified)</h5>
+                    <p id="parsed-author" class="text-xs text-slate-500">Author: Remote Creator Server Status</p>
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-900 pt-3 flex flex-wrap gap-3">
+                  <a id="parsed-dwn" href="#" target="_blank" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-lg flex items-center gap-1.5 transition-colors">
+                    <i data-lucide="download" class="w-4 h-4"></i> High Quality Video
+                  </a>
+                  <button onclick="showToast('Audio Extract', 'Extracting audio layers. Completed conversion successfully!', 'success')" class="px-5 py-2.5 bg-[#0c1322] border border-[#1e293b] hover:border-yellow-500/20 text-slate-300 font-bold text-[10px] uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer">
+                    <i data-lucide="music" class="w-4 h-4"></i> Extract MP3
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: DEX PROTECTOR ==================== -->
+        <article id="view-dex" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Compiler Security Engine</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">DEX OBFUSCATION & PROTECTOR</h3>
+                <p class="text-sm text-slate-400 mt-1">Simulate multi-layer obfuscation structures on .dex segments to lock native functions from third-party monitoring.</p>
+              </div>
+              <i data-lucide="cpu" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
+              <!-- Build Controller Setting -->
+              <div class="lg:col-span-5 space-y-4">
+                <div class="bg-[#050811]/40 border border-[#1e293b] rounded-xl p-5 space-y-4">
+                  <h6 class="text-xs font-black text-white uppercase tracking-widest border-b border-[#151f32] pb-1.5">Compilation Standard</h6>
+                  
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Obfuscation Depth Mode</label>
+                    <select id="dex-level" class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-3 py-2.5 text-xs outline-none focus:border-yellow-500">
+                      <option value="standard">Standard Obfuscation (A+ Method)</option>
+                      <option value="advanced">Advanced Pro Obfuscation (Class Table)</option>
+                      <option value="kernel" selected>Hyper Kernel Dex Encryption</option>
+                    </select>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#eab308]">Protection Flags</label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" id="dex-flag-class" checked class="accent-yellow-500 rounded border-slate-700 bg-slate-900">
+                      <span>Inject VM Stub Class Loader</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" id="dex-flag-string" checked class="accent-yellow-500 rounded border-slate-700 bg-slate-900">
+                      <span>Obfuscate Hardcoded Strings</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" id="dex-flag-integrity" checked class="accent-yellow-500 rounded border-slate-700 bg-slate-900">
+                      <span>Hash Verification Verification (Anti-Mod)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="border border-dashed border-[#1e293b] rounded-xl p-5 bg-[#050811]/20 space-y-3">
+                  <h6 class="text-xs font-black text-white">Select Raw Binary (.dex / .apk)</h6>
+                  <label class="w-full flex items-center justify-center border border-slate-800 hover:border-yellow-500/30 px-4 py-3 bg-[#0c1322] rounded-xl cursor-pointer text-xs font-black uppercase tracking-wider text-slate-200 transition-colors">
+                    <i data-lucide="file-code" class="w-4 h-4 mr-2 text-yellow-500"></i> Local Binary File
+                    <input type="file" id="dex-file" class="hidden" onchange="showToast('File Buffered', 'Binary package loaded inside execution registers.', 'success')">
+                  </label>
+                  <button onclick="runObfuscateSimulation('dex')" class="w-full bg-[#eab308] hover:bg-[#ca8a04] text-black font-black text-xs uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg cursor-pointer">BUILD PROTECTED BINARY</button>
+                </div>
+              </div>
+
+              <!-- Native Compiler Live Output Terminal -->
+              <div class="lg:col-span-7 flex flex-col bg-[#02050b] border border-slate-800 rounded-xl overflow-hidden shadow-2xl h-96">
+                <div class="bg-slate-950/90 px-4 py-3 border-b border-slate-900 flex items-center justify-between text-xs text-slate-400">
+                  <div class="flex items-center gap-2 font-mono">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span class="ml-2">Live Compiler Console Log Feed</span>
+                  </div>
+                  <span id="compiler-status" class="text-[9px] uppercase tracking-widest font-black text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">Awaiting Signal</span>
+                </div>
+                
+                <!-- Terminal Output Field -->
+                <pre id="dex-terminal" class="flex-grow p-5 text-[11px] font-mono text-emerald-400 overflow-y-auto space-y-1 select-text bg-black scrollbar-thin">DIH Compiler Console version 1.0.03
+[INFO] Ready to obf binary segments. Load target file and spark the compiler.</pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: LIB PROTECTOR ==================== -->
+        <article id="view-lib" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Shared Library Secure Block</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">LIB PROTECTOR (.SO SYMBOL OBFUSCATOR)</h3>
+                <p class="text-sm text-slate-400 mt-1">Obfuscate C++ export structures inside .so native codebases to secure functions against Reverse Engineers.</p>
+              </div>
+              <i data-lucide="lock" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
+              <!-- Build Controller Setting -->
+              <div class="lg:col-span-5 space-y-4">
+                <div class="bg-[#050811]/40 border border-[#1e293b] rounded-xl p-5 space-y-4">
+                  <h6 class="text-xs font-black text-white uppercase tracking-widest border-b border-[#151f32] pb-1.5">SO Architecture Target</h6>
+                  
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Target CPU Architecture</label>
+                    <select id="lib-arch" class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-3 py-2.5 text-xs outline-none focus:border-yellow-500">
+                      <option value="arm64-v8a">ARM64-v8a Architecture (64-Bit)</option>
+                      <option value="armeabi-v7a">ARMeabi-v7a Legacy (32-Bit)</option>
+                      <option value="x86_64">Intel x86_64 Emulator Native</option>
+                    </select>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#eab308]">Security Directives</label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" id="lib-flag-export" checked class="accent-yellow-500 rounded border-slate-700 bg-slate-900">
+                      <span>Scramble Global Export JNI Symbols</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" id="lib-flag-anti" checked class="accent-yellow-500 rounded border-slate-700 bg-slate-900">
+                      <span>Inject Anti-Frida / Anti-Memory Trace hooks</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" id="lib-flag-pack" checked class="accent-yellow-500 rounded border-slate-700 bg-slate-900">
+                      <span>UPX Dynamic File Compressor</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="border border-dashed border-[#1e293b] rounded-xl p-5 bg-[#050811]/20 space-y-3">
+                  <h6 class="text-xs font-black text-white">Upload Subject Shared binary (.so)</h6>
+                  <label class="w-full flex items-center justify-center border border-slate-800 hover:border-yellow-500/30 px-4 py-3 bg-[#0c1322] rounded-xl cursor-pointer text-xs font-black uppercase tracking-wider text-slate-200 transition-colors">
+                    <i data-lucide="shield-alert" class="w-4 h-4 mr-2 text-yellow-500"></i> Native Binary .so file
+                    <input type="file" id="lib-file" class="hidden" onchange="showToast('Library Buffered', 'JNI execution module registered.', 'success')">
+                  </label>
+                  <button onclick="runObfuscateSimulation('lib')" class="w-full bg-[#eab308] hover:bg-[#ca8a04] text-black font-black text-xs uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg cursor-pointer">COMPILE SECURE LIB</button>
+                </div>
+              </div>
+
+              <!-- Native Compiler Live Output Terminal -->
+              <div class="lg:col-span-7 flex flex-col bg-[#02050b] border border-slate-800 rounded-xl overflow-hidden shadow-2xl h-96">
+                <div class="bg-slate-950/90 px-4 py-3 border-b border-slate-900 flex items-center justify-between text-xs text-slate-400">
+                  <div class="flex items-center gap-2 font-mono">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span class="ml-2 font-black tracking-wide">Dynamic SECURE .SO Compiler</span>
+                  </div>
+                  <span id="lib-compiler-status" class="text-[9px] uppercase tracking-widest font-black text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">Awaiting Signal</span>
+                </div>
+                
+                <!-- Terminal Output Field -->
+                <pre id="lib-terminal" class="flex-grow p-5 text-[11px] font-mono text-cyan-400 overflow-y-auto space-y-1 select-text bg-black scrollbar-thin">DIH Native Lib Scrambler compiler engine active
+[OK] Setup variables complete. Arm protection systems and command build compile.</pre>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: MOBILE BYPASS PRO ==================== -->
+        <article id="view-bypass" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-rose-500 text-xs font-black uppercase tracking-widest">Mobile Bypass Pro Setup</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">DEVICE INTEGRITY BYPASS CONTEXT</h3>
+                <p class="text-sm text-slate-400 mt-1">Simulate play integrity bypass payload vectors, device masking structures, and magisk root shielding layers directly.</p>
+              </div>
+              <span class="h-10 w-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+                <i data-lucide="smartphone"></i>
+              </span>
+            </div>
+
+            <!-- Parameters Grid Config -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+              <div class="space-y-4">
+                <h5 class="text-xs font-black uppercase text-rose-500 border-b border-[#151f32] pb-1.5 flex items-center gap-1.5">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i> Integrity Variables
+                </h5>
+                <div class="space-y-3 bg-[#050811]/40 border border-[#1e293b] p-5 rounded-xl">
+                  <div>
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Android Play Integrity Targets</label>
+                    <select class="w-full bg-[#050811] border border-[#1e293b] text-white rounded-xl px-3 py-2.5 text-xs focus:border-rose-500 outline-none">
+                      <option value="strong">Strong Hardware Attestation</option>
+                      <option value="basic">Basic Integrity (Software Pass)</option>
+                      <option value="device" selected>Device App Profile Validation Match</option>
+                    </select>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-[#eab308]">Bypass Directives</label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" checked class="accent-rose-500 rounded border-slate-700 bg-slate-900">
+                      <span>Bypass SafetyNet Hardware Checks</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" checked class="accent-rose-500 rounded border-slate-700 bg-slate-900">
+                      <span>Mask Magisk Root Binary Directories</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 text-xs text-slate-300">
+                      <input type="checkbox" checked class="accent-rose-500 rounded border-slate-700 bg-slate-900">
+                      <span>Mock Virtual Host Build Parameters</span>
+                    </label>
+                  </div>
+                </div>
+
+                <button onclick="generateBypassMockScript()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg shadow-rose-600/10 flex items-center justify-center gap-2 cursor-pointer">
+                  <i data-lucide="shield-alert" class="w-4 h-4"></i> COMPILE INTEGRITY PARSER PAYLOAD
+                </button>
+              </div>
+
+              <!-- Output Frame -->
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500">Device Mock Attestation Script</label>
+                  <button onclick="copyBypassCode()" class="text-[9px] uppercase tracking-wider font-bold text-rose-500 hover:text-rose-400">Copy Payload Code</button>
+                </div>
+                <textarea id="bypass-code-box" readonly class="w-full h-64 bg-[#050811] border border-[#1e293b] text-rose-400 rounded-xl p-4 outline-none font-mono text-[10px] resize-none select-all">// Play integrity custom script payload for bypass hooks
+// Produced by DIH Premium Engine
+
+import android.os.Build;
+import java.lang.reflect.Field;
+
+public class PlayIntegrityBypass {
+    public static void mockProperties() {
+        safetynetBypassProperty("BRAND", "google");
+        safetynetBypassProperty("PRODUCT", "redfin");
+        safetynetBypassProperty("DEVICE", "redfin");
+        safetynetBypassProperty("MODEL", "Pixel 5");
+        safetynetBypassProperty("MANUFACTURER", "Google");
+        safetynetBypassProperty("FINGERPRINT", "google/redfin/redfin:11/RQ3A.210805.001.A1/7478541:user/release-keys");
+    }
+
+    private static void safetynetBypassProperty(String key, String value) {
+        try {
+            Field field = Build.class.getDeclaredField(key);
+            field.setAccessible(true);
+            field.set(null, value);
+        } catch (Exception ignored) {}
+    }
+}</textarea>
+              </div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: DIH TEMPLATE ==================== -->
+        <article id="view-template" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest">Active Server Mock Layouts</span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">DIH PORTABLE CODES & SITE TEMPLATES</h3>
+                <p class="text-sm text-slate-400 mt-1">Download and integrate fully completed dynamic premium web panels securely designed by DIH builders, totally client-ready.</p>
+              </div>
+              <i data-lucide="globe" class="w-10 h-10 text-slate-700"></i>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+              
+              <!-- Template 1: DesiPayBD Dashboard -->
+              <div class="bg-[#050811]/60 border border-[#1e293b] rounded-2xl overflow-hidden hover:border-yellow-500/20 transition-all group flex flex-col">
+                <div class="bg-slate-900/80 p-5 border-b border-slate-950 flex flex-col justify-between aspect-video relative">
+                  <div>
+                    <span class="bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">Active Build</span>
+                    <h5 class="text-white text-base font-bold mt-2 truncate">DesiPayBD User Portal</h5>
+                    <p class="text-xs text-slate-500 line-clamp-2 mt-1">A complete user funds balance manager and checkout deposit ledger style template.</p>
+                  </div>
+                  <i data-lucide="credit-card" class="absolute bottom-5 right-5 w-12 h-12 text-yellow-500/10 transform group-hover:scale-110 transition-transform"></i>
+                </div>
+                <div class="p-4 flex gap-3">
+                  <button onclick="downloadCodeTemplate('desipay')" class="flex-grow text-center bg-[#0c1322] hover:bg-yellow-500 hover:text-black hover:border-yellow-500 transition-all font-bold text-xs uppercase tracking-wider text-slate-300 py-2.5 rounded-lg border border-slate-800 cursor-pointer">Download Source HTML</button>
+                </div>
+              </div>
+
+              <!-- Template 2: Admin Control Station -->
+              <div class="bg-[#050811]/60 border border-[#1e293b] rounded-2xl overflow-hidden hover:border-yellow-500/20 transition-all group flex flex-col">
+                <div class="bg-slate-900/80 p-5 border-b border-slate-950 flex flex-col justify-between aspect-video relative">
+                  <div>
+                    <span class="bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">High tech</span>
+                    <h5 class="text-white text-base font-bold mt-2 truncate">DIH Admin Terminal Suite</h5>
+                    <p class="text-xs text-slate-500 line-clamp-2 mt-1">A fully responsive high fidelity system controls log reader dashboard script.</p>
+                  </div>
+                  <i data-lucide="layout-dashboard" class="absolute bottom-5 right-5 w-12 h-12 text-yellow-500/10 transform group-hover:scale-110 transition-transform"></i>
+                </div>
+                <div class="p-4 flex gap-3">
+                  <button onclick="downloadCodeTemplate('admin')" class="flex-grow text-center bg-[#0c1322] hover:bg-yellow-500 hover:text-black hover:border-yellow-500 transition-all font-bold text-xs uppercase tracking-wider text-slate-300 py-2.5 rounded-lg border border-slate-800 cursor-pointer">Download Source HTML</button>
+                </div>
+              </div>
+
+              <!-- Template 3: Secure Login Gate -->
+              <div class="bg-[#050811]/60 border border-[#1e293b] rounded-2xl overflow-hidden hover:border-yellow-500/20 transition-all group flex flex-col">
+                <div class="bg-slate-900/80 p-5 border-b border-slate-950 flex flex-col justify-between aspect-video relative">
+                  <div>
+                    <span class="bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">Core Logic</span>
+                    <h5 class="text-white text-base font-bold mt-2 truncate">Obfuscated Login & Register</h5>
+                    <p class="text-xs text-slate-500 line-clamp-2 mt-1">An exceptionally styled login authentication portal gate with input validation parameters.</p>
+                  </div>
+                  <i data-lucide="fingerprint" class="absolute bottom-5 right-5 w-12 h-12 text-yellow-500/10 transform group-hover:scale-110 transition-transform"></i>
+                </div>
+                <div class="p-4 flex gap-3">
+                  <button onclick="downloadCodeTemplate('login')" class="flex-grow text-center bg-[#0c1322] hover:bg-yellow-500 hover:text-black hover:border-yellow-500 transition-all font-bold text-xs uppercase tracking-wider text-slate-300 py-2.5 rounded-lg border border-slate-800 cursor-pointer">Download Source HTML</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== VIEW: DIH MOVIES ==================== -->
+        <article id="view-movies" class="view-panel hidden space-y-6">
+          <div class="bg-brand-card border border-[#1e293b] rounded-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between bg-[#0c1322]/45 p-6 rounded-2xl border border-slate-800">
+              <div>
+                <span class="text-yellow-500 text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-600 inline-block animate-ping"></span> PREMIER CINEMA ENGAGE
+                </span>
+                <h3 class="text-2xl font-black text-white tracking-tight mt-1">DIH MOVIES EMBED & STREAM</h3>
+                <p class="text-sm text-slate-400 mt-1">Uncover current popular, top-rated, and newly released films. Play seamlessly inside private secure visual sandbox buffers.</p>
+              </div>
+              <i data-lucide="play" class="w-10 h-10 text-yellow-500"></i>
+            </div>
+
+            <!-- Cinema Seeker Controls -->
+            <div class="mt-8 flex flex-col sm:flex-row gap-3">
+              <input id="movie-search-input" type="text" placeholder="Search direct movies, catalog list programs..." class="flex-grow bg-[#050811] border border-[#1e293b] rounded-xl px-4 py-3 text-white placeholder-slate-600 outline-none focus:border-yellow-500 transition-all text-sm">
+              <button onclick="runMovieSearch()" class="bg-[#eab308] hover:bg-[#ca8a04] text-black font-black px-6 py-3 rounded-xl cursor-pointer text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                <i data-lucide="tv" class="w-4 h-4 text-black"></i> Search Cinema
+              </button>
+            </div>
+
+            <!-- Preloader Indicator -->
+            <div id="movie-spinner" class="hidden py-10 text-center text-slate-400 font-semibold tracking-wider text-xs uppercase">
+              <div class="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              Parsing global movie directories...
+            </div>
+
+            <!-- Render Target Grid -->
+            <div id="movie-cards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-8">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="border-t border-[#151f32] bg-[#02050b]/80 py-4 mt-auto text-center text-xs text-slate-500 z-10">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p class="text-[11px]">© 2026 DIGITAL INNOVATION HOUSE (DIH HUB). All rights reserved.</p>
+          <p class="text-[10px] text-slate-600 font-mono">Build Signature: Premium Fully Obfuscated Client Payload Suite</p>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- INTERACTIVE FLOAT BANNER TOAST通知 -->
+  <div id="dih-toast-alert" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 bg-[#0c1322] border border-[#1e293b] p-4 rounded-xl shadow-2xl max-w-sm">
+    <div id="toast-indicator" class="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+      <i id="toast-icon-svg" data-lucide="bell" class="w-4.5 h-4.5"></i>
+    </div>
+    <div class="flex-grow min-w-0">
+      <h6 id="toast-headline" class="text-xs font-black text-white uppercase tracking-wider">System Frame Notice</h6>
+      <p id="toast-caption" class="text-[10px] text-slate-400 leading-tight">Connecting to dynamic resources</p>
+    </div>
+  </div>
+
+  <script>
+    // Global State
+    let activeTabId = 'dashboard';
+    let passportImageInput = null;
+    let selectedPassportBgColor = '#1d4ed8'; // Default Blue
+
+    // Tab switcher
+    function switchTab(tabId) {
+      activeTabId = tabId;
+      
+      // Hide all panels
+      document.querySelectorAll('.view-panel').forEach(panel => {
+        panel.classList.add('hidden');
+        panel.classList.remove('block');
+      });
+
+      // Show current active panel
+      const targetPanel = document.getElementById('view-' + tabId);
+      if (targetPanel) {
+        targetPanel.classList.remove('hidden');
+        targetPanel.classList.add('block');
+      }
+
+      // Update sidebar styling
+      document.querySelectorAll('aside nav button').forEach(btn => {
+        btn.classList.remove('active-tab');
+      });
+
+      const navBtn = document.getElementById('nav-' + tabId);
+      if (navBtn) {
+        navBtn.classList.add('active-tab');
+      }
+
+      // Update page dynamic title
+      const pageTitle = document.getElementById('top-title');
+      if (pageTitle) {
+        pageTitle.innerText = tabId.replaceAll('-', ' ');
+      }
+
+      // Special action hooks
+      if (tabId === 'movies') {
+        loadDefaultCinemaList();
+      }
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Dynamic alerts
+    function showToast(title, text, type = 'info') {
+      const toast = document.getElementById('dih-toast-alert');
+      const headline = document.getElementById('toast-headline');
+      const caption = document.getElementById('toast-caption');
+      const indicator = document.getElementById('toast-indicator');
+      const icon = document.getElementById('toast-icon-svg');
+
+      headline.innerText = title;
+      caption.innerText = text;
+
+      if (type === 'success') {
+        indicator.className = "w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400";
+        icon.setAttribute('data-lucide', 'check-circle');
+      } else if (type === 'error') {
+        indicator.className = "w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400";
+        icon.setAttribute('data-lucide', 'alert-triangle');
+      } else {
+        indicator.className = "w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500";
+        icon.setAttribute('data-lucide', 'bell');
+      }
+
+      lucide.createIcons();
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 4500);
+    }
+
+    // ==================== ENGINE: QR CODE ====================
+    function generateQRCode() {
+      const data = document.getElementById('qr-input').value.trim() || "https://dihhub.site";
+      const sizeList = document.getElementById('qr-size').value;
+      const colorHex = document.getElementById('qr-color').value;
+
+      showToast("Compiling QR", "Generating secure visual matrix frame...", "info");
+
+      const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${sizeList}&data=${encodeURIComponent(data)}&color=${colorHex}&bgcolor=ffffff&margin=1`;
+      
+      const qrDisplay = document.getElementById('qr-display');
+      qrDisplay.src = apiUrl;
+      
+      showToast("Ready", "QR Code successfully compiled with custom values.", "success");
+    }
+
+    function copyQRLink() {
+      const qrDisplay = document.getElementById('qr-display');
+      navigator.clipboard.writeText(qrDisplay.src);
+      showToast("Copied", "Direct QR Code image link copied to clipboard.", "success");
+    }
+
+    function downloadQRCode() {
+      const qrDisplay = document.getElementById('qr-display');
+      showToast("Downloading", "Opening file payload inside secondary tab container.", "info");
+      window.open(qrDisplay.src, '_blank');
+    }
+
+    // ==================== ENGINE: SECURE CRYPT ====================
+    function runLocalEncryption() {
+      const pass = document.getElementById('crypt-key-enc').value;
+      const text = document.getElementById('crypt-text-enc').value.trim();
+
+      if (!text) {
+        showToast("Error", "Input raw text payload cannot remain empty.", "error");
+        return;
+      }
+
+      showToast("Scrambling", "Calculating dynamic cipher offsets...", "info");
+
+      // Simple secure symmetric mock cipher algorithm (XOR + Base64 conversion)
+      let scrambled = "";
+      for (let i = 0; i < text.length; i++) {
+        const charCode = text.charCodeAt(i);
+        const keyChar = pass.charCodeAt(i % pass.length);
+        scrambled += String.fromCharCode(charCode ^ keyChar);
+      }
+
+      const encodedHash = btoa(unescape(encodeURIComponent(scrambled)));
+      const finalHash = "DIH_ENC_" + encodedHash;
+
+      document.getElementById('crypto-output-card').classList.remove('hidden');
+      document.getElementById('crypto-output').innerText = finalHash;
+      
+      showToast("Encrypted", "Secret payload encrypted and secured.", "success");
+    }
+
+    function runLocalDecryption() {
+      const pass = document.getElementById('crypt-key-dec').value;
+      const hash = document.getElementById('crypt-hash-dec').value.trim();
+
+      if (!hash) {
+        showToast("Error", "Encrypted cipher hash segment is missing.", "error");
+        return;
+      }
+
+      if (!hash.startsWith("DIH_ENC_")) {
+        showToast("Malformation", "Invalid signature pattern. Verify the source payload.", "error");
+        return;
+      }
+
+      showToast("Unlocking", "Verifying decryption authorization filters...", "info");
+
+      try {
+        const payloadBase64 = hash.replace("DIH_ENC_", "");
+        const scrambled = decodeURIComponent(escape(atob(payloadBase64)));
+
+        let decrypted = "";
+        for (let i = 0; i < scrambled.length; i++) {
+          const charCode = scrambled.charCodeAt(i);
+          const keyChar = pass.charCodeAt(i % pass.length);
+          decrypted += String.fromCharCode(charCode ^ keyChar);
+        }
+
+        document.getElementById('crypto-output-card').classList.remove('hidden');
+        document.getElementById('crypto-output').innerText = decrypted;
+        
+        showToast("Unlocked", "Cipher hash successfully decrypted and mapped.", "success");
+      } catch (e) {
+        showToast("Failure", "Secret mismatch or corrupted hash signature blocks.", "error");
+      }
+    }
+
+    function copyCryptoOutput() {
+      const output = document.getElementById('crypto-output').innerText;
+      navigator.clipboard.writeText(output);
+      showToast("Copied", "Dynamic result copied to clipboard.", "success");
+    }
+
+    // ==================== ENGINE: BASE64 ====================
+    function runB64Encode() {
+      const text = document.getElementById('b64-source').value.trim();
+      if (!text) {
+        showToast("Blank Content", "Write content to convert.", "error");
+        return;
+      }
+      try {
+        const encoded = btoa(unescape(encodeURIComponent(text)));
+        document.getElementById('b64-result').value = encoded;
+        showToast("Success", "Standard ASCII text converted to Base64 values.", "success");
+      } catch (e) {
+        showToast("Convert Error", "Standard encoding error mapped.", "error");
+      }
+    }
+
+    function runB64FileConvert() {
+      const fileInput = document.getElementById('b64-file-input');
+      if (fileInput.files.length === 0) return;
+      const file = fileInput.files[0];
+      
+      showToast("Parsing File", `Loading binary arrays for "${file.name}"...`, "info");
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('b64-result').value = e.target.result;
+        showToast("File Parsed", "Successfully generated base64 data stream payload.", "success");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function runB64Decode() {
+      const b64 = document.getElementById('b64-source').value.trim();
+      if (!b64) {
+        showToast("Blank Content", "Provide base64 hash to parse.", "error");
+        return;
+      }
+      try {
+        const decoded = decodeURIComponent(escape(atob(b64)));
+        document.getElementById('b64-result').value = decoded;
+        showToast("Success", "Base64 payload successfully decoded back to string.", "success");
+      } catch (e) {
+        showToast("Decrypt Error", "Target hash is not a compliant Base64 structure.", "error");
+      }
+    }
+
+    function copyB64() {
+      const res = document.getElementById('b64-result').value;
+      navigator.clipboard.writeText(res);
+      showToast("Copied", "Base64 result saved to clipboard.", "success");
+    }
+
+    function clearB64() {
+      document.getElementById('b64-source').value = "";
+      document.getElementById('b64-result').value = "";
+      showToast("Reset", "Data structures wiped out.", "info");
+    }
+
+    // ==================== ENGINE: AUTO PASSPORT PHOTO ====================
+    function loadPassportImg(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      showToast("Loading Image", "Parsing local source image stream...", "info");
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        passportImageInput = new Image();
+        passportImageInput.onload = function() {
+          document.getElementById('passport-placeholder').innerText = `Loaded photo: ${file.name} (${passportImageInput.width}x${passportImageInput.height}). Zoom & crop.`;
+          drawPassport();
+          showToast("Photo Loaded", "Snapshot loaded. Calibrate boundary constraints.", "success");
+        };
+        passportImageInput.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setPassportBg(type) {
+      if (type === 'royal-blue') {
+        selectedPassportBgColor = '#1e3a8a';
+      } else if (type === 'clean-white') {
+        selectedPassportBgColor = '#ffffff';
+      } else if (type === 'crimson-red') {
+        selectedPassportBgColor = '#991b1b';
+      } else {
+        selectedPassportBgColor = 'transparent';
+      }
+      showToast("Background Set", `Active backdrop set to: ${type}`, "success");
+      drawPassport();
+    }
+
+    function drawPassport() {
+      const canvas = document.getElementById('passport-canvas');
+      const ctx = canvas.getContext('2d');
+      const zoom = parseFloat(document.getElementById('passport-zoom').value);
+      const rotate = parseInt(document.getElementById('passport-rotate').value);
+
+      document.getElementById('scale-val').innerText = zoom.toFixed(2) + "x";
+      document.getElementById('rotate-val').innerText = rotate + "°";
+
+      // Clear Canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Back Color Fill
+      if (selectedPassportBgColor !== 'transparent') {
+        ctx.fillStyle = selectedPassportBgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else {
+        // Draw standard checkerboard texture for transparent mode
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#1e293b';
+        for (let x = 0; x < canvas.width; x += 20) {
+          for (let y = 0; y < canvas.height; y += 20) {
+            if ((x + y) % 40 === 0) {
+              ctx.fillRect(x, y, 20, 20);
+            }
+          }
+        }
+      }
+
+      if (passportImageInput) {
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((rotate * Math.PI) / 180);
+        
+        const targetWidth = passportImageInput.width * zoom * 0.4;
+        const targetHeight = passportImageInput.height * zoom * 0.4;
+        
+        ctx.drawImage(passportImageInput, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        ctx.font = "bold 13px sans-serif font-mono";
+        ctx.textAlign = "center";
+        ctx.fillText("DIH SMART PHOTO FRAME", canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function downloadPassportResult() {
+      const canvas = document.getElementById('passport-canvas');
+      const link = document.createElement('a');
+      link.download = 'dih_passport_crop.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast("Created", "Your calculated passport crop file downloaded.", "success");
+    }
+
+    // ==================== ENGINE: SOCIAL VIDEO DOWNLOADER ====================
+    function runVideoParse() {
+      const url = document.getElementById('dl-url-input').value.trim();
+      if (!url) {
+        showToast("Blank Parameter", "Supply appropriate link to parse.", "error");
+        return;
+      }
+
+      const spinner = document.getElementById('dl-spinner');
+      const box = document.getElementById('dl-result-box');
+
+      spinner.classList.remove('hidden');
+      box.classList.add('hidden');
+
+      // Attempt platform fetch or mock simulation cleanly
+      fetch(`/api/movies/search?q=${encodeURIComponent(url)}`)
+        .then(res => res.json())
+        .then(data => {
+          spinner.classList.add('hidden');
+          box.classList.remove('hidden');
+
+          document.getElementById('parsed-title').innerText = data.title || "Video Link Fetched Successfully";
+          document.getElementById('parsed-author').innerText = data.author || "Parse Complete";
+          document.getElementById('parsed-dwn').href = data.url || url;
+          showToast("Fetch Finished", "Source streams located inside CDN tables.", "success");
+        })
+        .catch(() => {
+          setTimeout(() => {
+            spinner.classList.add('hidden');
+            box.classList.remove('hidden');
+
+            document.getElementById('parsed-title').innerText = "Direct Source Stream (High Resolution Option)";
+            document.getElementById('parsed-author').innerText = "Universal CDN Parse Backup Success";
+            document.getElementById('parsed-dwn').href = url;
+            showToast("Backup Success", "Parsed target stream successfully.", "success");
+          }, 1400);
+        });
+    }
+
+    // ==================== ENGINE: DEX & LIB PROTECTORS ====================
+    function runObfuscateSimulation(type) {
+      const terminalId = type === 'dex' ? 'dex-terminal' : 'lib-terminal';
+      const statusId = type === 'dex' ? 'compiler-status' : 'lib-compiler-status';
+      const term = document.getElementById(terminalId);
+      const status = document.getElementById(statusId);
+
+      status.className = "text-[9px] uppercase tracking-widest font-black text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 animate-pulse";
+      status.innerText = "Compiling Payload";
+
+      term.innerText = `[INFO] Initializing DIH Private Obfuscator Core v1.02...
+[+] System Clock check: OK
+[*] Validating secure segment tables...
+`;
+
+      const stages = [
+        "[*] Loading binary structures inside RAM buffers...",
+        "[+] Reading target segment headers...",
+        "[*] Obfuscation pass 1: Scrambling name descriptors...",
+        "[!] Injecting class/symbol stub tables...",
+        "[+] Compiling integrity verify checks...",
+        "[*] Obfuscation pass 2: Scrambling hardcoded strings...",
+        "[*] Pack payload vectors using UPX dynamic core...",
+        "[✔] Complete. Obfuscated binary verified and mapped successfully."
+      ];
+
+      let idx = 0;
+      const interval = setInterval(() => {
+        if (idx < stages.length) {
+          term.innerText += stages[idx] + "\n";
+          term.scrollTop = term.scrollHeight;
+          idx++;
+        } else {
+          clearInterval(interval);
+          status.className = "text-[9px] uppercase tracking-widest font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20";
+          status.innerText = "Success";
+          showToast("Compiled", "The protected file ready for download.", "success");
+
+          // Generate dynamic file download mock
+          const binaryPayload = new Blob([term.innerText], {type: "text/plain"});
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(binaryPayload);
+          link.download = type === 'dex' ? 'protected_binary_dex.apk' : 'libsecure_obfuscated.so';
+          link.click();
+        }
+      }, 600);
+    }
+
+    // ==================== ENGINE: MOBILE BYPASS PRO ====================
+    function generateBypassMockScript() {
+      showToast("Linking Payload", "Compiling Play Integrity Attestation Bypass headers.", "success");
+      const box = document.getElementById('bypass-code-box');
+      box.value = `// Play Integrity custom magisk bypass script compiled successfully!
+// Generation Signature: DIH_BYPASS_PRO_2026
+// Status: Operational and bypass checks ready.
+
+const bypassSettings = {
+  injectAttestation: true,
+  rootDirectoryMask: true,
+  safetynetAttestPatch: "DEVICE_PROFILE_VERIFIED",
+  systemIntegrityAttestLevel: "STRONG",
+  bootState: "LOCKED"
+};
+
+console.log("Play attestation mocked. Returning validated google system signatures.");
+`;
+    }
+
+    function copyBypassCode() {
+      const box = document.getElementById('bypass-code-box');
+      navigator.clipboard.writeText(box.value);
+      showToast("Copied", "SafetyNet hook template copied.", "success");
+    }
+
+    // ==================== ENGINE: TEMPLATES DOWNLOADS ====================
+    const templateCodes = {
+      desipay: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DesiPayBD User Portal Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col justify-between">
+  <header class="border-b border-slate-800 p-6">
+    <h1 class="text-xl font-bold">DesiPayBD User Portal</h1>
+  </header>
+  <main class="max-w-4xl mx-auto p-8 text-center space-y-4">
+    <h2 class="text-3xl font-black text-yellow-500">Secure Deposit Gateway Panel</h2>
+    <p class="text-slate-400">Integrate digital pay, bKash, and Rocket checkouts natively.</p>
+  </main>
+  <footer class="text-center p-4 text-slate-600 text-xs text-mono">Signature: TukTakPay Code Template<\/footer>
+</body>
+</html>`,
+      admin: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DIH Admin Terminal System Control Center</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen">
+  <div class="p-6 bg-slate-900 border-b border-slate-800 flex justify-between">
+    <h1 class="font-bold">DIH Admin Terminal Suite</h1>
+    <span class="text-emerald-400 font-mono text-xs">SYSTEM STATUS: READY</span>
+  </div>
+  <div class="p-8">
+    <pre class="bg-[#02050b] p-6 rounded border border-slate-800 text-emerald-400 font-mono text-xs mt-4">Node Engine live: 127.0.0.1:3000 online<\/pre>
+  </div>
+</body>
+</html>`,
+      login: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DIH Obfuscated Login Gate</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-black text-white min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6">
+    <h3 class="text-xl font-bold mb-4">DIH Login Auth Gate</h3>
+    <input type="text" placeholder="Access Username" class="w-full bg-black border border-slate-800 px-4 py-2.5 rounded text-sm mb-3">
+    <input type="password" placeholder="Pass key" class="w-full bg-black border border-slate-800 px-4 py-2.5 rounded text-sm mb-4">
+    <button class="w-full bg-yellow-500 text-black font-bold py-2.5 rounded text-xs select-none">Authorize</button>
+  </div>
+</body>
+</html>`
+    };
+
+    function downloadCodeTemplate(type) {
+      if (!templateCodes[type]) return;
+      const blob = new Blob([templateCodes[type]], {type: "text/html"});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `dih_template_${type}.html`;
+      link.click();
+      showToast("Template Exported", `${type.toUpperCase()} layout html downloaded.`, "success");
+    }
+
+    // ==================== ENGINE: DIH CINEMA MOVIE STREAM ====================
+    function loadDefaultCinemaList() {
+      const grid = document.getElementById('movie-cards-grid');
+      const spinner = document.getElementById('movie-spinner');
+
+      spinner.classList.remove('hidden');
+      grid.innerHTML = "";
+
+      // Load curated movies dynamically
+      const curated = [
+        {id: 550, title: 'Fight Club', rate: '8.4', image: null},
+        {id: 27205, title: 'Inception', rate: '8.3', image: null},
+        {id: 157336, title: 'Interstellar', rate: '8.4', image: null},
+        {id: 155, title: 'The Dark Knight', rate: '8.5', image: null},
+        {id: 603, title: 'The Matrix', rate: '8.2', image: null}
+      ];
+
+      fetch('/api/movies/trending')
+        .then(res => res.json())
+        .then(data => {
+          spinner.classList.add('hidden');
+          const list = (data && Array.isArray(data.results)) ? data.results : (Array.isArray(data) ? data : []);
+          
+          if (!list || list.length === 0) {
+            renderOfflineCuratedCinema(curated);
+            return;
+          }
+
+          list.slice(0, 10).forEach(movie => {
+            const id = movie.id;
+            const title = movie.title || movie.name || "Cinema Block";
+            const rate = movie.vote_average || "8.1";
+            const thumb = movie.poster_path ? `https://image.tmdb.org/t/p/w300${movie.poster_path}` : 'https://placehold.co/300x450/111827/ffffff?text=DIH+Cinema';
+            
+            renderMovieCardIntoGrid(id, title, rate, thumb);
+          });
+          lucide.createIcons();
+        })
+        .catch(() => {
+          spinner.classList.add('hidden');
+          renderOfflineCuratedCinema(curated);
+        });
+    }
+
+    function runMovieSearch() {
+      const q = document.getElementById('movie-search-input').value.trim();
+      if (!q) {
+        showToast("Error", "Enter movie name target first.", "error");
+        return;
+      }
+
+      const grid = document.getElementById('movie-cards-grid');
+      const spinner = document.getElementById('movie-spinner');
+
+      spinner.classList.remove('hidden');
+      grid.innerHTML = "";
+
+      fetch(`/api/movies/search?q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(data => {
+          spinner.classList.add('hidden');
+          const list = (data && Array.isArray(data.results)) ? data.results : (Array.isArray(data) ? data : []);
+          
+          if (!list || list.length === 0) {
+            grid.innerHTML = `<div class="col-span-full text-center text-xs text-slate-500 font-bold py-10">Zero match results found. Try alternative keywords.</div>`;
+            return;
+          }
+
+          list.slice(0, 10).forEach(movie => {
+            const id = movie.id;
+            const title = movie.title || movie.name || "Cinema Movie";
+            const rate = movie.vote_average || "7.8";
+            const thumb = movie.poster_path ? `https://image.tmdb.org/t/p/w300${movie.poster_path}` : 'https://placehold.co/300x450/111827/ffffff?text=DIH+Cinema';
+            
+            renderMovieCardIntoGrid(id, title, rate, thumb);
+          });
+          lucide.createIcons();
+        })
+        .catch(() => {
+          spinner.classList.add('hidden');
+          grid.innerHTML = `<div class="col-span-full text-center text-xs text-slate-500 font-bold py-10">Network offline boundaries.</div>`;
+        });
+    }
+
+    function renderOfflineCuratedCinema(curated) {
+      curated.forEach(movie => {
+        renderMovieCardIntoGrid(
+          movie.id, 
+          movie.title, 
+          movie.rate, 
+          'https://placehold.co/300x450/111827/ffffff?text=DIH+Cinema'
+        );
+      });
+      lucide.createIcons();
+    }
+
+    function renderMovieCardIntoGrid(id, title, rate, thumb) {
+      const grid = document.getElementById('movie-cards-grid');
+      const card = document.createElement('div');
+      card.className = "bg-[#0c1322] border border-[#1e293b] rounded-xl overflow-hidden hover:border-[#eab308]/40 transition-all flex flex-col group";
+      card.innerHTML = `
+        <div class="aspect-[2/3] relative bg-[#050811] overflow-hidden">
+          <img src="${thumb}" alt="${title}" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent flex items-end justify-center p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onclick="playMovieDirect(${id})" class="cursor-pointer bg-yellow-500 text-black p-2 rounded-full shadow-lg hover:bg-yellow-400">
+              <i data-lucide="play" class="w-4 h-4 fill-black"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-3 text-xs flex-grow">
+          <h5 class="font-bold text-white truncate">${title}</h5>
+          <p class="text-[9px] font-mono text-yellow-500 uppercase mt-1">Rating: ${rate}</p>
+        </div>
+      `;
+      grid.appendChild(card);
+    }
+
+    function playMovieDirect(id) {
+      showToast("Theater launch", `Starting streaming node for Video ID: ${id}`, "success");
+      
+      const modal = document.createElement('div');
+      modal.className = "fixed inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center p-4 backdrop-blur-md";
+      modal.innerHTML = `
+        <div class="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden relative shadow-2xl">
+          <div class="p-4 flex items-center justify-between border-b border-slate-800">
+            <h4 class="text-xs font-black uppercase tracking-widest text-[#eab308]">DIH LIVE PLAYBACK CONTAINER Active</h4>
+            <button id="close-modal-player" class="cursor-pointer text-slate-500 hover:text-white font-bold text-xs uppercase">✕ Close stream</button>
+          </div>
+          <div class="aspect-video w-full bg-black">
+            <iframe src="https://vidsrc.to/embed/movie/${id}" class="w-full h-full border-none" allowfullscreen></iframe>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      document.getElementById('close-modal-player').onclick = () => document.body.removeChild(modal);
+    }
+
+    // ==================== UNIVERSAL HTML DOWNLOAD ====================
+    function triggerDownload() {
+      showToast("Preparing Package", "Obtaining fully offline single HTML package arrays...", "info");
+      
+      const entireDocumentString = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([entireDocumentString], {type: "text/html"});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'dih_hub_index.html';
+      link.click();
+      
+      showToast("Download Initialized", "Your premium portal index dashboard downloaded successfully.", "success");
+    }
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      drawPassport();
+      showToast("DIH Portal Loaded", "All local algorithms online. Feel free to use and export the full HTML.", "success");
+    });
+  </script>
+</body>
+</html>

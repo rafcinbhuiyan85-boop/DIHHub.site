@@ -1,0 +1,6 @@
+{
+  "name": "DIH HUB",
+  "description": "DIH HUB (Digital Innovation House Hub) — Premium multi-utility platform with advanced development tools, graphics editors, and cinema-grade streaming experience.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

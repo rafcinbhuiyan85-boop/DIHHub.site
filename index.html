@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DihHub | Official</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=5" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=5" />
+    <link rel="shortcut icon" href="/favicon.ico?v=5" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="/favicon.png?v=5" />
+    <script src="/desipaybd.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.DesiPayBD) {
+          window.DesiPayBD.init({
+            serverUrl: '/api/payment/create',
+            onError: function(msg) { console.error('[DesiPayBD] Error: ' + msg); }
+          });
+        }
+      });
+    </script>
+    <script src="https://pl29726384.effectivecpmnetwork.com/9c/20/d3/9c20d3c58eae216ba9be7731295b9ec9.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script src="https://pl29726386.effectivecpmnetwork.com/3c/6f/b3/3c6fb36b5d327b9524294f3251d4e7ea.js"></script>
+  </body>
+</html>
+

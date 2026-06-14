@@ -1,0 +1,472 @@
+import React, { useState, useEffect } from 'react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/src/lib/utils';
+import { useAppSettings } from '@/src/hooks/useAppSettings';
+import DihLogo from './DihLogo';
+
+type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'cut-downloader' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'temp-mail' | 'temp-sms' | 'mobile-bypass' | 'hosted-admin';
+
+interface LayoutProps {
+  children: React.ReactNode;
+  activeTool: string;
+  setActiveTool: (id: any) => void;
+  currentUser?: any;
+  onAuthClick?: () => void;
+  onLogout?: () => void;
+}
+
+const navItems = [
+  { id: 'dashboard' as ToolId, icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'tenmin-ai' as ToolId, icon: Volume2, label: '10Min AI Voice' },
+  { id: 'qr' as ToolId, icon: QrCode, label: 'QR Code Tools' },
+  { id: 'encryption' as ToolId, icon: ShieldCheck, label: 'Secure Encryption' },
+  { id: 'to-base64' as ToolId, icon: ImageIcon, label: 'Base64 Converter' },
+  { id: 'bg-remover' as ToolId, icon: ImageIcon, label: 'Background Remover' },
+  { id: 'passport' as ToolId, icon: UserSquare2, label: 'Passport Photo' },
+  { id: 'auto-passport' as ToolId, icon: Star, label: 'Auto Passport' },
+  { id: 'video' as ToolId, icon: Download, label: 'Video Downloader' },
+  { id: 'cut-downloader' as ToolId, icon: Scissors, label: 'Cut Downloader' },
+  { id: 'design-editor' as ToolId, icon: Palette, label: 'Design Editor' },
+  { id: 'dex-protector' as ToolId, icon: Cpu, label: 'DEX Protector' },
+  { id: 'lib-encryptor' as ToolId, icon: Lock, label: 'Lib Protector' },
+  { id: 'apk-store' as ToolId, icon: Package, label: 'APK Store' },
+  { id: 'dih-movies' as ToolId, icon: Film, label: 'Dih Movies' },
+  { id: 'temp-mail' as ToolId, icon: Mail, label: 'Temp Mail' },
+  { id: 'temp-sms' as ToolId, icon: MessageSquare, label: 'Temp SMS' },
+  { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
+  { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH TEMPLATE' },
+];
+
+declare global {
+  interface Window {
+    DesiPayBD: {
+      init: (config: any) => void;
+      showModal: (options: any) => void;
+      initPayment: (options: any) => void;
+    };
+  }
+}
+
+export default function Layout({ 
+  children, 
+  activeTool, 
+  setActiveTool, 
+  currentUser, 
+  onAuthClick, 
+  onLogout 
+}: LayoutProps) {
+  const { settings } = useAppSettings();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [logoClicks, setLogoClicks] = useState(0);
+
+  const handleLogoClick = () => {
+    if (logoClicks >= 4) {
+      setActiveTool('admin-login');
+      setLogoClicks(0);
+    } else {
+      setLogoClicks(prev => prev + 1);
+    }
+  };
+
+  // Check if we are in a "Full Screen" mode or page
+  const isGalleryPage = typeof window !== 'undefined' && (window.location.pathname === '/templates' || window.location.pathname === '/admin/templates');
+  const isLandingPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/t/');
+  const isFullScreenMode = isGalleryPage || isLandingPage;
+  const shouldHideSidebar = isFullScreenMode || activeTool === 'admin-panel' || activeTool === 'admin-login';
+
+  useEffect(() => {
+    if (shouldHideSidebar || window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    } else {
+      setIsSidebarOpen(true);
+    }
+  }, [shouldHideSidebar, activeTool]);
+
+  useEffect(() => {
+    // Apply dynamic colors
+    if (settings.primaryColor) {
+      document.documentElement.style.setProperty('--primary-color', settings.primaryColor);
+    }
+    if (settings.accentColor) {
+      document.documentElement.style.setProperty('--accent-color', settings.accentColor);
+    }
+  }, [settings.primaryColor, settings.accentColor]);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  // Sync balance if user logged in
+  const [balance, setBalance] = useState<number>(0);
+  
+  useEffect(() => {
+    if (currentUser?.id) {
+      const fetchBalance = async () => {
+        try {
+          const r = await fetch(`/api/auth/me/${currentUser.id}`);
+          const d = await r.json();
+          if (d.balance !== undefined) {
+             setBalance(d.balance);
+             // Update localStorage to keep it in sync
+             const updatedUser = { ...currentUser, balance: d.balance };
+             localStorage.setItem('dihhub_user', JSON.stringify(updatedUser));
+          }
+        } catch (e) {}
+      };
+      fetchBalance();
+      const interval = setInterval(fetchBalance, 15000); // Polling every 15s
+      return () => clearInterval(interval);
+    }
+  }, [currentUser?.id]);
+
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const handleAddFunds = () => {
+    if (window.DesiPayBD && currentUser) {
+      window.DesiPayBD.showModal({
+        userEmail: currentUser.email,
+        userName: currentUser.name,
+        userId: currentUser.id
+      });
+    }
+  };
+
+  const unfilteredNavItems = settings.visibleTools
+    .map(id => navItems.find(i => i.id === id))
+    .filter((item): item is typeof navItems[0] => !!item && item.id !== 'dashboard');
+
+  const dihMoviesNavItem = unfilteredNavItems.find(i => i.id === 'dih-movies');
+  const otherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies');
+
+  const filteredNavItems = [
+    navItems.find(i => i.id === 'dashboard')!,
+    ...otherNavItems,
+    ...(dihMoviesNavItem ? [dihMoviesNavItem] : [])
+  ];
+
+  return (
+    <div className="min-h-screen flex text-slate-900 dark:text-slate-100 selection:bg-primary/30 overflow-x-hidden relative">
+      {/* Premium Infrastructure Layers */}
+      <div className="fixed inset-0 bg-white dark:bg-[#02040a] -z-50 transition-colors duration-700" />
+      
+      {/* Subtle Depth Gradient */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(59,130,246,0.05),transparent_80%)] -z-45" />
+
+      {/* Atmospheric Glows */}
+      <div className="fixed inset-0 -z-40 pointer-events-none overflow-hidden select-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[160px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/5 rounded-full blur-[160px] animate-pulse delay-1000" />
+      </div>
+
+      {/* Sidebar Overlay for Mobile */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+           <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-20 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+           />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-30 w-56 bg-white/70 dark:bg-slate-950/70 border-r border-slate-200 dark:border-white/5 transition-all duration-500 md:translate-x-0 group overflow-hidden shadow-2xl",
+        (shouldHideSidebar || !isSidebarOpen) ? "-translate-x-full md:-translate-x-full" : "translate-x-0",
+        (shouldHideSidebar || !isSidebarOpen) && "md:w-0",
+        settings.enableGlassmorphism && "backdrop-blur-3xl",
+        settings.showScanlines && "scanlines"
+      )}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.1),transparent_70%)] pointer-events-none" />
+        <div className="flex flex-col h-full relative z-20">
+          <div className="px-4 py-4 flex items-center justify-between">
+            <div 
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 group/logo cursor-pointer py-1 select-none"
+              title="Double click or tap multiple times for terminal configuration"
+            >
+              <DihLogo small={true} className="flex-shrink-0 transition-transform duration-500 group-hover/logo:scale-105" />
+              <div className="flex flex-col justify-center">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 dark:from-amber-400 dark:via-yellow-300 dark:to-amber-500 drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)] font-black uppercase tracking-[0.12em] text-[11px] leading-tight">
+                  {settings.appName.toUpperCase()}
+                </span>
+                <span className="text-[7px] font-black text-slate-400 dark:text-slate-500 tracking-[0.05em] uppercase leading-none mt-0.5 group-hover/logo:text-amber-400 transition-colors">
+                  INNOVATION HOUSE
+                </span>
+              </div>
+            </div>
+            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-all hover:scale-110 active:scale-95">
+              <X size={28} />
+            </button>
+          </div>
+
+          <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto no-scrollbar">
+            <div className="px-3 mb-1">
+              <p className="text-[9px] font-black tracking-[0.2em] text-slate-400 dark:text-slate-500 uppercase">{settings.sidebarSystemCoreLabel || 'System Core'}</p>
+            </div>
+            {/* Navigation Items */}
+            {filteredNavItems.map((item) => {
+              const label = settings.toolLabels?.[item.id] || item.label;
+              const isActive = activeTool === item.id;
+              const isDisabled = settings.disabledTools?.includes(item.id);
+              const isDihMovies = item.id === 'dih-movies';
+
+              return (
+                <React.Fragment key={item.id}>
+                  {isDihMovies && (
+                    <div className="px-3 pt-3 pb-1">
+                      <p className="text-[9px] font-black tracking-[0.2em] text-amber-500 dark:text-amber-400 uppercase flex items-center gap-1.5 select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                        PREMIER CINEMA
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      setActiveTool(item.id);
+                      if (window.innerWidth < 768) setIsSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all relative group/item",
+                      isDihMovies
+                        ? isActive
+                          ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 text-slate-950 font-black shadow-lg shadow-amber-500/30 scale-[1.01]"
+                          : "text-amber-700 dark:text-amber-300/90 hover:text-amber-600 dark:hover:text-amber-200 bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/5 dark:hover:bg-amber-500/15 border border-amber-500/10 hover:border-amber-500/30 font-extrabold hover:translate-x-1"
+                        : isActive 
+                          ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
+                          : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
+                      isDisabled && !isActive && "opacity-75 hover:opacity-100 text-rose-600/80 dark:text-rose-500/80 hover:text-rose-600 dark:hover:text-rose-500 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10"
+                    )}
+                  >
+                    <item.icon size={14} className={cn("transition-transform", isActive ? "scale-110" : "group-hover/item:scale-110", isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse")} />
+                    <span className={cn("flex-1 text-left truncate uppercase", isDihMovies && "tracking-wide")}>{label}</span>
+                    {isDisabled ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.6)]" title="Under Management / Offline" />
+                    ) : isDihMovies ? (
+                      <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
+                        STREAM
+                      </span>
+                    ) : null}
+                    {isActive && !isDihMovies && (
+                      <motion.div 
+                        layoutId="active-pill"
+                        className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"
+                      />
+                    )}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+            {/* Admin Area */}
+          </nav>
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <p className="text-[8px] text-center text-slate-500 font-bold tracking-tight px-3 leading-relaxed opacity-60">
+              {settings.footerText.toUpperCase()}
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className={cn(
+        "flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950/50 transition-all duration-500",
+        (!shouldHideSidebar && isSidebarOpen) ? "md:ml-56" : "ml-0",
+        settings.enableGlassmorphism && "backdrop-blur-3xl"
+      )}>
+        {!isFullScreenMode && (
+        <header className={cn(
+          "h-12 md:h-14 flex items-center justify-between px-4 md:px-6 border-b border-slate-200 dark:border-white/5 bg-white/20 dark:bg-slate-950/20 sticky top-0 z-10 transition-all group/header",
+          settings.enableGlassmorphism && "backdrop-blur-3xl"
+        )}>
+          {/* Technical Progress Bar */}
+          <div className="absolute bottom-0 left-0 h-[1px] bg-primary group-hover:h-[2px] transition-all duration-700 animate-pulse w-full opacity-20 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+          
+            <div className="flex items-center gap-3 md:gap-6">
+            {!(activeTool === 'admin-panel' || activeTool === 'admin-login') && (
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-all active:scale-90">
+                <Menu size={20} />
+              </button>
+            )}
+            <div>
+              <h1 className="text-sm xs:text-base md:text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-600 to-slate-900 dark:from-white dark:via-slate-400 dark:to-white truncate sm:overflow-visible sm:whitespace-normal max-w-[180px] xs:max-w-xs sm:max-w-none">
+                {settings.toolLabels?.[activeTool]?.toUpperCase() || navItems.find(i => i.id === activeTool)?.label?.toUpperCase() || (activeTool === 'nid' ? 'NID CARD MAKER' : 'ADMIN SETTINGS')}
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 md:gap-6">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <div className="hidden xs:flex flex-col items-end">
+                   <p className="text-[9px] font-black tracking-widest text-emerald-500 uppercase leading-none mb-1">Balance</p>
+                   <p className="text-xs font-mono font-black text-slate-900 dark:text-white leading-none">
+                     {settings.paybdCurrency === 'USD' ? '$' : '৳'}{balance.toFixed(settings.paybdCurrency === 'USD' ? 2 : 0)}
+                   </p>
+                </div>
+                <button 
+                  onClick={handleAddFunds}
+                  className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg border border-emerald-500/20 transition-all group/funds active:scale-95"
+                  title="Add Funds"
+                >
+                  <Lock size={14} className="group-hover/funds:rotate-12 transition-transform" />
+                </button>
+                <div className="relative">
+                  <div 
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2.5 md:gap-3 group cursor-pointer select-none"
+                  >
+                    <div className="hidden sm:block text-right">
+                      <p className="text-[10px] font-black tracking-tighter text-slate-400 uppercase leading-none">{settings.headerOperatorLabel || 'Operator'}</p>
+                      <p className="text-xs font-black leading-none group-hover:text-primary transition-colors">{currentUser.name}</p>
+                    </div>
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-[10px] md:text-xs font-black shadow-lg shadow-indigo-500/20 rotate-3 group-hover:rotate-0 transition-all border border-indigo-400/20">
+                      {currentUser.name[0]?.toUpperCase()}
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {isUserMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={() => setIsUserMenuOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 mt-2.5 w-60 bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-2xl z-50 space-y-4"
+                        >
+                          {/* User Header */}
+                          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-amber-500/20">
+                              {currentUser.name[0]?.toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-black text-slate-900 dark:text-white truncate">{currentUser.name}</p>
+                              <p className="text-[10px] text-slate-400 truncate mt-0.5">{currentUser.email}</p>
+                            </div>
+                          </div>
+
+
+
+                          {/* User actions */}
+                          <div className="space-y-1">
+                            <button
+                              onClick={() => {
+                                onLogout && onLogout();
+                                setIsUserMenuOpen(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                              <LogOut size={13} />
+                              <span>Log Out Account</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ) : (
+              <button 
+                onClick={onAuthClick}
+                className="relative overflow-hidden group/login px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 dark:from-amber-600 dark:via-yellow-400 dark:to-amber-500 text-slate-950 dark:text-slate-950 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg shadow-amber-500/20 dark:shadow-amber-500/10 border border-amber-400/35 flex items-center gap-1.5"
+              >
+                {/* Visual glare shine animation */}
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/login:translate-x-full transition-transform duration-1000" />
+                <User size={13} className="text-slate-950 group-hover/login:scale-110 transition-transform" />
+                <span>Member Access</span>
+              </button>
+            )}
+          </div>
+        </header>
+        )}
+
+        <div className={cn(
+          "flex-1 overflow-y-auto scroll-smooth flex flex-col justify-between",
+          isFullScreenMode ? "p-0" : "p-3 md:p-4 lg:p-6"
+        )}>
+          <div className="flex-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTool}
+                initial={{ opacity: 0, scale: 0.98, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className={cn(
+                  "h-full",
+                  activeTool !== 'dih-movies' && "max-w-7xl mx-auto"
+                )}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {!isFullScreenMode && (
+            <footer className="mt-20 pt-10 border-t border-slate-100 dark:border-slate-900 pb-10 text-center max-w-7xl mx-auto px-4 w-full">
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {/* Disclaimer Badge */}
+                  <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 dark:text-slate-500 font-extrabold uppercase bg-slate-50 dark:bg-slate-950/40 px-3 py-1 rounded-full border border-slate-200/50 dark:border-slate-800/80">
+                    <ShieldAlert size={11} className="text-amber-500 dark:text-amber-400" />
+                    <span>Disclaimer & Legal Notice</span>
+                  </div>
+
+                  {/* Contact Email Badge */}
+                  <a 
+                    href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub&body=Dear%20DIH%20Hub%20Support%20Team%2C%0A%0AI%20am%20reaching%20out%20to%20you%20regarding%20the%2520following%2520inquiry%3A%0A%0A%5BPlease%20type%20your%20message%20here%5D%0A%0AThank%20you%2C%0A%5BYour%20Name%5D"
+                    className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 px-3 py-1 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer"
+                    title="Click to Compose Support Email"
+                  >
+                    <Mail size={11} className="text-indigo-500 dark:text-indigo-400" />
+                    <span>SUPPORT: contact@dihhub.site</span>
+                  </a>
+                </div>
+
+                {/* Disclaimer Content */}
+                <p className="text-[10.5px] text-slate-400/90 dark:text-slate-500 max-w-3xl leading-relaxed font-medium">
+                  DIH Hub (Digital Innovation House Hub) is an independent self-service utility platform. All tools, generation services, and data conversions (including pass-thru video protocols, system bypass modes, and automated biometrics) are intended solely for legitimate educational and private use. We neither host, reshare, nor retain recordings, sensitive media, or copyrighted contents on our servers. The operator bears full compliance and ownership obligations under local and international statutes. For official support, inquiries, or legal concerns, please write to us directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub&body=Dear%20DIH%20Hub%20Support%20Team%2C%0A%0AI%20am%20reaching%20out%20to%20you%20regarding%20the%2520following%2520inquiry%3A%0A%0A%5BPlease%20type%20your%20message%20here%5D%0A%0AThank%20you%2C%0A%5BYour%20Name%5D" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a>.
+                </p>
+
+                {/* Subtle Divider */}
+                <div className="w-16 h-[1px] bg-slate-200/60 dark:bg-slate-800/60 my-1"></div>
+
+                {/* Meta Rows */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-[10px]">
+                  <p className="font-bold text-slate-400/60 dark:text-slate-600 uppercase tracking-widest">
+                    © {new Date().getFullYear()} DIH HUB (DIGITAL INNOVATION HOUSE HUB) • CORE ARCHITECTURE SECURED
+                  </p>
+                  <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-400/80 dark:text-slate-500 uppercase tracking-widest text-[9px]">
+                      Developed by
+                    </span>
+                    <a 
+                      href="https://www.instagram.com/rafcin.b/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center p-1.5 rounded-full text-white bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] hover:scale-110 active:scale-95 transition-all shadow-md shadow-pink-500/10 hover:shadow-pink-500/25 cursor-pointer border border-transparent"
+                      title="Follow on Instagram @rafcin.b"
+                    >
+                      <Instagram size={11} className="stroke-[2.5]" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </footer>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

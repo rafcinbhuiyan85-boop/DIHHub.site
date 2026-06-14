@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "HtmlTemplate": {
+      "title": "HTML Template",
+      "description": "A manually uploaded HTML template for hosting",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the template slug"
+        },
+        "name": {
+          "type": "string",
+          "description": "User-friendly name"
+        },
+        "htmlContent": {
+          "type": "string",
+          "description": "The raw HTML content"
+        },
+        "cssContent": {
+          "type": "string",
+          "description": "Optional CSS for the template"
+        },
+        "jsContent": {
+          "type": "string",
+          "description": "Optional JS for the template"
+        },
+        "category": {
+          "type": "string",
+          "description": "e.g. Birthday, Wish, Landing Page"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "htmlContent",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/templates/{templateId}": {
+      "schema": "HtmlTemplate",
+      "description": "Collection of hosted HTML templates"
+    },
+    "/site/{docId}": {
+      "schema": "object",
+      "description": "Production website details and live systems maintenance controls"
+    },
+    "/maintenance/{docId}": {
+      "schema": "object",
+      "description": "Global website maintenance controls and maintenanceMode state"
+    },
+    "/dih_v3_users/{docId}": {
+      "schema": "object",
+      "description": "Database of registered suite users"
+    },
+    "/dih_v3_settings/{docId}": {
+      "schema": "object",
+      "description": "Global custom backup settings"
+    },
+    "/dih_v3_store/{docId}": {
+      "schema": "object",
+      "description": "App store item catalog"
+    },
+    "/dih_v3_logs/{docId}": {
+      "schema": "object",
+      "description": "Activity audit logs"
+    },
+    "/dih_v3_migrations/{docId}": {
+      "schema": "object",
+      "description": "Data and schema migration tracking records"
+    },
+    "/dih_v3_hostinger/{docId}": {
+      "schema": "object",
+      "description": "Hostinger dynamic site manager configurations"
+    },
+    "/users/{userId}": {
+      "schema": "object",
+      "description": "User profile with balance and subscription info"
+    },
+    "/test/{docId}": {
+      "schema": "object",
+      "description": "Test connection document"
+    }
+  }
+}
