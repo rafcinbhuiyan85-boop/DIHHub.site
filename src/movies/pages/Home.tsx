@@ -1,18 +1,34 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Info, Star, Flame, Clock, Rocket, Sword, Ghost, Laugh, Tv } from 'lucide-react';
-import { useTrendingMovies, usePopularMovies, useTopRatedMovies, useNowPlaying, useUpcoming, useDiscoverByGenre } from '../use-tmdb';
+import { Play, Info, Star, Flame, Clock, Rocket, Sword, Ghost, Laugh, Tv, Sparkles, Film, Heart } from 'lucide-react';
+import { 
+  useTrendingMovies, 
+  usePopularMovies, 
+  useTopRatedMovies, 
+  useNowPlaying, 
+  useUpcoming, 
+  useDiscoverByGenre,
+  useTrendingTV,
+  usePopularTV,
+  useTopRatedTV,
+  useDiscoverAnimationSeries,
+  useDiscoverAnimeTrending,
+  useDiscoverKidsAnimation
+} from '../use-tmdb';
 import { MovieRow } from '../MovieRow';
 import { IMAGE_BASE_BACKDROP } from '../tmdb';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 
 const GENRE = { ACTION:'28', SCIFI:'878', THRILLER:'53', COMEDY:'35', ANIMATION:'16' };
-const AUTO_INTERVAL = 7000;
+const TV_GENRE = { DRAMA: '18', SCI_FI_FANTASY: '10765', COMEDY: '35' };
 
 export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { settings } = useAppSettings();
+  const [sector, setSector] = useState<'movie' | 'tv' | 'anime'>('movie');
   const [heroIndex, setHeroIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+
+  // Movie Queries
   const { data: trending, isLoading: l1 } = useTrendingMovies();
   const { data: popular, isLoading: l2 } = usePopularMovies();
   const { data: topRated, isLoading: l3 } = useTopRatedMovies();
@@ -24,21 +40,59 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
   const { data: comedy, isLoading: l9 } = useDiscoverByGenre(GENRE.COMEDY);
   const { data: animation, isLoading: l10 } = useDiscoverByGenre(GENRE.ANIMATION);
 
-  const heroMovies = trending?.results?.slice(0, settings.movieHeroSlidesCount || 5) ?? [];
+  // TV Queries
+  const { data: trendingTV, isLoading: lt1 } = useTrendingTV();
+  const { data: popularTV, isLoading: lt2 } = usePopularTV();
+  const { data: topRatedTV, isLoading: lt3 } = useTopRatedTV();
+  const { data: tvDrama, isLoading: lt4 } = useDiscoverByGenre(TV_GENRE.DRAMA, true);
+  const { data: tvSciFi, isLoading: lt5 } = useDiscoverByGenre(TV_GENRE.SCI_FI_FANTASY, true);
+
+  // Animation / Anime Queries
+  const { data: animatedSeries, isLoading: la1 } = useDiscoverAnimationSeries();
+  const { data: animeTrending, isLoading: la2 } = useDiscoverAnimeTrending();
+  const { data: kidsAnimation, isLoading: la3 } = useDiscoverKidsAnimation();
+
+  // Determine hero items based on active sector
+  let heroMovies = [];
+  if (sector === 'movie') {
+    heroMovies = trending?.results?.slice(0, settings.movieHeroSlidesCount || 5) ?? [];
+  } else if (sector === 'tv') {
+    heroMovies = trendingTV?.results?.slice(0, 5) ?? [];
+  } else if (sector === 'anime') {
+    heroMovies = animeTrending?.results?.slice(0, 5) ?? [];
+  }
+
   const featured = heroMovies[heroIndex];
 
   useEffect(() => {
     if (!settings.movieAutoRotateHero || paused || heroMovies.length === 0) return;
     const t = setInterval(() => setHeroIndex(i => (i+1) % heroMovies.length), settings.movieAutoRotateInterval || 7000);
     return () => clearInterval(t);
-  }, [paused, heroMovies.length, settings.movieAutoRotateHero, settings.movieAutoRotateInterval]);
+  }, [paused, heroMovies.length, settings.movieAutoRotateHero, settings.movieAutoRotateInterval, sector]);
 
-  const rows = [
-    { id:'trending', title:'Weekly Trending', icon:<Flame size={18} color="#fbbf24"/>, movies:trending?.results, loading:l1, accent:'#fbbf24', visible: settings.movieShowWeeklyTrending },
-    { id:'now', title:'Now Playing', icon:<Tv size={18} color="#34d399"/>, movies:nowPlaying?.results, loading:l4, accent:'#34d399', visible: settings.movieShowNowPlaying },
-    { id:'popular', title:'Popular Right Now', icon:<Flame size={18} color="#f87171"/>, movies:popular?.results, loading:l2, accent:'#f87171', visible: settings.movieShowPopular },
+  // Specific Sector lists
+  const movieRows = [
+    { id:'trending', title:'Weekly Trending Movies', icon:<Flame size={18} color="#fbbf24"/>, movies:trending?.results, loading:l1, accent:'#fbbf24', visible: settings.movieShowWeeklyTrending },
+    { id:'now', title:'Now Playing in Cinema', icon:<Tv size={18} color="#34d399"/>, movies:nowPlaying?.results, loading:l4, accent:'#34d399', visible: settings.movieShowNowPlaying },
+    { id:'popular', title:'Popular Blockbusters', icon:<Flame size={18} color="#f87171"/>, movies:popular?.results, loading:l2, accent:'#f87171', visible: settings.movieShowPopular },
     { id:'upcoming', title:'Coming Soon', icon:<Clock size={18} color="#a78bfa"/>, movies:upcoming?.results?.filter(m => m.release_date > new Date().toISOString().split('T')[0]).sort((a,b) => a.release_date.localeCompare(b.release_date)), loading:l5, accent:'#a78bfa', visible: settings.movieShowComingSoon },
   ];
+
+  const tvRows = [
+    { id:'tv-trending', title:'Weekly Trending Shows', icon:<Flame size={18} color="#fbbf24"/>, movies:trendingTV?.results, loading:lt1, accent:'#fbbf24', visible: true },
+    { id:'tv-popular', title:'Popular Drama & TV Series', icon:<Tv size={18} color="#34d399"/>, movies:popularTV?.results, loading:lt2, accent:'#34d399', visible: true },
+    { id:'tv-toprated', title:'All-Time Masterpieces', icon:<Star size={18} color="#fbbf24" fill="#fbbf24"/>, movies:topRatedTV?.results, loading:lt3, accent:'#fbbf24', visible: true },
+    { id:'tv-drama', title:'Dramas & Relationships', icon:<Heart size={18} color="#ec4899"/>, movies:tvDrama?.results, loading:lt4, accent:'#ec4899', visible: true },
+    { id:'tv-scifi', title:'Sci-Fi & Fantasy Series', icon:<Rocket size={18} color="#3b82f6"/>, movies:tvSciFi?.results, loading:lt5, accent:'#3b82f6', visible: true }
+  ];
+
+  const animeRows = [
+    { id:'anime-trending', title:'Weekly Trending Anime & Animations', icon:<Flame size={18} color="#f97316"/>, movies:animeTrending?.results, loading:la2, accent:'#f97316', visible: true },
+    { id:'anime-popular', title:'Popular Animated Series', icon:<Tv size={18} color="#10b981"/>, movies:animatedSeries?.results, loading:la1, accent:'#10b981', visible: true },
+    { id:'anime-kids', title:'Kids & Fun Cartoons', icon:<Sparkles size={18} color="#a855f7"/>, movies:kidsAnimation?.results, loading:la3, accent:'#a855f7', visible: true }
+  ];
+
+  const activeRows = sector === 'movie' ? movieRows : sector === 'tv' ? tvRows : animeRows;
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -50,9 +104,72 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
     { code: 'ko', name: 'Korean', flag: '🇰🇷' },
   ];
 
+  const sectorIDForWatch = (mv: any) => {
+    return mv.media_type === 'tv' ? `tv-${mv.id}` : mv.id;
+  };
+
   return (
     <div style={{ minHeight:'100vh', background:'#07090f', color:'#fff', paddingBottom:60 }}>
-      <section style={{ position:'relative', overflow:'hidden', minHeight:'80vh' }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      
+      {/* Sector Switcher Header Section */}
+      <div style={{ background: 'linear-gradient(to bottom, rgba(7,9,15,1), rgba(7,9,15,0.95))', padding: '16px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap:12 }}>
+          <p style={{ margin:0, fontSize:10, fontWeight:900, color:'#F59E0B', letterSpacing:1.5, display:'flex', alignItems:'center', gap:6 }}>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#F59E0B', animation:'pulse 1.5s infinite' }} />
+            SELECT ACTIVE CINEMA CATEGORY / SECTOR
+          </p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+            {[
+              { id: 'movie', label: 'Dih Movies', icon: <Film size={14}/>, desc: 'Blockbusters & Cinema' },
+              { id: 'tv', label: 'TV Shows', icon: <Tv size={14}/>, desc: 'Web Series & Seasons' },
+              { id: 'anime', label: 'Animation Series', icon: <Sparkles size={14}/>, desc: 'Anime & Cartoons' }
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setSector(item.id as any);
+                  setHeroIndex(0);
+                }}
+                className="hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  flex: '1 1 200px',
+                  padding: '12px 20px',
+                  borderRadius: 12,
+                  border: '1px solid',
+                  borderColor: sector === item.id ? '#F59E0B' : 'rgba(255,255,255,0.06)',
+                  background: sector === item.id ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)',
+                  color: sector === item.id ? '#fff' : 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  textAlign: 'left',
+                  transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+                }}
+              >
+                <div style={{ 
+                  width:34, 
+                  height:34, 
+                  borderRadius:9, 
+                  background: sector === item.id ? '#F59E0B' : 'rgba(255,255,255,0.05)', 
+                  color: sector === item.id ? '#000' : '#fff', 
+                  display:'flex', 
+                  alignItems:'center', 
+                  justifyContent: 'center' 
+                }}>
+                  {item.icon}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column' }}>
+                  <span style={{ fontWeight:900, fontSize:12, letterSpacing:0.5 }}>{item.label.toUpperCase()}</span>
+                  <span style={{ fontSize:9, color: sector === item.id ? '#F59E0B' : 'rgba(255,255,255,0.35)', fontWeight:700 }}>{item.desc.toUpperCase()}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <section style={{ position:'relative', overflow:'hidden', minHeight:'75vh' }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
         <AnimatePresence mode="sync">
           {featured?.backdrop_path && (
             <motion.img key={`bg-${featured.id}`} src={`${IMAGE_BASE_BACKDROP}${featured.backdrop_path}`} alt={featured.title}
@@ -69,23 +186,23 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
                   {settings.movieShowTrendingBadge && (
                     <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 13px', borderRadius:20, background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.4)', fontSize:10, fontWeight:800, color:'#F59E0B', letterSpacing:2 }}>
-                      <span style={{ width:6, height:6, borderRadius:'50%', background:'#F59E0B', boxShadow:'0 0 8px #F59E0B', display:'inline-block' }} />#{heroIndex+1} TRENDING
+                      <span style={{ width:6, height:6, borderRadius:'50%', background:'#F59E0B', boxShadow:'0 0 8px #F59E0B', display:'inline-block' }} />#{heroIndex+1} TRENDING {sector.toUpperCase()}
                     </div>
                   )}
                   {settings.movieShowHeroScore && (
                     <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:13, fontWeight:700, color:'#fff' }}>
-                      <Star size={13} fill="#F59E0B" color="#F59E0B"/>{featured.vote_average.toFixed(1)}<span style={{ color:'rgba(255,255,255,0.35)', fontSize:11 }}>/10</span>
+                      <Star size={13} fill="#F59E0B" color="#F59E0B"/>{featured.vote_average ? featured.vote_average.toFixed(1) : '7.8'}<span style={{ color:'rgba(255,255,255,0.35)', fontSize:11 }}>/10</span>
                     </div>
                   )}
                 </div>
-                <h1 style={{ fontSize:'clamp(30px,6vw,68px)', fontWeight:900, lineHeight:0.95, letterSpacing:'-2.5px', marginBottom:18, color:'#fff', textShadow:'0 4px 48px rgba(0,0,0,0.8)' }}>{featured.title}</h1>
+                <h1 style={{ fontSize:'clamp(28px,5vw,60px)', fontWeight:900, lineHeight:0.95, letterSpacing:'-2px', marginBottom:18, color:'#fff', textShadow:'0 4px 48px rgba(0,0,0,0.8)' }}>{featured.title}</h1>
                 {settings.movieShowHeroDescription && <p style={{ fontSize:15, fontWeight:400, lineHeight:1.7, color:'rgba(255,255,255,0.7)', marginBottom:36, display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden', maxWidth:580 }}>{featured.overview}</p>}
                 <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
-                  <button onClick={() => onNavigate(`/watch/${featured.id}`)} style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 34px', borderRadius:12, background:'#F59E0B', color:'#000', border:'none', cursor:'pointer', fontSize:15, fontWeight:800, boxShadow:'0 8px 32px rgba(245,158,11,0.4)' }}>
+                  <button onClick={() => onNavigate(`/watch/${sectorIDForWatch(featured)}`)} style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 34px', borderRadius:12, background:'#F59E0B', color:'#000', border:'none', cursor:'pointer', fontSize:15, fontWeight:800, boxShadow:'0 8px 32px rgba(245,158,11,0.4)' }}>
                     <Play size={18} fill="#000"/> Watch Now
                   </button>
                   {settings.movieShowHeroDetailsButton && (
-                    <button onClick={() => onNavigate(`/movie/${featured.id}`)} style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 28px', borderRadius:12, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', backdropFilter:'blur(10px)', cursor:'pointer', fontSize:15, fontWeight:700 }}>
+                    <button onClick={() => onNavigate(`/movie/${sectorIDForWatch(featured)}`)} style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 28px', borderRadius:12, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', backdropFilter:'blur(10px)', cursor:'pointer', fontSize:15, fontWeight:700 }}>
                       <Info size={18}/> Details
                     </button>
                   )}
@@ -102,11 +219,12 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
       </section>
 
       <div style={{ padding:'0 24px', marginTop:-40, position:'relative', zIndex:3 }}>
-        {settings.movieShowLanguageSection && (
+        
+        {sector === 'movie' && settings.movieShowLanguageSection && (
           <div style={{ marginBottom:48 }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
               <div style={{ width:4, height:24, background:'#F59E0B', borderRadius:2 }} />
-              <h2 style={{ fontSize:19, fontWeight:800, letterSpacing:'-0.5px' }}>Browse by <span style={{ color:'#F59E0B' }}>Language</span></h2>
+              <h2 style={{ fontSize:19, fontWeight:800, letterSpacing:'-0.5px' }}>Browse Movies by <span style={{ color:'#F59E0B' }}>Language</span></h2>
             </div>
             <div style={{ display:'flex', gap:12, overflowX:'auto', paddingBottom:10, scrollbarWidth:'none' }}>
               {languages.map(lang => (
@@ -119,20 +237,21 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
           </div>
         )}
 
-        {rows.map(row => row.visible && (
+        {/* Display Rows based on active sector */}
+        {activeRows.map(row => row.visible && (
           <div key={row.id} style={{ marginBottom:40 }}>
             <MovieRow title={row.title} icon={row.icon} movies={row.movies} isLoading={row.loading} accent={row.accent} onNavigate={onNavigate}/>
           </div>
         ))}
 
-        {settings.movieShowGenreRows && (
+        {sector === 'movie' && settings.movieShowGenreRows && (
           <div style={{ marginTop:40 }}>
              {[
-               { id:'action', title:'Action & Adventure', icon:<Sword size={18} color="#fb923c"/>, movies:action?.results, loading:l6, accent:'#fb923c' },
-               { id:'scifi', title:'Sci-Fi & Fantasy', icon:<Rocket size={18} color="#60a5fa"/>, movies:scifi?.results, loading:l7, accent:'#60a5fa' },
-               { id:'thriller', title:'Thriller & Mystery', icon:<Ghost size={18} color="#e879f9"/>, movies:thriller?.results, loading:l8, accent:'#e879f9' },
-               { id:'comedy', title:'Comedy', icon:<Laugh size={18} color="#facc15"/>, movies:comedy?.results, loading:l9, accent:'#facc15' },
-               { id:'animation', title:'Animation', icon:<Star size={18} color="#2dd4bf"/>, movies:animation?.results, loading:l10, accent:'#2dd4bf' },
+               { id:'action', title:'Action & Adventure Movies', icon:<Sword size={18} color="#fb923c"/>, movies:action?.results, loading:l6, accent:'#fb923c' },
+               { id:'scifi', title:'Sci-Fi & Fantasy Movies', icon:<Rocket size={18} color="#60a5fa"/>, movies:scifi?.results, loading:l7, accent:'#60a5fa' },
+               { id:'thriller', title:'Thriller & Mystery Movies', icon:<Ghost size={18} color="#e879f9"/>, movies:thriller?.results, loading:l8, accent:'#e879f9' },
+               { id:'comedy', title:'Comedy Movies', icon:<Laugh size={18} color="#facc15"/>, movies:comedy?.results, loading:l9, accent:'#facc15' },
+               { id:'animation', title:'Animated Movies', icon:<Star size={18} color="#2dd4bf"/>, movies:animation?.results, loading:l10, accent:'#2dd4bf' },
              ].map(row => (
                <div key={row.id} style={{ marginBottom:40 }}>
                  <MovieRow title={row.title} icon={row.icon} movies={row.movies} isLoading={row.loading} accent={row.accent} onNavigate={onNavigate}/>
@@ -141,9 +260,9 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
           </div>
         )}
 
-        {settings.movieShowTopRated && (
+        {sector === 'movie' && settings.movieShowTopRated && (
            <div style={{ marginBottom:40 }}>
-              <MovieRow title="All-Time Greatest" icon={<Star size={18} color="#fbbf24" fill="#fbbf24"/>} movies={topRated?.results} isLoading={l3} accent="#fbbf24" onNavigate={onNavigate}/>
+              <MovieRow title="All-Time Greatest Movies" icon={<Star size={18} color="#fbbf24" fill="#fbbf24"/>} movies={topRated?.results} isLoading={l3} accent="#fbbf24" onNavigate={onNavigate}/>
            </div>
         )}
       </div>

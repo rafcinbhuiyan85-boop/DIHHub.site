@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2 } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
 
-type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'cut-downloader' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'temp-mail' | 'temp-sms' | 'mobile-bypass' | 'hosted-admin';
+type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'cut-downloader' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'temp-mail' | 'temp-sms' | 'mobile-bypass' | 'hosted-admin';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -32,6 +32,7 @@ const navItems = [
   { id: 'lib-encryptor' as ToolId, icon: Lock, label: 'Lib Protector' },
   { id: 'apk-store' as ToolId, icon: Package, label: 'APK Store' },
   { id: 'dih-movies' as ToolId, icon: Film, label: 'Dih Movies' },
+  { id: 'bachelor-point' as ToolId, icon: Tv, label: 'Bachelor Point S-5' },
   { id: 'temp-mail' as ToolId, icon: Mail, label: 'Temp Mail' },
   { id: 'temp-sms' as ToolId, icon: MessageSquare, label: 'Temp SMS' },
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
@@ -143,12 +144,14 @@ export default function Layout({
     .filter((item): item is typeof navItems[0] => !!item && item.id !== 'dashboard');
 
   const dihMoviesNavItem = unfilteredNavItems.find(i => i.id === 'dih-movies');
-  const otherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies');
+  const bachelorPointNavItem = unfilteredNavItems.find(i => i.id === 'bachelor-point');
+  const otherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies' && i.id !== 'bachelor-point');
 
   const filteredNavItems = [
     navItems.find(i => i.id === 'dashboard')!,
     ...otherNavItems,
-    ...(dihMoviesNavItem ? [dihMoviesNavItem] : [])
+    ...(dihMoviesNavItem ? [dihMoviesNavItem] : []),
+    ...(bachelorPointNavItem ? [bachelorPointNavItem] : [])
   ];
 
   return (
@@ -218,7 +221,7 @@ export default function Layout({
               const label = settings.toolLabels?.[item.id] || item.label;
               const isActive = activeTool === item.id;
               const isDisabled = settings.disabledTools?.includes(item.id);
-              const isDihMovies = item.id === 'dih-movies';
+              const isDihMovies = item.id === 'dih-movies' || item.id === 'bachelor-point';
 
               return (
                 <React.Fragment key={item.id}>

@@ -1,4 +1,11 @@
 import 'dotenv/config';
+import 'express';
+import 'cors';
+import 'multer';
+import 'axios';
+import '@google/genai';
+import 'firebase/app';
+import 'firebase/firestore';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, 
   UserSquare2, Download, Palette, ArrowRight, CreditCard, 
   ShieldAlert, Cpu, Package, Users, Star, Film, Smartphone,
-  FileArchive, RefreshCcw, Globe, Server, Volume2
+  FileArchive, RefreshCcw, Globe, Server, Volume2, Tv
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -33,6 +33,7 @@ const tools = [
   { id: 'dex-protector', icon: Cpu, label: 'DEX Protector', description: 'Binary DEX/APK encryption.', color: 'bg-red-600' },
   { id: 'apk-store', icon: Package, label: 'APK & Account Store', description: 'Premium APKs and Social Accounts.', color: 'bg-blue-600' },
   { id: 'dih-movies', icon: Film, label: 'Dih Movies', description: 'Exclusive Movie Experience by DIH TEMPLATE.', color: 'bg-indigo-600', isNew: true },
+  { id: 'bachelor-point', icon: Tv, label: 'Bachelor Point S-5', description: 'Manually managed high-fidelity exclusive streaming portal.', color: 'bg-red-600', isNew: true },
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
   { id: 'migration', icon: FileArchive, label: 'Migration Tool', description: 'Migrate your Replit projects by uploading a ZIP file.', color: 'bg-emerald-500', isNew: true },
   { id: 'hosted-admin', icon: Globe, label: 'DIH TEMPLATE', description: 'Share DIH templates with your favorite person.', color: 'bg-orange-500', isNew: true },
@@ -94,11 +95,13 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
   });
 
   const dihMoviesTool = unfilteredVisibleTools.find(t => t.id === 'dih-movies');
-  const otherVisibleTools = unfilteredVisibleTools.filter(t => t.id !== 'dih-movies');
+  const bachelorPointTool = unfilteredVisibleTools.find(t => t.id === 'bachelor-point');
+  const otherVisibleTools = unfilteredVisibleTools.filter(t => t.id !== 'dih-movies' && t.id !== 'bachelor-point');
 
   const visibleTools = [
     ...otherVisibleTools,
-    ...(dihMoviesTool ? [dihMoviesTool] : [])
+    ...(dihMoviesTool ? [dihMoviesTool] : []),
+    ...(bachelorPointTool ? [bachelorPointTool] : [])
   ];
 
   return (

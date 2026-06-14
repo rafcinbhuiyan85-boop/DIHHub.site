@@ -11,7 +11,7 @@ export function MovieCard({ movie, onNavigate }: MovieCardProps) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate(`/movie/${movie.id}`)}
+      onClick={() => onNavigate(`/movie/${movie.media_type === 'tv' ? 'tv-' + movie.id : movie.id}`)}
       style={{
         position:'relative', width:'100%', cursor:'pointer', borderRadius:12,
         overflow:'hidden', background:'#111',

@@ -33,8 +33,9 @@ import HostedTemplate from './pages/HostedTemplate';
 import DihMoviesApp from './movies/DihMoviesApp';
 import UnderMaintenance from './components/tools/UnderMaintenance';
 import TenminAI from './components/tools/TenminAI';
+import BachelorPoint from './components/tools/BachelorPoint';
 
-type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'temp-mail' | 'temp-sms' | 'cut-downloader' | 'mobile-bypass' | 'migration' | 'dih-movies' | 'hosted-admin';
+type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'temp-mail' | 'temp-sms' | 'cut-downloader' | 'mobile-bypass' | 'migration' | 'dih-movies' | 'bachelor-point' | 'hosted-admin';
 
 function MainApp() {
   const { settings } = useAppSettings();
@@ -143,6 +144,7 @@ function MainApp() {
       case 'img-to-base64': return <ImageToBase64 />;
       case 'mobile-bypass': return <MobileBypass />;
       case 'dih-movies': return <DihMoviesApp />;
+      case 'bachelor-point': return <BachelorPoint />;
       case 'hosted-admin': return <TemplatesGallery onBack={() => setActiveToolWithNavigation('dashboard')} />;
       case 'admin-login': return (
         <AdminLogin onLogin={() => {
