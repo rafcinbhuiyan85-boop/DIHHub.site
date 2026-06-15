@@ -42,7 +42,7 @@ export function MoviesDetail({ movieId, onNavigate, onBack }: { movieId: string;
           {settings.movieShowCastSection && movie.credits?.cast && movie.credits.cast.length > 0 && (
             <div style={{ marginTop:52 }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}><div style={{ width:4, height:22, borderRadius:2, background:'#a78bfa' }}/><h3 style={{ fontSize:19, fontWeight:800, color:'#fff', margin:0, fontFamily:"'Poppins', sans-serif" }}>Top Cast</h3></div>
-              <div style={{ display:'flex', gap:16, overflowX:'auto', paddingBottom:16, scrollbarWidth:'none' }}>
+              <div style={{ display:'flex', gap:16, overflowX:'auto', paddingBottom:16, scrollbarWidth:'none', WebkitOverflowScrolling:'touch' }}>
                 {movie.credits.cast.slice(0,12).map(person => (
                   <div key={person.id} onClick={() => settings.movieActorProfileEnabled && onNavigate(`/actor/${person.id}`)} style={{ flexShrink:0, width:100, textAlign:'center', cursor:settings.movieActorProfileEnabled?'pointer':'default' }}>
                     <div style={{ width:80, height:80, borderRadius:'50%', overflow:'hidden', margin:'0 auto 10px', border:'2px solid rgba(167,139,250,0.3)', background:'#1a1a2e' }}>

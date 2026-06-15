@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Info, Star, Flame, Clock, Rocket, Sword, Ghost, Laugh, Tv, Sparkles, Film, Heart } from 'lucide-react';
+import { Play, Info, Star, Flame, Clock, Rocket, Sword, Ghost, Laugh, Tv, Sparkles, Film, Heart, Cat } from 'lucide-react';
 import { 
   useTrendingMovies, 
   usePopularMovies, 
@@ -24,7 +24,33 @@ const TV_GENRE = { DRAMA: '18', SCI_FI_FANTASY: '10765', COMEDY: '35' };
 
 export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { settings } = useAppSettings();
-  const [sector, setSector] = useState<'movie' | 'tv' | 'anime'>('movie');
+  const [sector, setSector] = useState<'movie' | 'tv' | 'anime'>(() => {
+    const saved = localStorage.getItem('dih_movies_sector');
+    if (saved === 'movie' || saved === 'tv' || saved === 'anime') {
+      return saved as 'movie' | 'tv' | 'anime';
+    }
+    return 'movie';
+  });
+
+  useEffect(() => {
+    const handleSectorChanged = () => {
+      const saved = localStorage.getItem('dih_movies_sector');
+      if (saved === 'movie' || saved === 'tv' || saved === 'anime') {
+        setSector(saved as 'movie' | 'tv' | 'anime');
+      }
+    };
+    window.addEventListener('dih-movies-sector-changed', handleSectorChanged);
+    return () => {
+      window.removeEventListener('dih-movies-sector-changed', handleSectorChanged);
+    };
+  }, []);
+
+  const changeSector = (newSector: 'movie' | 'tv' | 'anime') => {
+    setSector(newSector);
+    localStorage.setItem('dih_movies_sector', newSector);
+    setHeroIndex(0);
+  };
+
   const [heroIndex, setHeroIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -111,64 +137,6 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
   return (
     <div style={{ minHeight:'100vh', background:'#07090f', color:'#fff', paddingBottom:60 }}>
       
-      {/* Sector Switcher Header Section */}
-      <div style={{ background: 'linear-gradient(to bottom, rgba(7,9,15,1), rgba(7,9,15,0.95))', padding: '16px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap:12 }}>
-          <p style={{ margin:0, fontSize:10, fontWeight:900, color:'#F59E0B', letterSpacing:1.5, display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'#F59E0B', animation:'pulse 1.5s infinite' }} />
-            SELECT ACTIVE CINEMA CATEGORY / SECTOR
-          </p>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-            {[
-              { id: 'movie', label: 'Dih Movies', icon: <Film size={14}/>, desc: 'Blockbusters & Cinema' },
-              { id: 'tv', label: 'TV Shows', icon: <Tv size={14}/>, desc: 'Web Series & Seasons' },
-              { id: 'anime', label: 'Animation Series', icon: <Sparkles size={14}/>, desc: 'Anime & Cartoons' }
-            ].map(item => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setSector(item.id as any);
-                  setHeroIndex(0);
-                }}
-                className="hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  flex: '1 1 200px',
-                  padding: '12px 20px',
-                  borderRadius: 12,
-                  border: '1px solid',
-                  borderColor: sector === item.id ? '#F59E0B' : 'rgba(255,255,255,0.06)',
-                  background: sector === item.id ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)',
-                  color: sector === item.id ? '#fff' : 'rgba(255,255,255,0.6)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  textAlign: 'left',
-                  transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
-                }}
-              >
-                <div style={{ 
-                  width:34, 
-                  height:34, 
-                  borderRadius:9, 
-                  background: sector === item.id ? '#F59E0B' : 'rgba(255,255,255,0.05)', 
-                  color: sector === item.id ? '#000' : '#fff', 
-                  display:'flex', 
-                  alignItems:'center', 
-                  justifyContent: 'center' 
-                }}>
-                  {item.icon}
-                </div>
-                <div style={{ display:'flex', flexDirection:'column' }}>
-                  <span style={{ fontWeight:900, fontSize:12, letterSpacing:0.5 }}>{item.label.toUpperCase()}</span>
-                  <span style={{ fontSize:9, color: sector === item.id ? '#F59E0B' : 'rgba(255,255,255,0.35)', fontWeight:700 }}>{item.desc.toUpperCase()}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <section style={{ position:'relative', overflow:'hidden', minHeight:'75vh' }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
         <AnimatePresence mode="sync">
           {featured?.backdrop_path && (
@@ -179,7 +147,7 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
         </AnimatePresence>
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,#07090f 0%,rgba(7,9,15,0.7) 45%,rgba(7,9,15,0.2) 100%)', zIndex:1 }} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right,#07090f 0%,rgba(7,9,15,0.5) 45%,transparent 100%)', zIndex:1 }} />
-        <div style={{ position:'absolute', inset:0, zIndex:2, display:'flex', flexDirection:'column', justifyContent:'flex-end', padding:'0 32px 80px' }}>
+        <div className="hero-content-container" style={{ position:'absolute', inset:0, zIndex:2, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
           <AnimatePresence mode="wait">
             {featured && (
               <motion.div key={`content-${featured.id}`} initial={{ opacity:0, x:-40 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:20 }} transition={{ duration:0.8, ease:[0.22,1,0.36,1] }} style={{ maxWidth:680 }}>
@@ -226,7 +194,7 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
               <div style={{ width:4, height:24, background:'#F59E0B', borderRadius:2 }} />
               <h2 style={{ fontSize:19, fontWeight:800, letterSpacing:'-0.5px' }}>Browse Movies by <span style={{ color:'#F59E0B' }}>Language</span></h2>
             </div>
-            <div style={{ display:'flex', gap:12, overflowX:'auto', paddingBottom:10, scrollbarWidth:'none' }}>
+            <div style={{ display:'flex', gap:12, overflowX:'auto', paddingBottom:10, scrollbarWidth:'none', WebkitOverflowScrolling:'touch' }}>
               {languages.map(lang => (
                 <button key={lang.code} onClick={() => onNavigate(`/search?with_original_language=${lang.code}`)} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:12, padding:'24px 32px', borderRadius:20, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', color:'#fff', cursor:'pointer', transition:'all 0.3s ease', minWidth:120 }}>
                   <span style={{ fontSize:32 }}>{lang.flag}</span>
@@ -266,7 +234,22 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
            </div>
         )}
       </div>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .hero-content-container {
+          padding: 0 16px 36px;
+        }
+        @media (min-width: 640px) {
+          .hero-content-container {
+            padding: 0 24px 60px;
+          }
+        }
+        @media (min-width: 1024px) {
+          .hero-content-container {
+            padding: 0 32px 80px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

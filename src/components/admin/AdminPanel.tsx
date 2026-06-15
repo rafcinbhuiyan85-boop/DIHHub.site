@@ -3,7 +3,8 @@ import {
   Settings, Key, Layers, Eye, EyeOff, Plus, 
   Trash2, Save, LogOut, ChevronRight, Activity, Menu,
   LayoutDashboard, Palette, QrCode, ShieldCheck, Download, Image, ShieldAlert, Cpu, Smartphone, Mail, MessageSquare, Film, Scissors, Cloud,
-  Users, ListFilter, Calendar, Clock, Upload, Package, Star, ArrowUp, ArrowDown, Layout, Calculator, RefreshCcw, Globe, Edit2, Code2, Settings2, ExternalLink, Zap, Search, X, Copy, Check, Shield, DollarSign, Rocket
+  Users, ListFilter, Calendar, Clock, Upload, Package, Star, ArrowUp, ArrowDown, Layout, Calculator, RefreshCcw, Globe, Edit2, Code2, Settings2, ExternalLink, Zap, Search, X, Copy, Check, Shield, DollarSign, Rocket,
+  Tv, Video
 } from 'lucide-react';
 import { 
   collection, 
@@ -21,6 +22,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { useAppSettings, Template, AppSettings, DEFAULT_SETTINGS } from '../../hooks/useAppSettings';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import BachelorPointManager from './BachelorPointManager';
 
 interface AdminPanelProps {
   onLogout: () => void;
@@ -54,9 +56,185 @@ interface HtmlTemplate {
   createdAt: any;
 }
 
+import bachelorPointS5Poster from '../../assets/images/bachelor_point_s5_premium_1781464542219.jpg';
+
+export interface BP_Category {
+  id: number;
+  name: string;
+}
+
+export interface BP_ContentItem {
+  id: number;
+  title: string;
+  description: string;
+  type: 'movie' | 'series' | 'short' | 'documentary';
+  poster_url: string;
+  video_url: string;
+  duration_minutes: number;
+  release_year: number;
+  category_id: number;
+  is_featured: boolean;
+  view_count: number;
+  poster_file_key?: string;
+  video_file_key?: string;
+}
+
+class BP_FileStorage {
+  private dbName = 'bachelor_point_db_v3';
+  private storeName = 'files';
+  private db: IDBDatabase | null = null;
+
+  async init(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName);
+        }
+      };
+    });
+  }
+
+  async saveFile(key: string, file: File | Blob): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.put(file, key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFile(key: string): Promise<Blob | null> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.get(key);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.delete(key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
+const bpFileStorage = new BP_FileStorage();
+const BP_STORAGE_KEY = 'bp_s5_custom_data_v2';
+
+const BP_INITIAL_CONTENTS: BP_ContentItem[] = [
+  {
+    id: 1,
+    title: 'Bachelor Point Season 5',
+    description: 'The beloved Bangla comedy series returns with a brand new season full of humor and heart from the bachelor boys of Dhaka.',
+    type: 'series',
+    poster_url: bachelorPointS5Poster,
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    duration_minutes: 25,
+    release_year: 2024,
+    category_id: 3,
+    is_featured: true,
+    view_count: 8520
+  },
+  {
+    id: 2,
+    title: 'Hawa',
+    description: 'A group of fishermen encounter a mysterious woman on their boat, leading to terrifying events in the deep sea.',
+    type: 'movie',
+    poster_url: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=400&h=600&fit=crop',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    duration_minutes: 132,
+    release_year: 2022,
+    category_id: 6,
+    is_featured: true,
+    view_count: 12050
+  },
+  {
+    id: 3,
+    title: 'Debi',
+    description: 'A psychological thriller about a woman who claims to be possessed, blurring the lines between faith, sanity, and science.',
+    type: 'movie',
+    poster_url: 'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    duration_minutes: 118,
+    release_year: 2018,
+    category_id: 4,
+    is_featured: false,
+    view_count: 6210
+  },
+  {
+    id: 4,
+    title: 'Mohanagar',
+    description: 'A gripping crime drama following a detective navigating the dark underbelly of Dhaka city within one intense night.',
+    type: 'series',
+    poster_url: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=600&fit=crop',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    duration_minutes: 40,
+    release_year: 2021,
+    category_id: 4,
+    is_featured: true,
+    view_count: 9815
+  },
+  {
+    id: 5,
+    title: 'Poran',
+    description: 'A young man falls in love while trying to escape the cycle of poverty and violent obsession in rural Bangladesh.',
+    type: 'movie',
+    poster_url: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&h=600&fit=crop',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+    duration_minutes: 140,
+    release_year: 2022,
+    category_id: 5,
+    is_featured: false,
+    view_count: 5120
+  },
+  {
+    id: 6,
+    title: 'Rickshaw Girl',
+    description: 'An inspiring drama following a young girl who fights social norms to ride a rickshaw and support her ailing family.',
+    type: 'documentary',
+    poster_url: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=600&fit=crop',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    duration_minutes: 85,
+    release_year: 2021,
+    category_id: 8,
+    is_featured: false,
+    view_count: 3450
+  },
+  {
+    id: 7,
+    title: 'Eid Special Short Film',
+    description: 'A heartwarming family short celebrating the reunion, laughter, and emotional attachment of modern relations.',
+    type: 'short',
+    poster_url: 'https://images.unsplash.com/photo-1504439904031-93ded9f93e4e?w=400&h=600&fit=crop',
+    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
+    duration_minutes: 18,
+    release_year: 2023,
+    category_id: 2,
+    is_featured: false,
+    view_count: 4730
+  }
+];
+
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const { settings, updateSettings, addTemplate, removeTemplate } = useAppSettings();
-  const [activeTab, setActiveTab] = useState<'tools' | 'templates' | 'store' | 'users' | 'general' | 'appearance' | 'dashboard' | 'dashboard-stats' | 'dashboard-counter' | 'dashboard-traffic' | 'api-keys' | 'api-systems' | 'api-payment' | 'config-video' | 'config-movies' | 'config-ai' | 'config-ads' | 'hosted-templates' | 'config-maintenance'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'tools' | 'templates' | 'store' | 'users' | 'general' | 'appearance' | 'dashboard' | 'dashboard-stats' | 'dashboard-counter' | 'dashboard-traffic' | 'api-keys' | 'api-systems' | 'api-payment' | 'config-video' | 'config-movies' | 'config-ai' | 'config-ads' | 'hosted-templates' | 'config-maintenance' | 'config-bachelor-point'>('dashboard');
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({ name: '', width: 800, height: 600, category: 'Custom' });
   
@@ -690,6 +868,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             { type: 'separator', label: 'Module Settings' },
             { id: 'config-video', icon: Download, label: 'Video Downloader' },
             { id: 'config-movies', icon: Film, label: 'Dih Movie Pro' },
+            { id: 'config-bachelor-point', icon: Film, label: 'Bachelor Point' },
             { id: 'config-utility', icon: Calculator, label: 'Utility Pro' },
             { id: 'config-ai', icon: Star, label: 'Advanced Engine Tools' },
             { id: 'config-ads', icon: MessageSquare, label: 'Ads Management' },
@@ -729,7 +908,9 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   />
                 )}
                 <div className="flex items-center gap-3 relative z-10">
-                  <tab.icon size={14} strokeWidth={isActive ? 2.5 : 2} className={cn(isActive ? "text-primary shadow-[0_0_10px_#00f2ff]" : "text-slate-600 group-hover:text-slate-400")} />
+                  {actualId !== 'config-bachelor-point' && (
+                    <tab.icon size={14} strokeWidth={isActive ? 2.5 : 2} className={cn(isActive ? "text-primary shadow-[0_0_10px_#00f2ff]" : "text-slate-600 group-hover:text-slate-400")} />
+                  )}
                   <span className={cn(
                     "text-[10px] font-bold tracking-tight uppercase transition-all",
                     isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300"
@@ -3136,6 +3317,12 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'config-bachelor-point' && (
+            <div className="animate-in fade-in duration-300">
+              <BachelorPointManager />
             </div>
           )}
 

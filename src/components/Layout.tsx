@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
@@ -32,7 +32,7 @@ const navItems = [
   { id: 'lib-encryptor' as ToolId, icon: Lock, label: 'Lib Protector' },
   { id: 'apk-store' as ToolId, icon: Package, label: 'APK Store' },
   { id: 'dih-movies' as ToolId, icon: Film, label: 'Dih Movies' },
-  { id: 'bachelor-point' as ToolId, icon: Tv, label: 'Bachelor Point S-5' },
+  { id: 'bachelor-point' as ToolId, icon: Film, label: 'Bachelor Point S-5' },
   { id: 'temp-mail' as ToolId, icon: Mail, label: 'Temp Mail' },
   { id: 'temp-sms' as ToolId, icon: MessageSquare, label: 'Temp SMS' },
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
@@ -62,6 +62,29 @@ export default function Layout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
+  const [currentMovieSector, setCurrentMovieSector] = useState<'movie' | 'tv' | 'anime'>(() => {
+    const saved = localStorage.getItem('dih_movies_sector');
+    return (saved === 'movie' || saved === 'tv' || saved === 'anime') ? (saved as any) : 'movie';
+  });
+
+  useEffect(() => {
+    const syncSector = () => {
+      const saved = localStorage.getItem('dih_movies_sector');
+      if (saved === 'movie' || saved === 'tv' || saved === 'anime') {
+        setCurrentMovieSector(saved as any);
+      }
+    };
+    window.addEventListener('dih-movies-sector-changed', syncSector);
+    return () => {
+      window.removeEventListener('dih-movies-sector-changed', syncSector);
+    };
+  }, []);
+
+  const changeSector = (sect: 'movie' | 'tv' | 'anime') => {
+    localStorage.setItem('dih_movies_sector', sect);
+    setCurrentMovieSector(sect);
+    window.dispatchEvent(new Event('dih-movies-sector-changed'));
+  };
 
   const handleLogoClick = () => {
     if (logoClicks >= 4) {
@@ -221,7 +244,9 @@ export default function Layout({
               const label = settings.toolLabels?.[item.id] || item.label;
               const isActive = activeTool === item.id;
               const isDisabled = settings.disabledTools?.includes(item.id);
-              const isDihMovies = item.id === 'dih-movies' || item.id === 'bachelor-point';
+              const isDihMovies = item.id === 'dih-movies';
+              const isBachelorPoint = item.id === 'bachelor-point';
+              const isStreamingTool = isDihMovies || isBachelorPoint;
 
               return (
                 <React.Fragment key={item.id}>
@@ -233,9 +258,22 @@ export default function Layout({
                       </p>
                     </div>
                   )}
+
+                  {isBachelorPoint && (
+                    <div className="px-3 pt-4 pb-1 mt-2">
+                      <p className="text-[9px] font-black tracking-[0.2em] text-rose-500 dark:text-rose-400 uppercase flex items-center gap-1.5 select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(229,23,63,0.6)]" />
+                        BANGLA COMEDY
+                      </p>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => {
                       setActiveTool(item.id);
+                      if (isDihMovies) {
+                        changeSector('movie');
+                      }
                       if (window.innerWidth < 768) setIsSidebarOpen(false);
                     }}
                     className={cn(
@@ -244,14 +282,24 @@ export default function Layout({
                         ? isActive
                           ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 text-slate-950 font-black shadow-lg shadow-amber-500/30 scale-[1.01]"
                           : "text-amber-700 dark:text-amber-300/90 hover:text-amber-600 dark:hover:text-amber-200 bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/5 dark:hover:bg-amber-500/15 border border-amber-500/10 hover:border-amber-500/30 font-extrabold hover:translate-x-1"
-                        : isActive 
-                          ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
-                          : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
+                        : isBachelorPoint
+                          ? isActive
+                            ? "bg-[#e5173f] text-white font-black shadow-lg shadow-[#e5173f]/40 scale-[1.01]"
+                            : "text-rose-700 dark:text-rose-300 hover:text-rose-650 dark:hover:text-rose-200 bg-rose-500/5 hover:bg-rose-500/10 dark:bg-rose-500/5 dark:hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 font-extrabold hover:translate-x-1"
+                          : isActive 
+                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
+                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
                       isDisabled && !isActive && "opacity-75 hover:opacity-100 text-rose-600/80 dark:text-rose-500/80 hover:text-rose-600 dark:hover:text-rose-500 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10"
                     )}
                   >
-                    <item.icon size={14} className={cn("transition-transform", isActive ? "scale-110" : "group-hover/item:scale-110", isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse")} />
-                    <span className={cn("flex-1 text-left truncate uppercase", isDihMovies && "tracking-wide")}>{label}</span>
+                    {!isBachelorPoint && (
+                      <item.icon size={14} className={cn(
+                        "transition-transform", 
+                        isActive ? "scale-110" : "group-hover/item:scale-110", 
+                        isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse"
+                      )} />
+                    )}
+                    <span className={cn("flex-1 text-left truncate uppercase", isStreamingTool && "tracking-wide")}>{label}</span>
                     {isDisabled ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.6)]" title="Under Management / Offline" />
                     ) : isDihMovies ? (
@@ -259,13 +307,67 @@ export default function Layout({
                         STREAM
                       </span>
                     ) : null}
-                    {isActive && !isDihMovies && (
+                    {isActive && !isStreamingTool && (
                       <motion.div 
                         layoutId="active-pill"
                         className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"
                       />
                     )}
                   </button>
+
+                  {isDihMovies && isActive && (
+                    <div className="mt-1 ml-3 pl-3.5 border-l border-amber-500/20 space-y-1.5 py-1">
+                      {[
+                        { id: 'tv' as const, label: 'TV SHOWS', desc: 'WEB SERIES & SEASONS', icon: Tv },
+                        { id: 'anime' as const, label: 'ANIMATION SERIES', desc: 'ANIME & CARTOONS', icon: Cat },
+                      ].map(sub => {
+                        const isSubActive = currentMovieSector === sub.id;
+                        const SubIcon = sub.icon;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeSector(sub.id);
+                            }}
+                            className={cn(
+                              "w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 relative overflow-hidden group/subitem",
+                              isSubActive
+                                ? "bg-amber-500/10 border border-amber-500/30 text-amber-500 shadow-md shadow-amber-500/5 scale-[1.02]"
+                                : "text-slate-400 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-500/5 border border-transparent hover:border-amber-500/10 hover:translate-x-0.5"
+                            )}
+                          >
+                            <div className={cn(
+                              "p-1.5 rounded-md transition-colors",
+                              isSubActive ? "bg-amber-500/15" : "bg-slate-100 dark:bg-white/5 group-hover/subitem:bg-amber-500/10"
+                            )}>
+                              <SubIcon size={12} className={cn(
+                                isSubActive ? "text-amber-500" : "text-slate-500 dark:text-slate-400 group-hover/subitem:text-amber-500"
+                              )} />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className={cn(
+                                "text-[10px] uppercase font-black tracking-wide truncate",
+                                isSubActive ? "text-amber-400" : "text-slate-600 dark:text-slate-300 group-hover/subitem:text-amber-400"
+                              )}>
+                                {sub.label}
+                              </span>
+                              <span className="text-[7.5px] font-bold text-slate-400 dark:text-slate-500 tracking-wider truncate uppercase">
+                                {sub.desc}
+                              </span>
+                            </div>
+                            
+                            {isSubActive && (
+                              <motion.div
+                                layoutId="sub-active-line"
+                                className="absolute right-0 h-4 w-1 bg-amber-500 rounded-l-full"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </React.Fragment>
               );
             })}

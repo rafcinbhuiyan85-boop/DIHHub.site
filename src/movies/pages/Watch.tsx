@@ -13,6 +13,8 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [server, setServer] = useState('vidsrc.pm');
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!(document.fullscreenElement));
@@ -24,12 +26,6 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
     if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(() => {});
     else document.exitFullscreen().catch(() => {});
   };
-
-  // Find current season's episodes
-  // Filter out season 0 (specials) usually, or include them if selected.
-  const seasons = movie?.seasons ? movie.seasons.filter(s => s.season_number > 0) : [];
-  const currentSeasonData = seasons.find(s => s.season_number === season) || seasons[0];
-  const episodeCount = currentSeasonData?.episode_count || 20;
 
   const getEmbedUrl = () => {
     if (isTV) {
@@ -43,6 +39,42 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
     }
     return `https://${server}/embed/movie/${realId}`;
   };
+
+  const embedUrl = getEmbedUrl();
+
+  useEffect(() => {
+    let active = true;
+    const checkAvailability = async () => {
+      setIsChecking(true);
+      try {
+        const checkUrl = `/api/movies/check-available?url=${encodeURIComponent(embedUrl)}`;
+        const res = await fetch(checkUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (active) {
+            setIsAvailable(data.available !== false);
+          }
+        } else {
+          if (active) setIsAvailable(true);
+        }
+      } catch (err) {
+        if (active) setIsAvailable(true); // default to true on error so we don't block
+      } finally {
+        if (active) setIsChecking(false);
+      }
+    };
+
+    checkAvailability();
+    return () => {
+      active = false;
+    };
+  }, [embedUrl]);
+
+  // Find current season's episodes
+  // Filter out season 0 (specials) usually, or include them if selected.
+  const seasons = movie?.seasons ? movie.seasons.filter(s => s.season_number > 0) : [];
+  const currentSeasonData = seasons.find(s => s.season_number === season) || seasons[0];
+  const episodeCount = currentSeasonData?.episode_count || 20;
 
   return (
     <div ref={containerRef} style={{ position:'fixed', inset:0, background:'#000', display:'flex', flexDirection:'column', zIndex:9999 }}>
@@ -97,19 +129,7 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
           </div>
         )}
 
-        {/* Server Selector */}
-        <div style={{ display:'flex', alignItems:'center', gap:4, background:'rgba(255,255,255,0.04)', padding:'4px 8px', borderRadius:10, border:'1px solid rgba(255,255,255,0.08)' }}>
-          <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase' }}>Mirror:</span>
-          <select 
-            value={server} 
-            onChange={(e) => setServer(e.target.value)}
-            style={{ background:'#111', color:'#F59E0B', border:'none', borderRadius:6, padding:'2px 4px', fontSize:11, fontWeight:700, outline:'none', cursor:'pointer' }}
-          >
-            {['vidsrc.pm', 'vidsrc.to', 'vidsrc.cc', 'vidsrc.me', 'vidsrc.pro', 'vidsrc.net'].map(s => (
-              <option key={s} value={s}>{s.split('.')[0].toUpperCase()}</option>
-            ))}
-          </select>
-        </div>
+        {/* Server Selector hidden completely per request */}
 
         <button onClick={toggleFullscreen} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 14px', borderRadius:20, background:'linear-gradient(135deg,rgba(245,158,11,0.18),rgba(245,158,11,0.07))', border:'1px solid rgba(245,158,11,0.35)', fontSize:12, fontWeight:800, color:'#F59E0B', cursor:'pointer' }}>
           {isFullscreen ? <><Minimize2 size={12}/>Exit Fullscreen</> : <><Zap size={11} fill="#F59E0B"/>Ultra Server</>}
@@ -117,15 +137,28 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
       </div>
 
       {/* Embedded Iframe */}
-      <div style={{ flex:1, position:'relative', background:'#000' }}>
-        <iframe 
-          key={`${server}-${season}-${episode}-${realId}`}
-          src={getEmbedUrl()} 
-          style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:'none' }} 
-          allow="autoplay; picture-in-picture; encrypted-media" 
-          title={movie?.title ?? 'Player'} 
-          referrerPolicy="no-referrer"
-        />
+      <div style={{ flex:1, position:'relative', background:'#000', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        {isChecking ? (
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, color:'rgba(255,255,255,0.7)', fontFamily:'sans-serif' }}>
+            <div className="w-8 h-8 border-2 border-white/10 border-t-amber-500 rounded-full animate-spin" />
+            <span style={{ fontSize:10, fontWeight:800, letterSpacing:2, textTransform:'uppercase', color:'rgba(255,255,255,0.5)' }}>Connecting Stream...</span>
+          </div>
+        ) : !isAvailable ? (
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24, textAlign:'center' }}>
+            <span style={{ color:'#ffffff', fontSize:15, fontWeight:600, letterSpacing:'0.2px', fontFamily:'sans-serif' }}>
+              This media is unavailable at the moment.
+            </span>
+          </div>
+        ) : (
+          <iframe 
+            key={`${server}-${season}-${episode}-${realId}`}
+            src={getEmbedUrl()} 
+            style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:'none' }} 
+            allow="autoplay; picture-in-picture; encrypted-media" 
+            title={movie?.title ?? 'Player'} 
+            referrerPolicy="no-referrer"
+          />
+        )}
         <div style={{ position:'absolute', top:8, right:0, width:110, height:34, background:'#000', zIndex:30, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:12 }}>
           <span style={{ fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.85)' }}>DIH <span style={{ color:'#F59E0B' }}>CINEMA</span></span>
         </div>

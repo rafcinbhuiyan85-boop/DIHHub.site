@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MoviesHome } from './pages/Home';
 import { MoviesDetail } from './pages/MovieDetail';
@@ -37,6 +37,16 @@ function DihMoviesInner() {
   const [history, setHistory] = useState<string[]>(['/']);
   const currentPath = history[history.length - 1];
   const route = parseRoute(currentPath);
+
+  useEffect(() => {
+    const handleSectorChanged = () => {
+      setHistory(['/']);
+    };
+    window.addEventListener('dih-movies-sector-changed', handleSectorChanged);
+    return () => {
+      window.removeEventListener('dih-movies-sector-changed', handleSectorChanged);
+    };
+  }, []);
   
   const onNavigate = useCallback((path: string) => {
     if (path === history[history.length - 1]) return;

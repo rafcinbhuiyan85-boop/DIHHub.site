@@ -33,7 +33,7 @@ const tools = [
   { id: 'dex-protector', icon: Cpu, label: 'DEX Protector', description: 'Binary DEX/APK encryption.', color: 'bg-red-600' },
   { id: 'apk-store', icon: Package, label: 'APK & Account Store', description: 'Premium APKs and Social Accounts.', color: 'bg-blue-600' },
   { id: 'dih-movies', icon: Film, label: 'Dih Movies', description: 'Exclusive Movie Experience by DIH TEMPLATE.', color: 'bg-indigo-600', isNew: true },
-  { id: 'bachelor-point', icon: Tv, label: 'Bachelor Point S-5', description: 'Manually managed high-fidelity exclusive streaming portal.', color: 'bg-red-600', isNew: true },
+  { id: 'bachelor-point', icon: Film, label: 'Bachelor Point S-5', description: 'Manually managed high-fidelity exclusive streaming portal.', color: 'bg-red-600', isNew: true },
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
   { id: 'migration', icon: FileArchive, label: 'Migration Tool', description: 'Migrate your Replit projects by uploading a ZIP file.', color: 'bg-emerald-500', isNew: true },
   { id: 'hosted-admin', icon: Globe, label: 'DIH TEMPLATE', description: 'Share DIH templates with your favorite person.', color: 'bg-orange-500', isNew: true },
@@ -117,13 +117,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
             data-text={`${settings.appName.toUpperCase()}`}
           >
             <span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-slate-500 to-slate-900 dark:from-white dark:via-slate-400 dark:to-white">
-              {settings.appName.toUpperCase()} 
-              <span 
-                className="inline-block ml-2 font-thin text-slate-400 dark:text-slate-600 text-lg md:text-2xl align-middle tracking-widest opacity-50 text-glitch"
-                data-text={settings.appVersionLabel || 'SYS.V1'}
-              >
-                {settings.appVersionLabel || 'SYS.V1'}
-              </span>
+              {settings.appName.toUpperCase()}
             </span>
           </h2>
           <p className="text-[10px] md:text-xs font-black tracking-[0.2em] text-primary dark:text-indigo-400 uppercase select-none opacity-80">
@@ -207,6 +201,8 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
         {visibleTools.map((tool, idx) => {
           const label = settings.toolLabels?.[tool.id] || tool.label;
           const isDihMovies = tool.id === 'dih-movies';
+          const isBachelorPoint = tool.id === 'bachelor-point';
+
           return (
             <motion.button
               key={tool.id}
@@ -217,6 +213,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
               className={cn(
                 "group relative flex flex-col items-start p-4 md:p-5 bg-white/80 dark:bg-slate-900/40 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-white/5 hover:border-primary/50 transition-all duration-500 text-left overflow-hidden h-full min-h-[140px] md:min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1.5 cursor-pointer",
                 isDihMovies && "hover:border-amber-500/50 hover:shadow-amber-500/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-amber-500/[0.02]",
+                isBachelorPoint && "hover:border-rose-500/55 hover:shadow-rose-550/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-rose-500/[0.02]",
                 settings.disabledTools?.includes(tool.id) && "hover:border-rose-500/40 hover:shadow-rose-500/20",
                 settings.upcomingTools?.includes(tool.id) && "hover:border-violet-500/40 hover:shadow-violet-500/20",
                 settings.comingSoonTools?.includes(tool.id) && "hover:border-pink-500/40 hover:shadow-pink-500/20",
@@ -225,9 +222,9 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
             >
               {/* Premium Inner Radiance */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-                <div className={cn("absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50")} />
-                <div className={cn("absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50")} />
-                <div className={cn("absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.05),transparent_70%)]", isDihMovies && "bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.08),transparent_70%)]")} />
+                <div className={cn("absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50", isBachelorPoint && "via-rose-500/50")} />
+                <div className={cn("absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50", isBachelorPoint && "via-rose-500/50")} />
+                <div className={cn("absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.05),transparent_70%)]", isDihMovies && "bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.08),transparent_70%)]", isBachelorPoint && "bg-[radial-gradient(circle_at_50%_0%,rgba(244,63,94,0.08),transparent_70%)]")} />
               </div>
 
               {/* Dynamic Shine Streak */}
@@ -236,11 +233,11 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
               </div>
 
               {/* Technical Corner Brackets */}
-              <div className={cn("absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:-translate-x-1 group-hover:-translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : "border-primary/10 group-hover:border-primary/60")} />
-              <div className={cn("absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : "border-primary/10 group-hover:border-primary/60")} />
+              <div className={cn("absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:-translate-x-1 group-hover:-translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : isBachelorPoint ? "border-rose-500/25 group-hover:border-[#ff2b56]/80" : "border-primary/10 group-hover:border-primary/60")} />
+              <div className={cn("absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : isBachelorPoint ? "border-rose-500/25 group-hover:border-[#ff2b56]/80" : "border-primary/10 group-hover:border-primary/60")} />
 
               {/* Edge Light Effect */}
-              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", isDihMovies ? "from-amber-500/5 via-transparent to-transparent" : "from-primary/5 via-transparent to-transparent")} />
+              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", isDihMovies ? "from-amber-500/5 via-transparent to-transparent" : isBachelorPoint ? "from-rose-500/5 via-transparent to-transparent" : "from-primary/5 via-transparent to-transparent")} />
 
               {/* Holographic Overlay on Hover */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-1000 pointer-events-none hologram z-0" />
@@ -248,78 +245,90 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
               {/* Tool Accent Glow */}
               <div className={cn(
                 "absolute -right-6 -top-6 w-24 h-24 blur-[50px] opacity-0 group-hover:opacity-30 transition-opacity duration-700 rounded-full z-0",
-                isDihMovies ? "bg-amber-500" : tool.color
+                isDihMovies ? "bg-amber-500" : isBachelorPoint ? "bg-[#ff2b56]" : tool.color
               )} />
 
               <div className="relative z-10 w-full mb-auto flex flex-col items-start">
-                <div className={cn(
-                  "w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 shadow-2xl transition-all duration-700 relative ring-3 md:ring-4 ring-white/10 dark:ring-white/5 active:scale-95",
-                  isDihMovies
-                    ? "bg-gradient-to-br from-amber-500 via-yellow-400 to-orange-500 text-slate-950 shadow-amber-500/30 group-hover:scale-110 group-hover:shadow-amber-500/40"
-                    : cn(tool.color, "text-white shadow-current/30 group-hover:scale-110 group-hover:shadow-primary/40")
-                )}>
-                  <tool.icon size={18} className="md:w-5 md:h-5 group-hover:animate-pulse transition-transform" />
-                  {settings.disabledTools?.includes(tool.id) ? (
-                    <div className="absolute -top-2 -right-2 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] px-1.5 py-0.5 rounded-full z-20">
-                      <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
-                        <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                        OFFLINE
-                      </span>
-                    </div>
-                  ) : settings.upcomingTools?.includes(tool.id) ? (
-                    <div className="absolute -top-2 -right-2 bg-violet-600 shadow-[0_0_8px_rgba(139,92,246,0.6)] px-1.5 py-0.5 rounded-full z-20">
-                      <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
-                        <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                        ROADMAP
-                      </span>
-                    </div>
-                  ) : settings.comingSoonTools?.includes(tool.id) ? (
-                    <div className="absolute -top-2 -right-2 bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.6)] px-1.5 py-0.5 rounded-full z-20">
-                      <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
-                        <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                        SOON
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
+                {!isBachelorPoint && (
+                  <div className={cn(
+                    "w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 shadow-2xl transition-all duration-700 relative ring-3 md:ring-4 ring-white/10 dark:ring-white/5 active:scale-95",
+                    isDihMovies
+                      ? "bg-gradient-to-br from-amber-500 via-yellow-400 to-orange-500 text-slate-950 shadow-amber-500/30 group-hover:scale-110 group-hover:shadow-amber-500/40"
+                      : cn(tool.color, "text-white shadow-current/30 group-hover:scale-110 group-hover:shadow-primary/40")
+                  )}>
+                    <tool.icon size={18} className="md:w-5 md:h-5 group-hover:animate-pulse transition-transform" />
+                    {settings.disabledTools?.includes(tool.id) ? (
+                      <div className="absolute -top-2 -right-2 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] px-1.5 py-0.5 rounded-full z-20">
+                        <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
+                          <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                          OFFLINE
+                        </span>
+                      </div>
+                    ) : settings.upcomingTools?.includes(tool.id) ? (
+                      <div className="absolute -top-2 -right-2 bg-violet-600 shadow-[0_0_8px_rgba(139,92,246,0.6)] px-1.5 py-0.5 rounded-full z-20">
+                        <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
+                          <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                          ROADMAP
+                        </span>
+                      </div>
+                    ) : settings.comingSoonTools?.includes(tool.id) ? (
+                      <div className="absolute -top-2 -right-2 bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.6)] px-1.5 py-0.5 rounded-full z-20">
+                        <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
+                          <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                          SOON
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
                 
                 <h3 className={cn(
                   "font-black text-sm md:text-base mb-1 tracking-tighter transition-all duration-500 group-hover:translate-x-1",
                   isDihMovies
                     ? "text-amber-500 dark:text-amber-400 group-hover:text-amber-400 dark:group-hover:text-amber-300"
-                    : "text-slate-900 dark:text-white group-hover:text-primary"
+                    : isBachelorPoint
+                      ? "text-rose-550 dark:text-rose-400 group-hover:text-rose-500 dark:group-hover:text-rose-350"
+                      : "text-slate-900 dark:text-white group-hover:text-primary"
                 )}>
                   {label.toUpperCase()}
                 </h3>
-                <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs leading-snug font-medium line-clamp-2 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-500 max-w-[95%]">
-                  {settings.toolDescriptions?.[tool.id] || tool.description}
-                </p>
+                {!isBachelorPoint && (
+                  <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs leading-snug font-medium line-clamp-2 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-500 max-w-[95%]">
+                    {settings.toolDescriptions?.[tool.id] || tool.description}
+                  </p>
+                )}
               </div>
               
               <div className="relative z-10 mt-4 w-full flex items-center justify-between pt-3 border-t border-slate-200 dark:border-white/5 group-hover:border-primary/20 transition-colors duration-500">
                 <div className="flex flex-col">
-                  <span className={cn(
-                    "text-[8px] font-black tracking-[0.3em] uppercase transition-colors duration-500",
-                    isDihMovies ? "text-amber-500 group-hover:text-amber-400" : "text-slate-400 group-hover:text-primary"
-                  )}>
-                    {isDihMovies ? "VIP_PREMIER" : (settings.activeLinkLabel || 'Active_Link')}
-                  </span>
-                  <div className="flex gap-1 mt-1">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className={cn(
-                        "w-1 h-1 rounded-full transition-all duration-500", 
-                        i <= (idx % 5 + 1) 
-                          ? isDihMovies ? "bg-amber-500 group-hover:scale-125" : "bg-primary group-hover:scale-125"
-                          : "bg-slate-200 dark:bg-slate-800"
-                      )} />
-                    ))}
-                  </div>
+                  {!isBachelorPoint && (
+                    <>
+                      <span className={cn(
+                        "text-[8px] font-black tracking-[0.3em] uppercase transition-colors duration-500",
+                        isDihMovies ? "text-amber-500 group-hover:text-amber-400" : "text-slate-400 group-hover:text-primary"
+                      )}>
+                        {isDihMovies ? "VIP_PREMIER" : (settings.activeLinkLabel || 'Active_Link')}
+                      </span>
+                      <div className="flex gap-1 mt-1">
+                         {[1, 2, 3, 4, 5].map(i => (
+                          <div key={i} className={cn(
+                            "w-1 h-1 rounded-full transition-all duration-500", 
+                            i <= (idx % 5 + 1) 
+                              ? isDihMovies ? "bg-amber-500 group-hover:scale-125" : "bg-primary group-hover:scale-125"
+                              : "bg-slate-200 dark:bg-slate-800"
+                          )} />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className={cn(
                   "group/btn w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl border flex items-center justify-center transition-all duration-500 shadow-xl shadow-transparent active:scale-90 group-hover:-rotate-3",
                   isDihMovies
                     ? "border-amber-500/30 group-hover:bg-amber-500 group-hover:border-amber-500 group-hover:text-slate-950 group-hover:shadow-amber-500/40"
-                    : "border-slate-200 dark:border-white/10 group-hover:bg-primary group-hover:border-primary group-hover:text-white group-hover:shadow-primary/40"
+                    : isBachelorPoint
+                      ? "border-rose-500/30 group-hover:bg-[#e5173f] group-hover:border-[#e5173f] group-hover:text-white group-hover:shadow-rose-500/40"
+                      : "border-slate-200 dark:border-white/10 group-hover:bg-primary group-hover:border-primary group-hover:text-white group-hover:shadow-primary/40"
                 )}>
                   <ArrowRight size={13} className="md:w-4 md:h-4 group-hover/btn:translate-x-1 transition-transform duration-500" />
                 </div>

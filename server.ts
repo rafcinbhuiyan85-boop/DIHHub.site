@@ -1027,6 +1027,50 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     }
   });
 
+  // Check if embed url returns 404 or not found
+  app.get("/api/movies/check-available", async (req, res) => {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ available: true });
+    }
+
+    try {
+      console.log(`[Media Check] Verifying availability of: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        signal: AbortSignal.timeout(4000)
+      });
+
+      if (response.status === 404) {
+        console.log(`[Media Check] 404 Status - UNAVAILABLE: ${url}`);
+        return res.json({ available: false });
+      }
+
+      const text = await response.text();
+      // Look for indicators in HTML that video is not found/unavailable
+      if (
+        (text.includes("404") && (text.toLowerCase().includes("not found") || text.toLowerCase().includes("not_found") || text.toLowerCase().includes("unavailable"))) ||
+        text.toLowerCase().includes("content not found") ||
+        text.toLowerCase().includes("media is unavailable") ||
+        text.toLowerCase().includes("not found") && text.includes("404")
+      ) {
+        console.log(`[Media Check] Content indicators - UNAVAILABLE: ${url}`);
+        return res.json({ available: false });
+      }
+
+      console.log(`[Media Check] Available: ${url}`);
+      return res.json({ available: true });
+    } catch (err) {
+      // On timeout or block or server issue, default to true so we don't break genuine players
+      console.warn("[Media Check Error]", err);
+      return res.json({ available: true });
+    }
+  });
+
   // Streaming Availability API Integration (Keep RapidAPI key here)
   app.get("/api/movies/streaming/:type/:id", async (req, res) => {
     const { type, id } = req.params; // TMDB ID

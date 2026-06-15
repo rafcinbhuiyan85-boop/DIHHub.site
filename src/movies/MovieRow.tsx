@@ -28,7 +28,7 @@ export function MovieRow({ title, movies, isLoading, accent='#F59E0B', icon, onN
       <div style={{ position:'relative' }}>
         <div style={{ position:'absolute', left:0, top:0, bottom:0, width:32, background:'linear-gradient(to right,#07090f,transparent)', zIndex:10, pointerEvents:'none' }} />
         <div style={{ position:'absolute', right:0, top:0, bottom:0, width:32, background:'linear-gradient(to left,#07090f,transparent)', zIndex:10, pointerEvents:'none' }} />
-        <div ref={rowRef} style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns:'clamp(120px,38vw,175px)', gap:10, overflowX:'auto', padding:'6px 20px 12px', scrollbarWidth:'none' }}>
+        <div ref={rowRef} style={{ display:'grid', gridAutoFlow:'column', gridAutoColumns:'clamp(120px,38vw,175px)', gap:10, overflowX:'auto', padding:'6px 20px 12px', scrollbarWidth:'none', WebkitOverflowScrolling:'touch' }}>
           {isLoading ? Array.from({length:10}).map((_,i) => <MovieCardSkeleton key={i}/>) : movies?.map(m => <MovieCard key={m.id} movie={m} onNavigate={onNavigate}/>)}
         </div>
       </div>

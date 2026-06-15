@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, Info, Star, Flame, Clock, Tv, Sparkles, Film, Heart, 
-  Search, X, ChevronLeft, Trash2, Plus, RefreshCw, Layers, Check
+  Search, X, ChevronLeft, Trash2, Plus, RefreshCw, Layers, Check,
+  Upload, HardDrive, FileText, Video
 } from 'lucide-react';
+import bachelorPointS5Poster from '../../assets/images/bachelor_point_s5_premium_1781464542219.jpg';
 
 interface Category {
   id: number;
@@ -21,7 +23,68 @@ interface ContentItem {
   category_id: number;
   is_featured: boolean;
   view_count: number;
+  poster_file_key?: string;
+  video_file_key?: string;
 }
+
+// Helper for storing and retrieving files from IndexedDB
+class FileStorage {
+  private dbName = 'bachelor_point_db_v3';
+  private storeName = 'files';
+  private db: IDBDatabase | null = null;
+
+  async init(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName);
+        }
+      };
+    });
+  }
+
+  async saveFile(key: string, file: File | Blob): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.put(file, key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFile(key: string): Promise<Blob | null> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.get(key);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.delete(key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
+const fileStorage = new FileStorage();
 
 const STORAGE_KEY = 'bp_s5_custom_data_v2';
 
@@ -42,7 +105,7 @@ const INITIAL_CONTENTS: ContentItem[] = [
     title: 'Bachelor Point Season 5',
     description: 'The beloved Bangla comedy series returns with a brand new season full of humor and heart from the bachelor boys of Dhaka.',
     type: 'series',
-    poster_url: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400&h=600&fit=crop',
+    poster_url: bachelorPointS5Poster,
     video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     duration_minutes: 25,
     release_year: 2024,
@@ -154,11 +217,15 @@ export default function BachelorPoint() {
   const [fType, setFType] = useState<'movie' | 'series' | 'short' | 'documentary'>('movie');
   const [fCat, setFCat] = useState('');
   const [fDesc, setFDesc] = useState('');
-  const [fVideo, setFVideo] = useState('');
-  const [fPoster, setFPoster] = useState('');
   const [fYear, setFYear] = useState('');
   const [fDur, setFDur] = useState('');
   const [fFeat, setFFeat] = useState(false);
+
+  // File pick / upload states
+  const [fPosterFile, setFPosterFile] = useState<File | null>(null);
+  const [fVideoFile, setFVideoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
 
   // Notifications (Toasts)
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'ok' | 'err' }[]>([]);
@@ -166,19 +233,99 @@ export default function BachelorPoint() {
   // Video container reference for scrolling top
   const playerRef = useRef<HTMLVideoElement>(null);
 
-  // Load from LS on boot
+  // State for delete confirmation to avoid window.confirm in iframe sandbox
+  const [bDeletingId, setBDeletingId] = useState<number | null>(null);
+
+  // Load from LS on boot and keep synchronized
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.categories) setCategories(parsed.categories);
-        if (parsed.contents) setContents(parsed.contents);
+    const loadFromStorage = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.categories) setCategories(parsed.categories);
+          if (parsed.contents) {
+            // Force update the poster_url of Bachelor Point Season 5 (id: 1) if it's the old placeholder
+            const mapped = parsed.contents.map((item: any) => {
+              if (item.id === 1) {
+                return { ...item, poster_url: bachelorPointS5Poster };
+              }
+              return item;
+            });
+            setContents(mapped);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load custom streamer data', e);
       }
-    } catch (e) {
-      console.error('Failed to load custom streamer data', e);
-    }
+    };
+
+    loadFromStorage();
+    window.addEventListener('storage', loadFromStorage);
+    window.addEventListener('bp_storage_update', loadFromStorage);
+
+    return () => {
+      window.removeEventListener('storage', loadFromStorage);
+      window.removeEventListener('bp_storage_update', loadFromStorage);
+    };
   }, []);
+
+  // Load local media Blob URLs from IndexedDB
+  useEffect(() => {
+    let active = true;
+    const loadLocalMedia = async () => {
+      try {
+        const urls: Record<string, string> = {};
+        for (const item of contents) {
+          if (item.poster_file_key) {
+            const blob = await fileStorage.getFile(item.poster_file_key);
+            if (blob && active) {
+              urls[item.poster_file_key] = URL.createObjectURL(blob);
+            }
+          }
+          if (item.video_file_key) {
+            const blob = await fileStorage.getFile(item.video_file_key);
+            if (blob && active) {
+              urls[item.video_file_key] = URL.createObjectURL(blob);
+            }
+          }
+        }
+        if (active) {
+          setLocalUrls(prev => {
+            // Revoke old object URLs to prevent memory leaks
+            Object.values(prev).forEach(url => {
+              const strUrl = url as string;
+              if (strUrl && strUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(strUrl);
+              }
+            });
+            return urls;
+          });
+        }
+      } catch (e) {
+        console.error('Error loading local IndexedDB media:', e);
+      }
+    };
+    loadLocalMedia();
+
+    return () => {
+      active = false;
+    };
+  }, [contents]);
+
+  const getPosterUrl = (item: ContentItem) => {
+    if (item.poster_file_key && localUrls[item.poster_file_key]) {
+      return localUrls[item.poster_file_key];
+    }
+    return item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop';
+  };
+
+  const getVideoUrl = (item: ContentItem) => {
+    if (item.video_file_key && localUrls[item.video_file_key]) {
+      return localUrls[item.video_file_key];
+    }
+    return item.video_url;
+  };
 
   // Save to LS whenever data changes
   const saveData = (nextCats: Category[], nextItems: ContentItem[]) => {
@@ -187,6 +334,7 @@ export default function BachelorPoint() {
         categories: nextCats,
         contents: nextItems
       }));
+      window.dispatchEvent(new Event('bp_storage_update'));
     } catch (e) {
       console.error('Failed to persist custom streamer data', e);
     }
@@ -251,49 +399,88 @@ export default function BachelorPoint() {
     setShowCatModal(false);
   };
 
-  const handleAddContent = (e: React.FormEvent) => {
+  const handleAddContent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fTitle.trim() || !fVideo.trim()) {
-      showToast('Please fill out all required fields marked with *', 'err');
+    if (!fTitle.trim()) {
+      showToast('Please fill out Title', 'err');
       return;
     }
 
-    const nextId = Math.max(0, ...contents.map(c => c.id)) + 1;
-    const newItem: ContentItem = {
-      id: nextId,
-      title: fTitle.trim(),
-      type: fType,
-      video_url: fVideo.trim(),
-      description: fDesc.trim() || 'No description provided.',
-      poster_url: fPoster.trim() || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop',
-      release_year: parseInt(fYear) || new Date().getFullYear(),
-      duration_minutes: parseInt(fDur) || 120,
-      category_id: parseInt(fCat) || 1,
-      is_featured: fFeat,
-      view_count: 0
-    };
+    if (!fVideoFile) {
+      showToast('Please select a video file from your device.', 'err');
+      return;
+    }
 
-    const updated = [newItem, ...contents];
-    setContents(updated);
-    saveData(categories, updated);
-    showToast(`Added "${fTitle}" successfully!`, 'ok');
+    setUploading(true);
+    try {
+      const nextId = Math.max(0, ...contents.map(c => c.id)) + 1;
+      let poster_file_key = '';
+      let video_file_key = '';
 
-    // Reset Form
-    setFTitle('');
-    setFType('movie');
-    setFCat('');
-    setFDesc('');
-    setFVideo('');
-    setFPoster('');
-    setFYear('');
-    setFDur('');
-    setFFeat(false);
+      if (fPosterFile) {
+        poster_file_key = `poster_${nextId}_${Date.now()}`;
+        await fileStorage.saveFile(poster_file_key, fPosterFile);
+      }
 
-    changeTab('admin');
+      if (fVideoFile) {
+        video_file_key = `video_${nextId}_${Date.now()}`;
+        await fileStorage.saveFile(video_file_key, fVideoFile);
+      }
+
+      const newItem: ContentItem = {
+        id: nextId,
+        title: fTitle.trim(),
+        type: fType,
+        video_url: '',
+        description: fDesc.trim() || 'No description provided.',
+        poster_url: '',
+        release_year: parseInt(fYear) || new Date().getFullYear(),
+        duration_minutes: parseInt(fDur) || 120,
+        category_id: parseInt(fCat) || 3, // Default to Comedy (Bengali Comedy starts here)
+        is_featured: fFeat,
+        view_count: 0
+      };
+
+      if (poster_file_key) newItem.poster_file_key = poster_file_key;
+      if (video_file_key) newItem.video_file_key = video_file_key;
+
+      const updated = [newItem, ...contents];
+      setContents(updated);
+      saveData(categories, updated);
+      showToast(`Added "${fTitle}" successfully!`, 'ok');
+
+      // Reset Form
+      setFTitle('');
+      setFType('movie');
+      setFCat('');
+      setFDesc('');
+      setFYear('');
+      setFDur('');
+      setFFeat(false);
+      setFPosterFile(null);
+      setFVideoFile(null);
+
+      changeTab('admin');
+    } catch (err) {
+      console.error(err);
+      showToast('Error uploading local files to device storage', 'err');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleDeleteContent = (id: number, title: string) => {
-    if (!window.confirm(`Are you absolutely sure you want to delete "${title}"?`)) return;
+  const handleDeleteContent = async (id: number, title: string) => {
+    // Attempt deleting associated offline storage keys
+    const item = contents.find(c => c.id === id);
+    if (item) {
+      if (item.poster_file_key) {
+        try { await fileStorage.deleteFile(item.poster_file_key); } catch(e) { console.error(e); }
+      }
+      if (item.video_file_key) {
+        try { await fileStorage.deleteFile(item.video_file_key); } catch(e) { console.error(e); }
+      }
+    }
+
     const updated = contents.filter(c => c.id !== id);
     setContents(updated);
     saveData(categories, updated);
@@ -310,7 +497,12 @@ export default function BachelorPoint() {
   const heroContent = featured[0] || contents[0];
 
   // Recently Added list
-  const recent = [...contents].sort((a,b) => b.id - a.id);
+  const recent = [...contents]
+    .sort((a,b) => b.id - a.id)
+    .filter(c => !searchQuery || c.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // User uploaded custom-only (Newly added items)
+  const newlyAddedOnly = recent.filter(item => item.id > 7 || !!item.poster_file_key || !!item.video_file_key);
 
   // Filters calculation
   const filteredBrowse = contents.filter(c => {
@@ -355,36 +547,13 @@ export default function BachelorPoint() {
       {/* Embedded Style Block to replicate custom HTML classes without conflict */}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
         
-        {/* Sub Navigation / Header modeled after selected template */}
-        <nav className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-4 border-b border-slate-900 sticky top-0 z-40 bg-[#07090f]/95 backdrop-blur-xl">
+        {/* Sub Navigation */}
+        <nav className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b border-slate-900 sticky top-0 z-40 bg-[#07090f]/95 backdrop-blur-xl">
           <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => changeTab('home')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#e5173f] to-[#ff2b56] flex items-center justify-center text-white shadow-lg shadow-red-500/20">
-              <Tv size={20} className="text-white" />
-            </div>
             <div>
+              <div className="text-[9px] font-black tracking-[0.2em] text-[#e5173f] uppercase">BANGLA COMEDY</div>
               <div className="text-sm font-black tracking-widest text-[#f5173f] uppercase">Bachelor Point S-5</div>
-              <div className="text-[9px] font-bold text-[#8888a8] uppercase tracking-[0.2em]">Manual Streaming Portal</div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2">
-            {[
-              { id: 'home', label: 'Home' },
-              { id: 'browse', label: 'Browse' },
-              { id: 'admin', label: 'Admin Panel' }
-            ].map(item => (
-              <button
-                key={item.id}
-                onClick={() => changeTab(item.id as any)}
-                className={`px-4 py-2 rounded-lg text-xs font-extrabold uppercase tracking-widest transition-all ${
-                  (activeTab === item.id || (item.id === 'admin' && activeTab === 'add'))
-                    ? 'bg-[#e5173f]/10 border border-[#e5173f]/30 text-[#e5173f] shadow-sm shadow-red-500/10'
-                    : 'text-[#8888a8] border border-transparent hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
           </div>
 
           <div className="relative w-full sm:w-[220px]">
@@ -395,8 +564,7 @@ export default function BachelorPoint() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setBrowseSearch(e.target.value);
-                setActiveTab('browse');
+                setActiveTab('home');
               }}
               className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none text-white focus:border-[#e5173f]/50 transition-all font-semibold"
             />
@@ -408,27 +576,18 @@ export default function BachelorPoint() {
           <div className="space-y-8 animate-[slideIn_0.3s_ease] select-none">
             
             {/* HERO BANNER */}
-            {heroContent ? (
+            {heroContent && !searchQuery ? (
               <div 
                 className="relative min-h-[460px] rounded-2xl md:rounded-3xl overflow-hidden border border-slate-900 bg-center bg-cover flex items-end shadow-2xl"
-                style={{ backgroundImage: `linear-gradient(to right, rgba(7,9,15,0.95) 45%, rgba(7,9,15,0.3) 100%), linear-gradient(to top, rgba(7,9,15,0.98) 10%, transparent 60%), url('${heroContent.poster_url}')` }}
+                style={{ backgroundImage: `linear-gradient(to right, rgba(7,9,15,0.95) 45%, rgba(7,9,15,0.3) 100%), linear-gradient(to top, rgba(7,9,15,0.98) 10%, transparent 60%), url('${getPosterUrl(heroContent)}')` }}
               >
                 <div className="p-6 md:p-12 max-w-xl space-y-4">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e5173f] text-white text-[9px] font-black uppercase tracking-widest rounded-md">
-                    <Sparkles size={11} fill="white" /> FEATURED CONTENT
-                  </div>
                   <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight drop-shadow-md">
                     {heroContent.title}
                   </h1>
                   <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-lg">
                     {heroContent.description}
                   </p>
-                  <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-400 font-extrabold uppercase">
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded border border-slate-800/80 text-white">{heroContent.release_year}</span>
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded border border-slate-800/80 text-[#e5173f]">{heroContent.duration_minutes} MIN</span>
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded border border-slate-800/80 text-orange-400">{getCategoryName(heroContent.category_id)}</span>
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded border border-slate-800/80 text-sky-400">{heroContent.view_count.toLocaleString()} VIEWS</span>
-                  </div>
                   
                   <div className="flex flex-wrap items-center gap-3 pt-2">
                     <button 
@@ -437,84 +596,43 @@ export default function BachelorPoint() {
                     >
                       <Play size={14} fill="white" /> Start Watching
                     </button>
-                    <button 
-                      onClick={() => changeTab('watch', heroContent.id)}
-                      className="inline-flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all active:scale-95"
-                    >
-                      <Info size={14} /> Full Information
-                    </button>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-20 bg-[#12121a] rounded-2xl border border-dashed border-slate-800">
-                <Film className="mx-auto text-slate-600 mb-3" size={36} />
-                <h3 className="text-sm font-black tracking-widest text-[#f0f0f5]">No streaming banners available.</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">Please visit the Admin Panel tab to upload and manage your video contents.</p>
-              </div>
-            )}
+            ) : null}
 
-            {/* CATEGORY CHIPS */}
-            <div className="space-y-3">
-              <div className="text-[10px] font-black tracking-[0.25em] text-[#8888a8] uppercase">Browse by Genre / Category</div>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => { setBrowseCat(''); changeTab('browse'); }}
-                  className="px-4 py-2 bg-slate-955 border border-slate-800 hover:border-slate-700 hover:text-white rounded-full text-xs font-extrabold text-[#8888a8] hover:bg-slate-900 transition-all uppercase"
-                >
-                  ✨ ALL RELEASES
-                </button>
-                {categories.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setBrowseCat(c.id.toString()); changeTab('browse'); }}
-                    className="px-4 py-2 bg-slate-950 border border-slate-800 hover:border-[#e5173f]/40 hover:text-[#e5173f] rounded-full text-xs font-extrabold text-[#8888a8] transition-all uppercase"
-                  >
-                    🚀 {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            {/* FEATURED / THEATER ROWS */}
-            {contents.length > 0 && (
+            {/* SECTION 1: NEWLY ADDED (CUSTOM NEW RELEASES ONLY) */}
+            {newlyAddedOnly.length > 0 && (
               <div className="space-y-5">
                 <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                   <h2 className="text-sm font-black tracking-widest uppercase text-white flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-[#e5173f] rounded-sm" /> Exclusive Spotlight
+                    <span className="w-1.5 h-6 bg-red-500 rounded-sm" /> Newly Uploaded (New Only)
                   </h2>
                 </div>
+                
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {contents.slice(0, 6).map(item => (
+                  {newlyAddedOnly.map(item => (
                     <div 
                       key={item.id}
                       onClick={() => changeTab('watch', item.id)}
-                      className="group cursor-pointer bg-slate-950 border border-slate-900 rounded-xl overflow-hidden hover:scale-105 active:scale-98 transition-all hover:shadow-2xl hover:shadow-[#e5173f]/10"
+                      className="group cursor-pointer bg-slate-950 border border-slate-905 rounded-xl overflow-hidden hover:scale-105 active:scale-98 transition-all hover:shadow-2xl hover:shadow-red-500/5"
                     >
                       <div className="aspect-[2/3] relative bg-[#12121a] overflow-hidden">
                         <img 
-                          src={item.poster_url} 
+                          src={getPosterUrl(item)} 
                           alt={item.title} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300">
-                          <div className="w-11 h-11 rounded-full bg-[#e5173f] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform duration-300 shadow-lg shadow-red-500/30">
+                          <div className="w-11 h-11 rounded-full bg-[#e5173f] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform duration-300 shadow-lg shadow-red-500/20">
                             <Play size={16} fill="white" className="text-white ml-0.5" />
                           </div>
                         </div>
-                        <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
-                          <span className="bg-[#e5173f] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
-                            {item.type}
-                          </span>
-                        </div>
                       </div>
-                      <div className="p-3 space-y-1">
-                        <div className="text-[11px] font-black text-[#f0f0f5] truncate uppercase tracking-tight group-hover:text-white">
+                      <div className="p-3">
+                        <div className="text-[11px] font-black text-[#f0f0f5] truncate uppercase tracking-tight">
                           {item.title}
-                        </div>
-                        <div className="flex items-center justify-between text-[9px] text-slate-500 font-extrabold">
-                          <span>{item.release_year}</span>
-                          <span>{item.duration_minutes} M</span>
                         </div>
                       </div>
                     </div>
@@ -523,22 +641,17 @@ export default function BachelorPoint() {
               </div>
             )}
 
-            {/* RECENTLY UPLOADED MANUAL RELEASES */}
-            <div className="space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-                <h2 className="text-sm font-black tracking-widest uppercase text-white flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-amber-500 rounded-sm" /> Recently Added
-                </h2>
-                <button onClick={() => changeTab('browse')} className="text-[11px] font-black tracking-widest text-[#8888a8] hover:text-[#e5173f] uppercase">
-                  View Catalogue &rarr;
-                </button>
-              </div>
-              
-              {contents.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-xs">No entries. Click Admin Panel to populate.</div>
-              ) : (
+            {/* SECTION 2: COMPLETE COLLECTION */}
+            {contents.length > 0 && (
+              <div className="space-y-5 pt-4">
+                <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                  <h2 className="text-sm font-black tracking-widest uppercase text-white flex items-center gap-2">
+                    <span className="w-1.5 h-6 bg-slate-500 rounded-sm" /> Complete Collection (Old + New)
+                  </h2>
+                </div>
+                
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {recent.slice(0, 12).map(item => (
+                  {recent.map(item => (
                     <div 
                       key={item.id}
                       onClick={() => changeTab('watch', item.id)}
@@ -546,35 +659,33 @@ export default function BachelorPoint() {
                     >
                       <div className="aspect-[2/3] relative bg-[#12121a] overflow-hidden">
                         <img 
-                          src={item.poster_url} 
+                          src={getPosterUrl(item)} 
                           alt={item.title} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300">
-                          <div className="w-11 h-11 rounded-full bg-[#e5173f] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                          <div className="w-11 h-11 rounded-full bg-slate-800 flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform duration-300">
                             <Play size={16} fill="white" className="text-white ml-0.5" />
                           </div>
                         </div>
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <span className="bg-slate-950/90 text-amber-400 border border-slate-800 font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
-                            {item.type}
-                          </span>
-                        </div>
+                        {(item.id > 7 || item.poster_file_key || item.video_file_key) && (
+                          <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1">
+                            <span className="bg-[#e5173f] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
+                              New
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className="p-3 space-y-1">
+                      <div className="p-3">
                         <div className="text-[11px] font-black text-[#f0f0f5] truncate uppercase tracking-tight">
                           {item.title}
-                        </div>
-                        <div className="flex items-center justify-between text-[9px] text-slate-500 font-extrabold">
-                          <span>{item.release_year}</span>
-                          <span>{item.duration_minutes} M</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
           </div>
         )}
@@ -631,7 +742,6 @@ export default function BachelorPoint() {
             {/* RESULTS GRID */}
             {filteredBrowse.length === 0 ? (
               <div className="text-center py-20 bg-slate-950 rounded-2xl border border-slate-900">
-                <Film className="mx-auto text-slate-600 mb-3" size={32} />
                 <h3 className="text-sm font-black text-slate-400 tracking-wider">No matches found.</h3>
                 <p className="text-xs text-slate-600 mt-1">Try resetting filters or adjusting search queries.</p>
               </div>
@@ -645,7 +755,7 @@ export default function BachelorPoint() {
                   >
                     <div className="aspect-[2/3] relative bg-[#12121a] overflow-hidden">
                       <img 
-                        src={item.poster_url} 
+                        src={getPosterUrl(item)} 
                         alt={item.title} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -654,19 +764,10 @@ export default function BachelorPoint() {
                           <Play size={16} fill="white" className="text-white ml-0.5" />
                         </div>
                       </div>
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <span className="bg-slate-950/90 text-sky-400 border border-slate-800/80 font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
-                          {getCategoryName(item.category_id)}
-                        </span>
-                      </div>
                     </div>
-                    <div className="p-3 space-y-1">
+                    <div className="p-3">
                       <div className="text-[11px] font-black text-[#f0f0f5] truncate uppercase tracking-tight">
                         {item.title}
-                      </div>
-                      <div className="flex items-center justify-between text-[9px] text-slate-500 font-extrabold">
-                        <span>{item.release_year}</span>
-                        <span>{item.duration_minutes} MIN</span>
                       </div>
                     </div>
                   </div>
@@ -689,14 +790,15 @@ export default function BachelorPoint() {
             {/* VIDEO BOX AND SCREEN */}
             <div className="bg-[#000] border border-slate-900 rounded-2xl overflow-hidden shadow-2xl relative">
               <video 
+                key={getVideoUrl(activeWatchItem)}
                 ref={playerRef}
                 controls 
                 autoPlay 
                 preload="metadata" 
-                poster={activeWatchItem.poster_url}
+                poster={getPosterUrl(activeWatchItem)}
                 className="w-full aspect-[16/9] max-h-[600px] object-contain"
               >
-                <source src={activeWatchItem.video_url} type="video/mp4" />
+                <source src={getVideoUrl(activeWatchItem)} type="video/mp4" />
                 Your browser does not support HTML5 video streaming. Please update browser protocols.
               </video>
               
@@ -707,43 +809,10 @@ export default function BachelorPoint() {
             </div>
 
             {/* INFORMATION AREA */}
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-900 space-y-4 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-900/60">
-                <h1 className="text-2xl font-black text-white uppercase tracking-wide leading-tight">
-                  {activeWatchItem.title}
-                </h1>
-                
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3.5 py-1 bg-[#e5173f]/10 border border-[#e5173f]/30 text-[#e5173f] text-[10px] font-black uppercase tracking-widest rounded-md">
-                    {activeWatchItem.type}
-                  </span>
-                  <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-md">
-                    ★ {getCategoryName(activeWatchItem.category_id)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-3 gap-4 text-xs font-extrabold uppercase tracking-wider text-slate-400">
-                <div className="bg-[#12121a]/60 p-3 rounded-xl border border-slate-900/60 flex flex-col gap-1">
-                  <span className="text-[8px] text-slate-500 font-black">Release Year</span>
-                  <span className="text-white text-xs font-black">{activeWatchItem.release_year}</span>
-                </div>
-                <div className="bg-[#12121a]/60 p-3 rounded-xl border border-slate-900/60 flex flex-col gap-1">
-                  <span className="text-[8px] text-slate-500 font-black">Duration Minutes</span>
-                  <span className="text-white text-xs font-black">{activeWatchItem.duration_minutes} min</span>
-                </div>
-                <div className="bg-[#12121a]/60 p-3 rounded-xl border border-slate-900/60 flex flex-col gap-1">
-                  <span className="text-[8px] text-slate-500 font-black">Total Views tracked</span>
-                  <span className="text-[#e5173f] text-xs font-black">{(activeWatchItem.view_count || 1).toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-2">
-                <div className="text-[10px] font-black tracking-widest uppercase text-[#8888a8]">Synopsis & Information</div>
-                <p className="text-slate-300 text-xs sm:text-sm font-semibold leading-relaxed">
-                  {activeWatchItem.description}
-                </p>
-              </div>
+            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-900 shadow-xl">
+              <h1 className="text-2xl font-black text-white uppercase tracking-wide leading-tight">
+                {activeWatchItem.title}
+              </h1>
             </div>
           </div>
         )}
@@ -795,11 +864,6 @@ export default function BachelorPoint() {
                     <thead>
                       <tr className="bg-[#12121a]/80 text-[#8888a8] font-black uppercase tracking-wider border-b border-slate-900">
                         <th className="p-3.5">Release Title</th>
-                        <th className="p-3.5">Format Type</th>
-                        <th className="p-3.5">Release Year</th>
-                        <th className="p-3.5">Genre</th>
-                        <th className="p-3.5">Tracking Views</th>
-                        <th className="p-3.5 text-center">Spotlight Featured</th>
                         <th className="p-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -807,27 +871,6 @@ export default function BachelorPoint() {
                       {contents.map(c => (
                         <tr key={c.id} className="hover:bg-[#12121a]/40 transition-colors">
                           <td className="p-3.5 max-w-[200px] truncate font-bold text-white uppercase">{c.title}</td>
-                          <td className="p-3.5">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
-                              c.type === 'movie' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 
-                              c.type === 'series' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                              'bg-[#e5173f]/10 text-[#e5173f] border border-[#e5173f]/20'
-                            }`}>
-                              {c.type}
-                            </span>
-                          </td>
-                          <td className="p-3.5 font-mono">{c.release_year}</td>
-                          <td className="p-3.5 text-slate-400">{getCategoryName(c.category_id)}</td>
-                          <td className="p-3.5 font-mono text-emerald-400">{c.view_count.toLocaleString()}</td>
-                          <td className="p-3.5 text-center">
-                            {c.is_featured ? (
-                              <span className="inline-flex items-center gap-1 bg-[#e5173f]/10 text-[#e5173f] border border-[#e5173f]/20 text-[9px] font-black px-2 py-0.5 rounded uppercase">
-                                <Check size={10} /> Active
-                              </span>
-                            ) : (
-                              <span className="text-slate-600 text-[10px]">—</span>
-                            )}
-                          </td>
                           <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
                             <button 
                               onClick={() => changeTab('watch', c.id)}
@@ -835,12 +878,30 @@ export default function BachelorPoint() {
                             >
                               Watch
                             </button>
-                            <button 
-                              onClick={() => handleDeleteContent(c.id, c.title)}
-                              className="px-2.5 py-1 bg-rose-950/40 border border-rose-500/15 text-rose-400 hover:bg-[#e5173f] hover:text-white rounded font-extrabold text-[10px] uppercase tracking-wider transition-all"
-                            >
-                              Delete
-                            </button>
+                            {bDeletingId === c.id ? (
+                              <button 
+                                onClick={() => {
+                                  handleDeleteContent(c.id, c.title);
+                                  setBDeletingId(null);
+                                }}
+                                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-black text-[10px] uppercase tracking-wider transition-all animate-pulse"
+                                title="Click again to confirm delete"
+                              >
+                                Confirm?
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => {
+                                  setBDeletingId(c.id);
+                                  setTimeout(() => {
+                                    setBDeletingId(current => current === c.id ? null : current);
+                                  }, 4000);
+                                }}
+                                className="px-2.5 py-1 bg-rose-950/40 border border-rose-500/15 text-rose-400 hover:bg-[#e5173f] hover:text-white rounded font-extrabold text-[10px] uppercase tracking-wider transition-all"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -869,131 +930,135 @@ export default function BachelorPoint() {
               </div>
 
               <form onSubmit={handleAddContent} className="space-y-5">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Release Title *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. Aynabaji"
-                      value={fTitle}
-                      onChange={(e) => setFTitle(e.target.value)}
-                      className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-semibold"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Content format block *</label>
-                    <select 
-                      value={fType}
-                      onChange={(e) => setFType(e.target.value as any)}
-                      className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none text-slate-400 font-bold uppercase cursor-pointer focus:border-[#e5173f]"
-                    >
-                      <option value="movie">Movie</option>
-                      <option value="series">TV Web Series</option>
-                      <option value="short">Short Film</option>
-                      <option value="documentary">Documentary</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Release Year</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g. 2024"
-                      value={fYear}
-                      onChange={(e) => setFYear(e.target.value)}
-                      className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-semibold"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Duration (Minutes)</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g. 132"
-                      value={fDur}
-                      onChange={(e) => setFDur(e.target.value)}
-                      className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-semibold"
-                    />
-                  </div>
-                </div>
-
-                {/* CATEGORIES dropdown with inline addition trigger */}
                 <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans">Content category genre</label>
-                    <button 
-                      type="button" 
-                      onClick={() => setShowCatModal(true)}
-                      className="text-[9px] font-black text-red-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-1"
-                    >
-                      + Add New Category
-                    </button>
-                  </div>
-                  <select 
-                    value={fCat}
-                    onChange={(e) => setFCat(e.target.value)}
-                    className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none text-slate-400 font-bold uppercase cursor-pointer focus:border-[#e5173f]"
-                  >
-                    <option value="">None / Select genre</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Video stream direct URL *</label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Release Title *</label>
                   <input 
-                    type="url" 
+                    type="text" 
                     required 
-                    placeholder="https://example.com/video_file.mp4"
-                    value={fVideo}
-                    onChange={(e) => setFVideo(e.target.value)}
-                    className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-mono"
-                  />
-                  <span className="text-[9px] font-bold text-slate-600 mt-0.5">DIRECT MP4, WEBM, OR COMPATIBLE HOSTED SECURE URLS REQUIRED.</span>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Poster illustration graphics URL</label>
-                  <input 
-                    type="url" 
-                    placeholder="https://images.unsplash.com/photo-..."
-                    value={fPoster}
-                    onChange={(e) => setFPoster(e.target.value)}
-                    className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f ] text-white font-mono"
-                  />
-                  <span className="text-[9px] font-bold text-slate-600 mt-0.5">vertical orientation graphics design works beautifully.</span>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">release description / synopsis</label>
-                  <textarea 
-                    placeholder="Brief explanation on plot details, actors, characters..."
-                    value={fDesc}
-                    onChange={(e) => setFDesc(e.target.value)}
-                    className="px-3 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white min-h-[90px] font-semibold"
+                    placeholder="e.g. Aynabaji"
+                    value={fTitle}
+                    onChange={(e) => setFTitle(e.target.value)}
+                    className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-semibold"
                   />
                 </div>
 
-                <div className="p-3.5 bg-[#12121a]/60 border border-slate-900 rounded-xl flex items-center justify-between hover:border-slate-800 transition-all select-none">
-                  <div>
-                    <div className="font-extrabold text-xs text-white uppercase">Feature on Homepage Banner</div>
-                    <div className="text-[9px] text-slate-500 font-bold uppercase mt-0.5">Toggle this block to trigger home page sliders</div>
+                 {/* LOCAL FILE UPLOADER FOR POSTER THUMBNAIL */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Poster Thumbnail Graphic (Optional)</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div 
+                      className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files[0];
+                        if (file && file.type.startsWith('image/')) {
+                          setFPosterFile(file);
+                        } else {
+                          showToast('Please upload an image file (PNG/JPG)', 'err');
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) setFPosterFile(file);
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Upload size={24} className="text-slate-500 mb-2" />
+                      <span className="text-[11px] font-extrabold text-white">Choose Image from Gallery</span>
+                      <span className="text-[9px] text-slate-500 font-bold mt-1 uppercase">or drag and drop thumbnail here</span>
+                    </div>
+
+                    <div className="bg-[#12121a]/60 border border-slate-900 rounded-xl p-4 flex items-center justify-center min-h-[140px]">
+                      {fPosterFile ? (
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-16 h-20 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 flex-shrink-0">
+                            <img src={URL.createObjectURL(fPosterFile)} alt="Poster preview" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                              <Check size={12} /> Local File Selected
+                            </div>
+                            <div className="text-xs font-bold text-white truncate mt-0.5">{fPosterFile.name}</div>
+                            <div className="text-[10px] text-slate-500 font-semibold mt-0.5 uppercase">{(fPosterFile.size / 1024 / 1024).toFixed(2)} MB</div>
+                            <button 
+                              type="button" 
+                              onClick={() => setFPosterFile(null)}
+                              className="text-[9px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-widest mt-2 flex items-center gap-1"
+                            >
+                              <X size={10} /> Clear selection
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-[#8888a8] text-[10px] font-bold uppercase tracking-wider">
+                          No poster file uploaded yet.
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer"
-                      checked={fFeat}
-                      onChange={(e) => setFFeat(e.target.checked)}
-                    />
-                    <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#e5173f] peer-checked:after:bg-white peer-checked:after:border-transparent"></div>
-                  </label>
+                </div>
+
+                {/* LOCAL FILE UPLOADER FOR VIDEO */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Video File Upload *</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div 
+                      className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files[0];
+                        if (file && file.type.startsWith('video/')) {
+                          setFVideoFile(file);
+                        } else {
+                          showToast('Please upload a video file (MP4/WebM)', 'err');
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'video/*';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) setFVideoFile(file);
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Video size={24} className="text-slate-500 mb-2" />
+                      <span className="text-[11px] font-extrabold text-white">Choose Video from Device</span>
+                      <span className="text-[9px] text-slate-500 font-bold mt-1 uppercase">or drag and drop video here</span>
+                    </div>
+
+                    <div className="bg-[#12121a]/60 border border-slate-900 rounded-xl p-4 flex items-center justify-center min-h-[140px]">
+                      {fVideoFile ? (
+                        <div className="w-full">
+                          <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                            <Check size={12} /> Video File Selected
+                          </div>
+                          <div className="text-xs font-bold text-white truncate mt-1">{fVideoFile.name}</div>
+                          <div className="text-[10px] text-slate-500 font-black mt-0.5 uppercase">{(fVideoFile.size / 1024 / 1024).toFixed(2)} MB</div>
+                          <button 
+                            type="button" 
+                            onClick={() => setFVideoFile(null)}
+                            className="text-[9px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-widest mt-2.5 flex items-center gap-1"
+                          >
+                            <X size={10} /> Clear selection
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-[#8888a8] text-[10px] font-bold uppercase tracking-wider">
+                          No video file uploaded yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-900">
