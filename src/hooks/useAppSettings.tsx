@@ -19,6 +19,8 @@ export interface AppSettings {
   visibleTools: string[];
   newTools: string[];
   newBadgeText: string;
+  faviconUrl?: string;
+  appLogoUrl?: string;
   toolLabels: Record<string, string>;
   toolDescriptions: Record<string, string>;
   bgRemoverApiKey: string;
@@ -153,6 +155,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   visibleTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin'],
   newTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin'],
   newBadgeText: 'NEW',
+  faviconUrl: '/favicon-dih.png',
+  appLogoUrl: '',
   toolLabels: {
     'tenmin-ai': '10Min AI Voice',
     'qr': 'QR Code Tools',
@@ -385,6 +389,18 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem('dh_v3_settings', JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    const faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+    const links = document.querySelectorAll("link[rel*='icon']");
+    links.forEach((link: any) => {
+      link.href = faviconUrl;
+    });
+    const appleLink = document.querySelector("link[rel='apple-touch-icon']") as any;
+    if (appleLink) {
+      appleLink.href = faviconUrl;
+    }
+  }, [settings.faviconUrl]);
 
   useEffect(() => {
     if (!isLoaded) return;

@@ -26,7 +26,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import AdsController from './components/AdsController';
 import Migration from './pages/Migration';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TemplatesGallery from './pages/TemplatesGallery';
 import AdminTemplates from './pages/AdminTemplates';
 import HostedTemplate from './pages/HostedTemplate';
@@ -40,6 +40,7 @@ type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'i
 function MainApp() {
   const { settings } = useAppSettings();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTool, setActiveTool] = useState<ToolId>('dashboard');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -61,11 +62,44 @@ function MainApp() {
     }
   }, []);
 
+  // Sync URL pathname -> activeTool on mount & path changes
   useEffect(() => {
-    if (window.location.pathname === '/admin' || window.location.pathname === '/admin-login') {
-      setActiveTool('admin-login');
+    const rawPath = location.pathname;
+    const cleanPath = rawPath.replace(/^\//, '').replace(/\/$/, '');
+    
+    // Ignore pages with their own custom routes
+    const ignorePaths = ['templates', 'movies', 'migration', 'payment'];
+    if (ignorePaths.some(p => cleanPath.startsWith(p)) || rawPath.startsWith('/t/')) {
+      return;
     }
-  }, []);
+
+    if (cleanPath === 'admin' || cleanPath === 'admin-login') {
+      setActiveTool('admin-login');
+      return;
+    }
+
+    if (cleanPath === 'admin-panel') {
+      setActiveTool('admin-panel');
+      return;
+    }
+
+    const toolIds: ToolId[] = [
+      'tenmin-ai', 'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
+      'passport', 'auto-passport', 'video', 'design-editor', 'lib-encryptor', 
+      'dex-protector', 'apk-store', 'temp-mail', 'temp-sms', 'cut-downloader', 
+      'mobile-bypass', 'dih-movies', 'bachelor-point', 'hosted-admin'
+    ];
+
+    if (toolIds.includes(cleanPath as ToolId)) {
+      if (activeTool !== cleanPath) {
+        setActiveTool(cleanPath as ToolId);
+      }
+    } else if (cleanPath === '') {
+      if (activeTool !== 'dashboard') {
+        setActiveTool('dashboard');
+      }
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('dihhub_user');
@@ -76,12 +110,18 @@ function MainApp() {
   const setActiveToolWithNavigation = (id: ToolId) => {
     if (id === 'migration') {
       navigate('/migration');
+    } else if (id === 'dih-movies') {
+      setActiveTool('dih-movies');
+      navigate('/dih-movies');
     } else if (id === 'hosted-admin') {
       setActiveTool('hosted-admin');
+      navigate('/hosted-admin');
+    } else if (id === 'dashboard') {
+      setActiveTool('dashboard');
       navigate('/');
     } else {
       setActiveTool(id);
-      if (id === 'dashboard') navigate('/');
+      navigate('/' + id);
     }
   };
 

@@ -2600,7 +2600,27 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      try {
+        const indexHtmlPath = path.join(distPath, 'index.html');
+        if (fs.existsSync(indexHtmlPath)) {
+          let html = fs.readFileSync(indexHtmlPath, 'utf8');
+          const settings = loadData(SETTINGS_FILE, {});
+          const faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+          const appName = settings.appName || 'DihHub';
+
+          // Dynamically override title and favicons
+          html = html.replace(/DihHub \| Official/g, `${appName} | Official`);
+          html = html.replace(/\/favicon\.png\?v=5/g, faviconUrl);
+          html = html.replace(/\/favicon\.ico\?v=5/g, faviconUrl);
+
+          res.setHeader('Content-Type', 'text/html');
+          res.send(html);
+        } else {
+          res.sendFile(indexHtmlPath);
+        }
+      } catch (err) {
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
     });
   }
 

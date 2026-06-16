@@ -861,6 +861,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
             { type: 'separator', label: 'App Configuration' },
             { id: 'appearance', icon: Palette, label: 'Branding & UI' },
+            { id: 'general', icon: Settings, label: 'General Configuration' },
             { id: 'dashboard-stats', icon: Activity, label: 'Dashboard Labels' },
             { id: 'dashboard-traffic', icon: Activity, label: 'Traffic Analysis' },
             { id: 'dashboard-counter', icon: Users, label: 'Live User Counter' },
@@ -2056,6 +2057,172 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                       className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:ring-1 focus:ring-blue-500 outline-none font-mono text-xs"
                       placeholder="https://example.com"
                     />
+                  </div>
+                  
+                  {/* Website Logo Section */}
+                  <div className="space-y-1.5 md:col-span-2 border-t border-slate-800/50 pt-4">
+                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Website Logo (Header Logo)</label>
+                    <div className="flex gap-4 items-center">
+                      <div className="w-16 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
+                        {settings.appLogoUrl ? (
+                          <img src={settings.appLogoUrl} className="max-w-full max-h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png' }} />
+                        ) : (
+                          <div className="text-[8px] text-center text-slate-500 uppercase tracking-widest font-black leading-none">
+                            Default Monogram
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={settings.appLogoUrl || ''}
+                            onChange={e => updateSettings({ appLogoUrl: e.target.value })}
+                            placeholder="Enter image URL or select a file to upload"
+                            className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono"
+                          />
+                          <label className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-[10px] uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-colors self-center shrink-0">
+                            <Upload size={12} />
+                            Upload Logo
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const formData = new FormData();
+                                formData.append('image', file);
+                                try {
+                                  const res = await fetch('/api/admin/upload-image', {
+                                    method: 'POST',
+                                    body: formData
+                                  });
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.url) {
+                                      updateSettings({ appLogoUrl: data.url });
+                                    }
+                                  } else {
+                                    alert('Failed to upload logo image');
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                  alert('Upload error');
+                                }
+                              }} 
+                            />
+                          </label>
+                        </div>
+                        <div className="flex gap-2 flex-wrap items-center">
+                          <button 
+                            type="button" 
+                            onClick={() => updateSettings({ appLogoUrl: '' })}
+                            className="text-[10px] font-bold text-red-400 hover:text-red-300"
+                          >
+                            Reset to Monogram (SVG)
+                          </button>
+                          <span className="text-slate-700 text-xs">•</span>
+                          <button 
+                            type="button" 
+                            onClick={() => updateSettings({ appLogoUrl: '/logo.png' })}
+                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300"
+                          >
+                            Set '/logo.png'
+                          </button>
+                          <span className="text-slate-700 text-xs">•</span>
+                          <button 
+                            type="button" 
+                            onClick={() => updateSettings({ appLogoUrl: '/favicon-dih.png' })}
+                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300"
+                          >
+                            Set '/favicon-dih.png'
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Browser Tab Icon (Favicon) Section */}
+                  <div className="space-y-1.5 md:col-span-2 border-t border-slate-800/50 pt-4">
+                    <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Browser Tab Icon (Favicon URL)</label>
+                    <div className="flex gap-4 items-center">
+                      <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
+                        {settings.faviconUrl ? (
+                          <img src={settings.faviconUrl} className="w-8 h-8 object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/favicon-dih.png' }} />
+                        ) : (
+                          <span className="text-xs text-slate-600 font-bold">No Icon</span>
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={settings.faviconUrl || ''}
+                            onChange={e => updateSettings({ faviconUrl: e.target.value })}
+                            placeholder="/favicon-dih.png"
+                            className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono"
+                          />
+                          <label className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-[10px] uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-colors self-center shrink-0">
+                            <Upload size={12} />
+                            Upload Icon
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const formData = new FormData();
+                                formData.append('image', file);
+                                try {
+                                  const res = await fetch('/api/admin/upload-image', {
+                                    method: 'POST',
+                                    body: formData
+                                  });
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.url) {
+                                      updateSettings({ faviconUrl: data.url });
+                                    }
+                                  } else {
+                                    alert('Failed to upload favicon icon');
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                  alert('Upload error');
+                                }
+                              }} 
+                            />
+                          </label>
+                        </div>
+                        <div className="flex gap-2 flex-wrap items-center">
+                          <button 
+                            type="button" 
+                            onClick={() => updateSettings({ faviconUrl: '/favicon-dih.png' })}
+                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300"
+                          >
+                            Set DIH Logo
+                          </button>
+                          <span className="text-slate-700 text-xs">•</span>
+                          <button 
+                            type="button" 
+                            onClick={() => updateSettings({ faviconUrl: '/logo.png' })}
+                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300"
+                          >
+                            Set Alt Logo
+                          </button>
+                          <span className="text-slate-700 text-xs">•</span>
+                          <button 
+                            type="button" 
+                            onClick={() => updateSettings({ faviconUrl: '/favicon.png' })}
+                            className="text-[10px] font-bold text-blue-400 hover:text-blue-300"
+                          >
+                            Set Default Icon
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

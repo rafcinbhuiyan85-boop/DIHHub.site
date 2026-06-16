@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useAppSettings } from '../hooks/useAppSettings';
 
 interface DihLogoProps {
   small?: boolean;
@@ -8,6 +9,8 @@ interface DihLogoProps {
 }
 
 export default function DihLogo({ small = false, className = '', animateOnHover = true }: DihLogoProps) {
+  const { settings } = useAppSettings();
+
   // SVG drawing configuration
   const pathVariants = {
     hidden: { pathLength: 0, opacity: 0 },
@@ -50,16 +53,26 @@ export default function DihLogo({ small = false, className = '', animateOnHover 
       {...containerAnimations}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
-      <svg
-        viewBox="14 4 114 82"
-        className={small ? "w-10 h-7" : "w-16 h-12 sm:w-20 sm:h-16"}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          {/* Metallic Gold Primary Gradient */}
-          <linearGradient id="dih-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#d4af37" />
+      {settings.appLogoUrl ? (
+        <img 
+          src={settings.appLogoUrl} 
+          alt={settings.appName || "Logo"} 
+          className={small ? "h-6 w-auto object-contain" : "h-10 sm:h-12 w-auto object-contain"}
+          onError={(e) => {
+            (e.target as HTMLElement).style.display = 'none';
+          }}
+        />
+      ) : (
+        <svg
+          viewBox="14 4 114 82"
+          className={small ? "w-10 h-7" : "w-16 h-12 sm:w-20 sm:h-16"}
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            {/* Metallic Gold Primary Gradient */}
+            <linearGradient id="dih-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#d4af37" />
             <stop offset="25%" stopColor="#aa771c" />
             <stop offset="50%" stopColor="#fbf5b7" />
             <stop offset="75%" stopColor="#bf953f" />
@@ -254,6 +267,7 @@ export default function DihLogo({ small = false, className = '', animateOnHover 
           </g>
         )}
       </svg>
+      )}
     </motion.div>
   );
 }
