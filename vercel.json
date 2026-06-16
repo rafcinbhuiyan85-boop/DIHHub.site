@@ -4,7 +4,7 @@
   "trailingSlash": false,
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{dist/server.cjs,data/**,firebase-applet-config.json}"
+      "includeFiles": "{dist/server.cjs,dist/index.html,data/**,firebase-applet-config.json}"
     }
   },
   "rewrites": [
@@ -14,7 +14,7 @@
     },
     {
       "source": "/((?!api).*)",
-      "destination": "/index.html"
+      "destination": "/api"
     }
   ]
 }

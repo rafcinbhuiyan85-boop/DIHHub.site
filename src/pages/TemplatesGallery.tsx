@@ -43,12 +43,12 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
   const navigate = useNavigate();
 
   const categories = [
-    { id: 'ALL_SECTORS', label: '✨ ALL THEMES', icon: Compass },
-    { id: 'BIRTHDAY', label: '🎂 BIRTHDAY', icon: Cake },
-    { id: 'WISH', label: '💖 WISH', icon: Heart },
-    { id: 'LANDING', label: '🚀 LANDING', icon: Layout },
-    { id: 'GIFTS', label: '🎁 GIFTS', icon: Gift },
-    { id: 'OTHERS', label: '🌟 OTHERS', icon: Sparkles }
+    { id: 'ALL_SECTORS', label: 'All Designs', icon: Compass },
+    { id: 'BIRTHDAY', label: 'Birthday wishes', icon: Cake },
+    { id: 'WISH', label: 'Celebrations', icon: Heart },
+    { id: 'LANDING', label: 'Landing pages', icon: Layout },
+    { id: 'GIFTS', label: 'Event portals', icon: Gift },
+    { id: 'OTHERS', label: 'Branded links', icon: Sparkles }
   ];
 
   useEffect(() => {
@@ -81,50 +81,55 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
     const catLower = category?.toLowerCase();
     if (catLower === 'birthday' || name.toLowerCase().includes('birthday')) {
       return (
-        <div className="absolute inset-0 bg-gradient-to-tr from-pink-600/20 via-purple-600/10 to-amber-500/10 flex flex-col items-center justify-center p-4">
-          <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg mb-3">
-            <Cake className="text-pink-400 group-hover:scale-110 transition-transform duration-500 animate-bounce" size={32} />
+        <div className="absolute inset-0 bg-[#080b0f] flex flex-col items-center justify-center p-4">
+          <div className="absolute inset-0 bg-radial-gradient from-rose-500/10 via-transparent to-transparent opacity-50" />
+          <div className="relative w-16 h-16 flex items-center justify-center bg-rose-500/5 rounded-2xl border border-rose-500/10 shadow-inner mb-3 group-hover:scale-105 transition-transform duration-500">
+            <Cake className="text-rose-450" size={26} />
           </div>
-          <p className="text-[10px] font-black tracking-[0.2em] text-pink-400 uppercase">BIRTHDAY EDITION</p>
+          <p className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Birthday Card Template</p>
         </div>
       );
     }
     if (catLower === 'wish' || name.toLowerCase().includes('wish')) {
       return (
-        <div className="absolute inset-0 bg-gradient-to-tr from-rose-600/20 via-red-650/10 to-pink-500/10 flex flex-col items-center justify-center p-4">
-          <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg mb-3">
-            <Heart className="text-rose-400 animate-pulse group-hover:scale-110 transition-transform duration-500" size={32} fill="currentColor" />
+        <div className="absolute inset-0 bg-[#080b0f] flex flex-col items-center justify-center p-4">
+          <div className="absolute inset-0 bg-radial-gradient from-pink-500/10 via-transparent to-transparent opacity-50" />
+          <div className="relative w-16 h-16 flex items-center justify-center bg-pink-500/5 rounded-2xl border border-pink-500/10 shadow-inner mb-3 group-hover:scale-105 transition-transform duration-500">
+            <Heart className="text-pink-400" size={24} />
           </div>
-          <p className="text-[10px] font-black tracking-[0.2em] text-rose-400 uppercase">CELEBRATION WISH</p>
+          <p className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Greeting celebration</p>
         </div>
       );
     }
     if (catLower === 'landing' || name.toLowerCase().includes('landing') || name.toLowerCase().includes('page')) {
       return (
-        <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 via-indigo-650/10 to-teal-500/10 flex flex-col items-center justify-center p-4">
-          <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg mb-3">
-            <Layout className="text-blue-400 group-hover:rotate-6 transition-transform duration-500" size={32} />
+        <div className="absolute inset-0 bg-[#080b0f] flex flex-col items-center justify-center p-4">
+          <div className="absolute inset-0 bg-radial-gradient from-blue-500/10 via-transparent to-transparent opacity-50" />
+          <div className="relative w-16 h-16 flex items-center justify-center bg-blue-500/5 rounded-2xl border border-blue-500/10 shadow-inner mb-3 group-hover:scale-105 transition-transform duration-500">
+            <Layout className="text-blue-400" size={24} />
           </div>
-          <p className="text-[10px] font-black tracking-[0.2em] text-blue-400 uppercase">PREMIUM LANDING</p>
+          <p className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Professional Landing page</p>
         </div>
       );
     }
     if (catLower === 'gifts' || name.toLowerCase().includes('gift')) {
       return (
-        <div className="absolute inset-0 bg-gradient-to-tr from-amber-650/20 via-orange-600/10 to-yellow-500/10 flex flex-col items-center justify-center p-4">
-          <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg mb-3">
-            <Gift className="text-amber-400 group-hover:-translate-y-1 transition-transform duration-500" size={32} />
+        <div className="absolute inset-0 bg-[#080b0f] flex flex-col items-center justify-center p-4">
+          <div className="absolute inset-0 bg-radial-gradient from-amber-500/10 via-transparent to-transparent opacity-50" />
+          <div className="relative w-16 h-16 flex items-center justify-center bg-amber-500/5 rounded-2xl border border-amber-500/10 shadow-inner mb-3 group-hover:scale-105 transition-transform duration-500">
+            <Gift className="text-amber-400" size={24} />
           </div>
-          <p className="text-[10px] font-black tracking-[0.2em] text-amber-400 uppercase">GIFT SHOWCASE</p>
+          <p className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Digital Gift Box</p>
         </div>
       );
     }
     return (
-      <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 via-slate-900/30 to-blue-500/15 flex flex-col items-center justify-center p-4">
-        <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg mb-3">
-          <Sparkles className="text-purple-400 group-hover:rotate-12 transition-transform duration-500" size={32} />
+      <div className="absolute inset-0 bg-[#080b0f] flex flex-col items-center justify-center p-4">
+        <div className="absolute inset-0 bg-radial-gradient from-purple-500/10 via-transparent to-transparent opacity-50" />
+        <div className="relative w-16 h-16 flex items-center justify-center bg-purple-500/5 rounded-2xl border border-purple-500/10 shadow-inner mb-3 group-hover:scale-105 transition-transform duration-500">
+          <Sparkles className="text-purple-400" size={24} />
         </div>
-        <p className="text-[10px] font-black tracking-[0.2em] text-purple-400 uppercase">EXCLUSIVE TEMPLATE</p>
+        <p className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Exclusive Template</p>
       </div>
     );
   };
@@ -161,48 +166,44 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-10 lg:py-16">
         
         {/* Top Navbar / Back actions */}
-        <div className="flex items-center justify-between mb-12 pb-6 border-b border-slate-900/60">
+        <div className="flex items-center justify-between mb-16 pb-6 border-b border-slate-900/45">
           <div className="flex items-center gap-3">
             {onBack && (
               <button 
                 onClick={onBack}
-                className="group flex items-center justify-center gap-2 px-3.5 py-2 bg-slate-900/85 hover:bg-amber-500 text-[#8888a8] hover:text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 border border-slate-800/60 active:scale-95 shadow-md shadow-black/20"
+                className="group flex items-center justify-center gap-2 px-4 py-2 bg-slate-900/60 hover:bg-slate-800 text-slate-350 hover:text-white font-semibold text-xs rounded-xl transition-all duration-300 border border-slate-800/80 active:scale-95 shadow-sm"
               >
-                <ArrowLeft size={13} className="group-hover:-translate-x-1 transition-transform" />
-                Back
+                <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+                Return to Dashboard
               </button>
             )}
-            <span className="bg-amber-500/10 text-amber-400 text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">
-              PREMIUM VERIFIED
+            <span className="text-[10px] font-medium text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800/60">
+              Template Gallery
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              Central Server Active
+            <span className="text-xs text-slate-500 font-medium font-mono">
+              Ready to deploy
             </span>
           </div>
         </div>
 
         {/* Hero Header Section */}
-        <header className="mb-14 text-center sm:text-left space-y-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-500 uppercase tracking-[0.25em]">
-                <Crown size={14} className="text-amber-500" /> CREATIVE HQ SHOWROOM
-              </div>
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white uppercase italic leading-none drop-shadow-md">
-                DIH <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-450 via-amber-400 to-orange-500">TEMPLATE</span>
+        <header className="mb-14 text-left space-y-6">
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+            <div className="space-y-4 max-w-3xl">
+              <h1 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                DIH <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-205">Templates</span>
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium tracking-wide max-w-2xl">
-                Deploy and share beautifully sculpted templates with your special friends. Access {templates.length} manual high-fidelity nodes instantly.
+              <p className="text-sm text-slate-400 font-normal leading-relaxed max-w-xl">
+                Deploy, customize, and share elegant, responsive single-page web experiences designed for celebratory greetings, landing pages, and digital gifts.
               </p>
             </div>
             
-            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 px-6 py-4 rounded-2xl flex flex-col items-center sm:items-start gap-1 shadow-lg shadow-black/10">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">AVAILABLE RESOURCES</span>
-              <span className="text-3xl font-black text-white">{templates.length} <span className="text-xs text-amber-500 uppercase font-bold">Templates</span></span>
+            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/50 px-6 py-4 rounded-2xl flex flex-col items-center md:items-start gap-1 shadow-sm self-stretch md:self-auto justify-center min-w-[160px]">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TOTAL DESIGNS</span>
+              <span className="text-2xl font-bold text-white font-mono">{templates.length} <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider ml-1">Live</span></span>
             </div>
           </div>
         </header>
@@ -259,81 +260,56 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                 transition={{ duration: 0.35, delay: Math.min(idx * 0.04, 0.4) }}
                 className="group relative"
               >
-                {/* Premium Glow Container */}
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-purple-600/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-[8px] pointer-events-none" />
+                {/* Subtle soft gradient glow */}
+                <div className="absolute inset-0 bg-amber-500/[0.02] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 
-                {/* Glass Card */}
-                <div className="relative bg-slate-900/40 backdrop-blur-xl border border-slate-800 hover:border-amber-500/30 p-5 rounded-3xl h-full flex flex-col justify-between transition-all duration-500 shadow-md hover:shadow-2xl shadow-black/10 hover:shadow-amber-500/[0.04] hover:-translate-y-1.5">
+                {/* Modern Card */}
+                <div className="relative bg-[#0b0e14] border border-slate-800/80 hover:border-amber-500/20 p-5 rounded-2xl h-full flex flex-col justify-between transition-all duration-350 shadow-sm hover:shadow-md hover:-translate-y-1">
                   
-                  {/* Decorative Frame corner borders */}
-                  <div className="absolute top-4 left-4 w-3 h-3 border-t border-l border-slate-800 group-hover:border-amber-500/40 duration-350 transition-all rounded-tl-md" />
-                  <div className="absolute bottom-4 right-4 w-3 h-3 border-b border-r border-slate-800 group-hover:border-amber-500/40 duration-350 transition-all rounded-br-md" />
-
-                  {/* Card ID Bar */}
-                  <div className="flex items-center justify-between mb-5 font-black text-[9px] tracking-wider text-slate-500 border-b border-slate-900/80 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
-                      ID: {t.id.slice(0, 10).toUpperCase()}
-                    </div>
-                    <span className="text-[8px] px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-slate-500 font-mono">
-                      PRESETS_V2
+                  {/* Decorative Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] font-medium text-slate-500 font-mono">
+                      id: {t.id.slice(0, 8)}
+                    </span>
+                    <span className="text-[9px] px-2.5 py-0.5 bg-slate-900 border border-slate-800/60 rounded-full text-slate-400 font-semibold uppercase tracking-wider">
+                      {t.category || 'General'}
                     </span>
                   </div>
 
-                  {/* Decorative Arts Placeholder with responsive categories */}
-                  <div className="relative aspect-[16/10] w-full mb-5 bg-slate-950 rounded-2xl border border-slate-900 overflow-hidden group/viz">
-                    <div className="absolute inset-0 bg-[radial-gradient(#20293a_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.25]" />
+                  {/* Aesthetic Visual preview */}
+                  <div className="relative aspect-[16/10] w-full mb-4 bg-slate-950 rounded-xl border border-slate-900/60 overflow-hidden group/viz">
+                    <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:12px_12px] opacity-[0.2]" />
                     {getTemplateArt(t.category, t.name)}
-                    
-                    {/* Hover Glow Light Overlay */}
-                    <div className="absolute inset-y-0 -left-1/2 w-1/4 bg-white/5 skew-x-12 opacity-0 group-hover/viz:opacity-100 group-hover/viz:left-full duration-1000 transition-all ease-out pointer-events-none" />
                   </div>
 
                   {/* Content Area */}
                   <div className="space-y-4 flex-1 flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 text-[8px] font-black text-amber-500 tracking-[0.2em] uppercase">
-                        <Crown size={9} />
-                        THEME_ID_{t.id.slice(0, 4).toUpperCase()}
-                      </div>
-                      
-                      <h3 className="text-xl font-black text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors duration-300 leading-tight">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors duration-250 leading-snug">
                         {t.name}
                       </h3>
                     </div>
 
-                    <div className="space-y-3.5">
-                      {/* Specifications Block */}
-                      <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 font-semibold text-[8px] tracking-widest text-[#8888a8] bg-slate-950/80 p-3 rounded-xl border border-slate-900">
-                        <div className="flex items-center gap-1 uppercase">
-                          <span className="w-1 h-1 rounded-full bg-slate-700" /> CATEGORY: 
-                        </div>
-                        <div className="text-right text-white font-bold truncate max-w-[100px]">{t.category?.toUpperCase() || 'GENERAL'}</div>
-                        <div className="flex items-center gap-1 uppercase">
-                          <span className="w-1 h-1 rounded-full bg-slate-700" /> STATUS: 
-                        </div>
-                        <div className="text-right text-emerald-400 font-black">DEPLOYED</div>
-                      </div>
-
-                      {/* Launch and Copy Buttons */}
+                    <div className="space-y-3">
+                      {/* Actions */}
                       <div className="flex gap-2">
                         <button 
                           onClick={() => window.open(`/t/${t.id}`, '_blank')}
-                          className="flex-1 bg-white hover:bg-amber-500 text-slate-950 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 shadow-lg shadow-black/15 active:scale-95"
+                          className="flex-1 bg-slate-900 hover:bg-amber-500 text-slate-300 hover:text-slate-950 py-3 rounded-xl font-bold text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 border border-slate-800 hover:border-amber-500/25 active:scale-95"
                         >
-                          <ExternalLink size={12} strokeWidth={2} />
-                          Live Launch
+                          <ExternalLink size={13} />
+                          Launch Live
                         </button>
                         
                         <button 
                           onClick={(e) => handleCopyLink(e, t.id)}
                           className={cn(
-                            "w-12 h-12 rounded-xl border flex items-center justify-center transition-all duration-300",
+                            "w-11 h-11 rounded-xl border flex items-center justify-center transition-all duration-200 shrink-0",
                             copiedId === t.id 
-                              ? "bg-emerald-500/15 border-emerald-500 text-emerald-400" 
-                              : "bg-slate-950 border-slate-800/80 text-slate-500 hover:text-white hover:border-slate-700"
+                              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-450" 
+                              : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-705"
                           )}
-                          title="Copy direct share Link"
+                          title="Copy Link"
                         >
                           {copiedId === t.id ? <Check size={15} /> : <Copy size={15} />}
                         </button>
