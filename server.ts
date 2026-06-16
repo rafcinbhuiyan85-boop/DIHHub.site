@@ -21,13 +21,33 @@ try {
   _dirname = typeof __dirname !== 'undefined' ? __dirname : '';
 }
 
-// Simple Persistence
-const DATA_DIR = process.env.VERCEL ? '/tmp/data' : path.join(process.cwd(), 'data');
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+// Simple Persistence with automatic read-only filesystem check
+let DATA_DIR = path.join(process.cwd(), 'data');
+let UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
-if (process.env.VERCEL) {
+// Helper to check if a directory is writable, or create it
+function ensureDirectory(dir: string): boolean {
   try {
-    const srcDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    // Test write permission
+    const testFile = path.join(dir, '.test-write-' + Date.now());
+    fs.writeFileSync(testFile, 'test');
+    fs.unlinkSync(testFile);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+// Resilient setup
+if (process.env.VERCEL || !ensureDirectory(DATA_DIR)) {
+  console.log("⚠️ Standard data directory is not writable. Falling back to /tmp/data.");
+  DATA_DIR = '/tmp/data';
+  UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+  
+  try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
@@ -35,7 +55,8 @@ if (process.env.VERCEL) {
       fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
     
-    // Copy existing JSON database files if they don't exist in /tmp/data yet
+    // Copy existing JSON database files if they exist in source directory and not in /tmp/data yet
+    const srcDir = path.join(process.cwd(), 'data');
     const filesToCopy = ['settings.json', 'store.json', 'users.json', 'logs.json'];
     for (const f of filesToCopy) {
       const srcPath = path.join(srcDir, f);
@@ -46,14 +67,7 @@ if (process.env.VERCEL) {
       }
     }
   } catch (err) {
-    console.error("Vercel /tmp directory prep failed:", err);
-  }
-} else {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    console.error("Resilient /tmp directory prep failed:", err);
   }
 }
 
