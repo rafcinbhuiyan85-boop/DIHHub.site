@@ -86,11 +86,13 @@ const loadData = (file: string, defaultVal: any) => {
   }
 };
 
-const saveData = (file: string, data: any) => {
+const saveData = async (file: string, data: any) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
-  saveToCloud(file, data).catch((err) => {
+  try {
+    await saveToCloud(file, data);
+  } catch (err) {
     console.error("Cloud sync backup failed:", err);
-  });
+  }
 };
 
 let app: any;
@@ -122,7 +124,7 @@ async function startServer() {
 
   // --- USER & AUTH ENDPOINTS ---
 
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
     const { name, email, password } = req.body;
     const users = loadData(USERS_FILE, []);
     
@@ -142,11 +144,11 @@ async function startServer() {
     };
 
     users.push(newUser);
-    saveData(USERS_FILE, users);
+    await saveData(USERS_FILE, users);
     res.status(201).json({ status: 'ok', user: { id: newUser.id, name: newUser.name, email: newUser.email, balance: newUser.balance } });
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
     const users = loadData(USERS_FILE, []);
 
@@ -158,11 +160,11 @@ async function startServer() {
 
     user.lastActive = new Date().toISOString();
     user.status = 'active';
-    saveData(USERS_FILE, users);
+    await saveData(USERS_FILE, users);
     res.json({ status: 'ok', user: { id: user.id, name: user.name, email: user.email, balance: user.balance || 0 } });
   });
 
-  app.post("/api/auth/google", (req, res) => {
+  app.post("/api/auth/google", async (req, res) => {
     const { email, name } = req.body;
     const users = loadData(USERS_FILE, []);
     let user = users.find((u: any) => u.email === email);
@@ -173,7 +175,7 @@ async function startServer() {
       if (name && !user.name) {
         user.name = name;
       }
-      saveData(USERS_FILE, users);
+      await saveData(USERS_FILE, users);
       return res.json({ status: 'ok', user: { id: user.id, name: user.name, email: user.email, balance: user.balance || 0 } });
     }
 
@@ -189,7 +191,7 @@ async function startServer() {
     };
 
     users.push(newUser);
-    saveData(USERS_FILE, users);
+    await saveData(USERS_FILE, users);
     res.status(201).json({ status: 'ok', user: { id: newUser.id, name: newUser.name, email: newUser.email, balance: newUser.balance } });
   });
 
@@ -212,7 +214,7 @@ async function startServer() {
     res.json(logs);
   });
 
-  app.post("/api/logs", (req, res) => {
+  app.post("/api/logs", async (req, res) => {
     const { userId, ...eventData } = req.body;
     const logs = loadData(LOGS_FILE, []);
     const users = loadData(USERS_FILE, []);
@@ -223,7 +225,7 @@ async function startServer() {
       if (userIndex !== -1) {
         users[userIndex].lastActive = new Date().toISOString();
         users[userIndex].status = 'active';
-        saveData(USERS_FILE, users);
+        await saveData(USERS_FILE, users);
       }
     }
 
@@ -236,7 +238,7 @@ async function startServer() {
       ...eventData
     };
     logs.unshift(newLog); // Newest first
-    saveData(LOGS_FILE, logs.slice(0, 1000)); // Keep last 1000
+    await saveData(LOGS_FILE, logs.slice(0, 1000)); // Keep last 1000
     res.status(201).json({ status: 'ok' });
   });
 
@@ -253,8 +255,8 @@ async function startServer() {
     res.json(settings);
   });
 
-  app.post("/api/admin/settings", (req, res) => {
-    saveData(SETTINGS_FILE, req.body);
+  app.post("/api/admin/settings", async (req, res) => {
+    await saveData(SETTINGS_FILE, req.body);
     res.json({ status: 'ok' });
   });
 
@@ -265,7 +267,7 @@ async function startServer() {
     res.json(store);
   });
 
-  app.post("/api/admin/store", (req, res) => {
+  app.post("/api/admin/store", async (req, res) => {
     const store = loadData(STORE_FILE, []);
     const newItem = {
       id: Date.now().toString(),
@@ -273,14 +275,14 @@ async function startServer() {
       createdAt: new Date().toISOString()
     };
     store.unshift(newItem);
-    saveData(STORE_FILE, store);
+    await saveData(STORE_FILE, store);
     res.status(201).json(newItem);
   });
 
-  app.delete("/api/admin/store/:id", (req, res) => {
+  app.delete("/api/admin/store/:id", async (req, res) => {
     const store = loadData(STORE_FILE, []);
     const filtered = store.filter((item: any) => item.id !== req.params.id);
-    saveData(STORE_FILE, filtered);
+    await saveData(STORE_FILE, filtered);
     res.json({ status: 'ok' });
   });
   
@@ -1177,10 +1179,13 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     
     // 1. Try RapidAPI (Social Download All In One) as primary premium downloader
     // We use the key provided by the user as Priority
-    const rapidApiKey = settings.rapidApiKey || process.env.RAPIDAPI_KEY || "afaab2db25mshccd408433d00cb7p1dfde4jsn0d0a7253edbc";
+    const defaultRapidKey = "afaab2db25mshccd408433d00cb7p1dfde4jsn0d0a7253edbc";
+    const rapidApiKey = settings.rapidApiKey || process.env.RAPIDAPI_KEY || defaultRapidKey;
     if (rapidApiKey && url) {
       try {
         console.log('Trying RapidAPI for URL:', url);
+        // If it is the default key, we timeout very quickly (3.5s) to avoid hanging on a stale/rate-limited key
+        const isSharedKey = rapidApiKey === defaultRapidKey;
         const rapidResponse = await fetch('https://social-download-all-in-one.p.rapidapi.com/v1/social/autolink', {
           method: 'POST',
           headers: {
@@ -1189,7 +1194,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
             'x-rapidapi-host': 'social-download-all-in-one.p.rapidapi.com'
           },
           body: JSON.stringify({ url }),
-          signal: AbortSignal.timeout(25000)
+          signal: AbortSignal.timeout(isSharedKey ? 3500 : 7000)
         });
 
         if (rapidResponse.ok) {
@@ -1235,7 +1240,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
-          signal: AbortSignal.timeout(45000) 
+          signal: AbortSignal.timeout(5000) 
         });
 
         if (apifyResponse.ok) {
@@ -1282,7 +1287,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     if (url && (url.includes('instagram') || url.includes('tiktok') || url.includes('reels') || url.includes('shorts'))) {
       try {
         const tdResponse = await fetch(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`, {
-          signal: AbortSignal.timeout(10000)
+          signal: AbortSignal.timeout(3000)
         });
         if (tdResponse.ok) {
           const tdData = await tdResponse.json();
@@ -1344,8 +1349,8 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           },
-          // Longer timeout for public nodes
-          signal: AbortSignal.timeout(30000)
+          // Shorter, fast fail-over timeout for public nodes
+          signal: AbortSignal.timeout(3500)
         };
 
         if (isCobalt) {
@@ -1388,13 +1393,9 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         // Handle error responses from instance
         if (data.status === 'error') {
           const errorCode = data.error?.code || '';
-          if (errorCode.includes('auth') || errorCode.includes('jwt') || errorCode.includes('limit') || errorCode.includes('forbidden')) {
-            console.warn(`Instance ${apiBase} rejected with auth/limit error: ${errorCode}`);
-            lastErrorDetails = { status: 'error', code: errorCode, text: data.text || errorCode };
-            continue;
-          }
-          // If it's a "real" error (e.g. invalid URL), return it
-          return res.status(500).json(data);
+          console.warn(`Instance ${apiBase} rejected with error: ${errorCode} - ${data.text}`);
+          lastErrorDetails = { status: 'error', code: errorCode, text: data.text || errorCode };
+          continue;
         }
 
         // TiklyDown/v0.pw/others might have different response formats

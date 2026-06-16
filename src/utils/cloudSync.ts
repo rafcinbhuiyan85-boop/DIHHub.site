@@ -19,14 +19,25 @@ let db: any = null;
 export function getFirestoreDb(): any {
   if (db) return db;
   try {
-    let configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-    if (!fs.existsSync(configPath)) {
-      // Fallback relative to this file's location to guarantee bundler inclusion
-      configPath = path.resolve(_dirname, '../../firebase-applet-config.json');
+    const candidatePaths = [
+      path.join(process.cwd(), 'firebase-applet-config.json'),
+      path.join(process.cwd(), '../firebase-applet-config.json'),
+      path.resolve(_dirname, '../../firebase-applet-config.json'),
+      path.resolve(_dirname, '../../../firebase-applet-config.json'),
+      path.resolve(_dirname, '../firebase-applet-config.json'),
+      '/var/task/firebase-applet-config.json'
+    ];
+    
+    let configPath = '';
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        configPath = p;
+        break;
+      }
     }
     
-    if (!fs.existsSync(configPath)) {
-      console.log('⚠️ [CloudSync] firebase-applet-config.json not found. Offline fallback mode active.');
+    if (!configPath) {
+      console.log('⚠️ [CloudSync] firebase-applet-config.json not found in any standard path. Offline fallback mode active.');
       return null;
     }
     const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -34,7 +45,7 @@ export function getFirestoreDb(): any {
     db = firebaseConfig.firestoreDatabaseId 
       ? getFirestore(app, firebaseConfig.firestoreDatabaseId) 
       : getFirestore(app);
-    console.log('✅ [CloudSync] Connected to Firestore for resilient cloud backup.');
+    console.log('✅ [CloudSync] Connected to Firestore (using ' + configPath + ') for resilient cloud backup.');
     return db;
   } catch (error) {
     console.error('❌ [CloudSync] Failed to initialize Firebase:', error);

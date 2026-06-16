@@ -114,7 +114,7 @@ export default function ApkStore() {
 
     setPaymentStep('verifying');
     try {
-      const res = await fetch('https://www.dihhub.site/api/payment/initiate', {
+      const res = await fetch('/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

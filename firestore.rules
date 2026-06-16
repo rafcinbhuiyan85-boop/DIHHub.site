@@ -30,9 +30,7 @@ service cloud.firestore {
     function isValidTemplate(data) {
       return data.id is string && data.id.size() <= 100 &&
              data.name is string && data.name.size() <= 200 &&
-             data.htmlContent is string && data.htmlContent.size() <= 1048576 && 
-             data.createdAt is timestamp &&
-             (data.updatedAt == null || data.updatedAt is timestamp);
+             data.htmlContent is string;
     }
 
     match /templates/{templateId} {

@@ -15,7 +15,7 @@ export function MoviesDetail({ movieId, onNavigate, onBack }: { movieId: string;
   const runtimeStr = movie.runtime ? `${Math.floor(movie.runtime/60)}h ${movie.runtime%60>0?`${movie.runtime%60}m`:''}` : '';
   return (
     <div style={{ minHeight:'100vh', background:'#07090f', color:'#fff' }}>
-      <div style={{ position:'relative', height:'65vh', minHeight:420, overflow:'hidden' }}>
+      <div className="movie-backdrop-container" style={{ position:'relative', overflow:'hidden' }}>
         {movie.backdrop_path ? <img src={`${IMAGE_BASE_BACKDROP}${movie.backdrop_path}`} alt={movie.title} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 20%' }}/> : <div style={{ width:'100%', height:'100%', background:'#111' }}/>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,#07090f 0%,rgba(7,9,15,0.5) 60%,rgba(7,9,15,0.3) 100%)' }}/>
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right,#07090f 0%,rgba(7,9,15,0.3) 60%,transparent 100%)' }}/>
@@ -23,7 +23,7 @@ export function MoviesDetail({ movieId, onNavigate, onBack }: { movieId: string;
           <ChevronLeft size={16}/> Back
         </button>
       </div>
-      <div style={{ padding:'0 24px', maxWidth:1200, margin:'-220px auto 0', position:'relative', zIndex:10 }}>
+      <div className="movie-content-container" style={{ maxWidth:1200, margin:'0 auto', position:'relative', zIndex:10 }}>
         <div style={{ flex:1, paddingTop:16 }}>
           <h1 style={{ fontSize:'clamp(30px,6vw,68px)', fontWeight:900, letterSpacing:'-2px', lineHeight:1.05, marginBottom:10, color:'#fff' }}>{movie.title}</h1>
           {movie.tagline && <p style={{ fontSize:15, fontWeight:400, color:'#F59E0B', fontStyle:'italic', marginBottom:20 }}>"{movie.tagline}"</p>}
@@ -61,6 +61,35 @@ export function MoviesDetail({ movieId, onNavigate, onBack }: { movieId: string;
         <div style={{ marginTop:48 }}><MovieRow title="More Like This" movies={movie.similar.results} isLoading={false} accent="#34d399" onNavigate={onNavigate}/></div>
       )}
       <div style={{ height:60 }}/>
+      <style>{`
+        .movie-backdrop-container {
+          height: 35vh;
+          min-height: 240px;
+        }
+        .movie-content-container {
+          padding: 0 16px;
+          margin-top: -60px !important;
+        }
+        @media (min-width: 640px) {
+          .movie-backdrop-container {
+            height: 50vh;
+            min-height: 340px;
+          }
+          .movie-content-container {
+            padding: 0 24px;
+            margin-top: -140px !important;
+          }
+        }
+        @media (min-width: 1024px) {
+          .movie-backdrop-container {
+            height: 65vh;
+            min-height: 420px;
+          }
+          .movie-content-container {
+            margin-top: -220px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
