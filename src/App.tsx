@@ -69,7 +69,7 @@ function MainApp() {
     
     // Ignore pages with their own custom routes
     const ignorePaths = ['templates', 'movies', 'migration', 'payment'];
-    if (ignorePaths.some(p => cleanPath.startsWith(p)) || rawPath.startsWith('/t/')) {
+    if (ignorePaths.some(p => cleanPath.startsWith(p)) || rawPath.startsWith('/rb/')) {
       return;
     }
 
@@ -83,11 +83,21 @@ function MainApp() {
       return;
     }
 
+    if (cleanPath === 'dih-templates') {
+      setActiveTool('hosted-admin');
+      return;
+    }
+
+    if (cleanPath === 'hosted-admin') {
+      navigate('/dih-templates', { replace: true });
+      return;
+    }
+
     const toolIds: ToolId[] = [
       'tenmin-ai', 'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
       'passport', 'auto-passport', 'video', 'design-editor', 'lib-encryptor', 
       'dex-protector', 'apk-store', 'temp-mail', 'temp-sms', 'cut-downloader', 
-      'mobile-bypass', 'dih-movies', 'bachelor-point', 'hosted-admin'
+      'mobile-bypass', 'dih-movies', 'bachelor-point'
     ];
 
     if (toolIds.includes(cleanPath as ToolId)) {
@@ -115,7 +125,7 @@ function MainApp() {
       navigate('/dih-movies');
     } else if (id === 'hosted-admin') {
       setActiveTool('hosted-admin');
-      navigate('/hosted-admin');
+      navigate('/dih-templates');
     } else if (id === 'dashboard') {
       setActiveTool('dashboard');
       navigate('/');
@@ -217,7 +227,7 @@ function MainApp() {
       <AdsController />
       <Routes>
         <Route path="/templates" element={<TemplatesGallery />} />
-        <Route path="/t/:slug" element={<HostedTemplate />} />
+        <Route path="/rb/:slug" element={<HostedTemplate />} />
         <Route path="/movies" element={<DihMoviesApp />} />
         <Route path="/migration" element={<Migration />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />

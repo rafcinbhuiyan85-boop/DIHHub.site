@@ -105,6 +105,42 @@ export default function HostedTemplate() {
     </div>
   );
 
+  const getCleanHtml = (html: string) => {
+    if (!html) return '';
+    let clean = html;
+    
+    // Perform dynamic filtering if running in the browser
+    if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
+      try {
+        const parser = new DOMParser();
+        const docObj = parser.parseFromString(clean, 'text/html');
+        
+        // Find elements with specific classes or content matching unwanted flags
+        const elements = docObj.querySelectorAll('*');
+        elements.forEach((el: any) => {
+          const text = (el.textContent || '').trim();
+          
+          const isCreativeHq = text.toUpperCase().includes('CREATIVE HQ') || text.toUpperCase().includes('SHOWROOM');
+          const isPremiumVerified = text.toUpperCase().includes('PREMIUM VERIFIED');
+          const isCentralServer = text.toUpperCase().includes('CENTRAL SERVER');
+          const isCategoryStatus = text.toUpperCase().includes('CATEGORY:') && text.toUpperCase().includes('STATUS:');
+          const isThemeId = text.toUpperCase().includes('THEME_ID_');
+          const isIdDot = text.toUpperCase().startsWith('ID:') && text.length < 50;
+          
+          if (isCreativeHq || isPremiumVerified || isCentralServer || isCategoryStatus || isThemeId || isIdDot) {
+            el.remove();
+          }
+        });
+        
+        return docObj.body.innerHTML;
+      } catch (err) {
+        console.error("HTML cleaning error:", err);
+      }
+    }
+    
+    return clean;
+  };
+
   return (
     <div id="template-root" className="w-full min-h-screen">
       {/* 
@@ -113,7 +149,7 @@ export default function HostedTemplate() {
         or rendered in a sandboxed iframe. For this admin-only context, it's 
         the requested hosting behavior.
       */}
-      <div dangerouslySetInnerHTML={{ __html: template.htmlContent }} />
+      <div dangerouslySetInnerHTML={{ __html: getCleanHtml(template.htmlContent) }} />
     </div>
   );
 }

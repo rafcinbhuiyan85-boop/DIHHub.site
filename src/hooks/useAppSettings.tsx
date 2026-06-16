@@ -177,7 +177,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'temp-mail': 'Temp Mail',
     'temp-sms': 'Temp SMS',
     'mobile-bypass': 'Mobile Bypass Pro',
-    'hosted-admin': 'DIH TEMPLATE'
+    'hosted-admin': 'DIH Templates'
   },
   toolDescriptions: {
     'tenmin-ai': 'Practice speaking Bengali, English, and Japanese on real-time voice calls.',
@@ -199,7 +199,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'temp-mail': 'Get a temporary email for private registrations.',
     'temp-sms': 'Temporary phone numbers for OTP verification.',
     'mobile-bypass': '100% Working Mobile FRP, MDM & Bootloader Bypass solution.',
-    'hosted-admin': 'Share your favorite DIH templates with your favorite people.'
+    'hosted-admin': 'Premium quality landing page showcase and live deployment portal.'
   },
   bgRemoverApiKey: 'DIHTEMPLATE_FREE_KEY',
   templates: DEFAULT_TEMPLATES,

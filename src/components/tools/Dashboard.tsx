@@ -36,7 +36,7 @@ const tools = [
   { id: 'bachelor-point', icon: Film, label: 'Bachelor Point S-5', description: 'Manually managed high-fidelity exclusive streaming portal.', color: 'bg-red-600', isNew: true },
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
   { id: 'migration', icon: FileArchive, label: 'Migration Tool', description: 'Migrate your Replit projects by uploading a ZIP file.', color: 'bg-emerald-500', isNew: true },
-  { id: 'hosted-admin', icon: Globe, label: 'DIH TEMPLATE', description: 'Share DIH templates with your favorite person.', color: 'bg-orange-500', isNew: true },
+  { id: 'hosted-admin', icon: Globe, label: 'DIH Templates', description: 'Premium quality landing page showcase and live deployment portal.', color: 'bg-orange-500', isNew: true },
 ];
 
 export default function Dashboard({ onSelectTool }: DashboardProps) {

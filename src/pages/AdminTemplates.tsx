@@ -321,7 +321,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                 <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-600">Created: {t.createdAt?.toDate().toLocaleDateString()}</span>
                   <a 
-                    href={`/t/${t.id}`} 
+                    href={`/rb/${t.id}`} 
                     target="_blank"
                     className="flex items-center gap-2 text-xs font-black text-white hover:text-orange-500 transition-colors"
                   >
@@ -399,7 +399,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                         className="w-full bg-[#0a0a0b] border border-white/5 rounded-xl px-4 py-3 font-bold focus:border-orange-500 outline-none transition-all"
                         required
                       />
-                      <p className="text-[10px] text-slate-600">This becomes the URL: yoursite.com/t/{formData.id || 'slug'}</p>
+                      <p className="text-[10px] text-slate-600">This becomes the URL: yoursite.com/rb/{formData.id || 'slug'}</p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black uppercase tracking-widest text-slate-500">Display Name</label>

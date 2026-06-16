@@ -234,7 +234,7 @@ const BP_INITIAL_CONTENTS: BP_ContentItem[] = [
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const { settings, updateSettings, addTemplate, removeTemplate } = useAppSettings();
-  const [activeTab, setActiveTab] = useState<'tools' | 'templates' | 'store' | 'users' | 'general' | 'appearance' | 'dashboard' | 'dashboard-stats' | 'dashboard-counter' | 'dashboard-traffic' | 'api-keys' | 'api-systems' | 'api-payment' | 'config-video' | 'config-movies' | 'config-ai' | 'config-ads' | 'hosted-templates' | 'config-maintenance' | 'config-bachelor-point'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'tools' | 'templates' | 'store' | 'users' | 'general' | 'appearance' | 'dashboard' | 'dashboard-stats' | 'dashboard-counter' | 'dashboard-traffic' | 'api-keys' | 'api-systems' | 'api-payment' | 'config-video' | 'config-movies' | 'config-ai' | 'config-ads' | 'hosted-templates' | 'config-maintenance' | 'config-bachelor-point'>('tools');
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({ name: '', width: 800, height: 600, category: 'Custom' });
   
@@ -259,7 +259,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [isCopiedHtmlCode, setIsCopiedHtmlCode] = useState(false);
 
   const handleCopyLink = (id: string) => {
-    const url = `${window.location.origin}/t/${id}`;
+    const url = `${window.location.origin}/rb/${id}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
@@ -850,9 +850,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
         <nav className="flex-1 space-y-0.5 pr-1 custom-scrollbar overflow-y-auto">
           {[
             { type: 'separator', label: 'Core Operations' },
-            { id: 'dashboard', icon: LayoutDashboard, label: 'Control Center' },
             { id: 'tools', icon: Activity, label: 'Manage Tools' },
-            { id: 'templates', icon: Layers, label: 'Design Templates' },
             { id: 'hosted-templates', icon: Globe, label: 'DIH TEMPLATE' },
             { id: 'store', icon: Download, label: 'Resource Store' },
             
@@ -862,15 +860,12 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             { type: 'separator', label: 'App Configuration' },
             { id: 'appearance', icon: Palette, label: 'Branding & UI' },
             { id: 'general', icon: Settings, label: 'General Configuration' },
-            { id: 'dashboard-stats', icon: Activity, label: 'Dashboard Labels' },
             { id: 'dashboard-traffic', icon: Activity, label: 'Traffic Analysis' },
-            { id: 'dashboard-counter', icon: Users, label: 'Live User Counter' },
 
             { type: 'separator', label: 'Module Settings' },
             { id: 'config-video', icon: Download, label: 'Video Downloader' },
             { id: 'config-movies', icon: Film, label: 'Dih Movie Pro' },
             { id: 'config-bachelor-point', icon: Film, label: 'Bachelor Point' },
-            { id: 'config-utility', icon: Calculator, label: 'Utility Pro' },
             { id: 'config-ai', icon: Star, label: 'Advanced Engine Tools' },
             { id: 'config-ads', icon: MessageSquare, label: 'Ads Management' },
             
@@ -880,7 +875,6 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             { type: 'separator', label: 'Master Integrations' },
             { id: 'api-keys', icon: Key, label: 'Master API Keys' },
             { id: 'api-systems', icon: Cpu, label: 'System Proxies' },
-            { id: 'api-payment', icon: Smartphone, label: 'Payment Gateway' },
           ].map((tab, idx) => {
             const actualId = (tab as any).idActual || (tab as any).id;
             const isActive = activeTab === actualId;
@@ -1014,7 +1008,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           <div className="flex items-center gap-4 text-[9px] text-slate-500 font-mono tracking-wider">
                              <div className="flex items-center gap-1.5 text-blue-400">
                                 <Activity size={10} />
-                                {typeof window !== 'undefined' ? window.location.host : 'dihhub.site'}/t/{t.id}
+                                {typeof window !== 'undefined' ? window.location.host : 'dihhub.site'}/rb/{t.id}
                              </div>
                              <div className="flex items-center gap-1.5 opacity-60">
                                 <Clock size={10} />
@@ -1044,7 +1038,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                            <button onClick={() => handleDeleteHtml(t.id)} className="w-9 h-9 flex items-center justify-center bg-red-500/10 hover:bg-red-500/20 rounded-lg text-slate-500 hover:text-red-500 transition-all group/btn" title="Delete Site">
                               <Trash2 size={14} className="group-hover/btn:scale-110 transition-transform" />
                            </button>
-                           <a href={`/t/${t.id}`} target="_blank" className="w-9 h-9 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-slate-500 hover:text-blue-500 transition-all group/btn" title="Launch Site">
+                           <a href={`/rb/${t.id}`} target="_blank" className="w-9 h-9 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-slate-500 hover:text-blue-500 transition-all group/btn" title="Launch Site">
                               <ExternalLink size={14} className="group-hover/btn:scale-110 transition-transform" />
                            </a>
                          </div>
@@ -1121,7 +1115,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                  </div>
                               </div>
                               <div className="text-lg md:text-2xl font-mono font-black text-blue-400 bg-white/5 p-6 rounded-[2rem] border border-white/5 select-all break-all shadow-inner tracking-tighter">
-                                 {typeof window !== 'undefined' ? window.location.host : 'dihhub.site'}/t/{successSlug}
+                                 {typeof window !== 'undefined' ? window.location.host : 'dihhub.site'}/rb/{successSlug}
                               </div>
                            </div>
  
@@ -1140,7 +1134,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                 <span>{copiedId === successSlug ? "SYNCED" : "TRANSMIT LINK"}</span>
                               </button>
                               <a 
-                                href={`/t/${successSlug}`} 
+                                href={`/rb/${successSlug}`} 
                                 target="_blank"
                                 rel="noreferrer"
                                 className="w-16 h-16 bg-white/5 border border-white/10 hover:bg-blue-600/10 hover:border-blue-500/30 rounded-[2rem] text-slate-500 hover:text-blue-500 transition-all flex items-center justify-center group/btn shadow-xl"
@@ -1175,7 +1169,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                      <div className="space-y-2">
                                         <div className="flex items-center justify-between px-1">
                                           <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Network ID (Slug)</span>
-                                          <span className="text-[8px] font-mono text-blue-500">{typeof window !== 'undefined' ? window.location.host : 'dihhub.site'}/t/{htmlFormData.id || '...'}</span>
+                                          <span className="text-[8px] font-mono text-blue-500">{typeof window !== 'undefined' ? window.location.host : 'dihhub.site'}/rb/{htmlFormData.id || '...'}</span>
                                         </div>
                                         <input 
                                           type="text" value={htmlFormData.id} onChange={e => setHtmlFormData({...htmlFormData, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-')})}
@@ -2783,7 +2777,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   <h2 className="text-2xl font-bold mb-1">Dashboard Labels</h2>
                   <p className="text-xs text-slate-500">Modify the primary statistics shown on the home page.</p>
                 </div>
-                <button onClick={() => setActiveTab('dashboard')} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-black rounded-lg transition-colors border border-slate-700">BACK TO HUB</button>
+                <button onClick={() => setActiveTab('tools')} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-black rounded-lg transition-colors border border-slate-700">BACK TO HUB</button>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-8">
@@ -2863,7 +2857,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   <h2 className="text-2xl font-bold mb-1">Counter Engine</h2>
                   <p className="text-xs text-slate-500">Configure the animated user counter behavior.</p>
                 </div>
-                <button onClick={() => setActiveTab('dashboard')} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-black rounded-lg transition-colors border border-slate-700">BACK TO HUB</button>
+                <button onClick={() => setActiveTab('tools')} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-black rounded-lg transition-colors border border-slate-700">BACK TO HUB</button>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-8">
@@ -3599,7 +3593,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                       )} />
                     </button>
                   </div>
-                  <button onClick={() => setActiveTab('dashboard')} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-black rounded-lg transition-colors border border-slate-700">BACK TO HUB</button>
+                  <button onClick={() => setActiveTab('tools')} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-black rounded-lg transition-colors border border-slate-700">BACK TO HUB</button>
                 </div>
               </div>
 

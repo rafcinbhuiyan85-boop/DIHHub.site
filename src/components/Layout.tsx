@@ -36,7 +36,7 @@ const navItems = [
   { id: 'temp-mail' as ToolId, icon: Mail, label: 'Temp Mail' },
   { id: 'temp-sms' as ToolId, icon: MessageSquare, label: 'Temp SMS' },
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
-  { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH TEMPLATE' },
+  { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
 ];
 
 declare global {
@@ -97,7 +97,7 @@ export default function Layout({
 
   // Check if we are in a "Full Screen" mode or page
   const isGalleryPage = typeof window !== 'undefined' && (window.location.pathname === '/templates' || window.location.pathname === '/admin/templates');
-  const isLandingPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/t/');
+  const isLandingPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/rb/');
   const isFullScreenMode = isGalleryPage || isLandingPage;
   const shouldHideSidebar = isFullScreenMode || activeTool === 'admin-panel' || activeTool === 'admin-login';
 

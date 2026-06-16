@@ -63,7 +63,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
 
   const handleCopyLink = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/t/${id}`;
+    const url = `${window.location.origin}/rb/${id}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
@@ -294,7 +294,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                       {/* Actions */}
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => window.open(`/t/${t.id}`, '_blank')}
+                          onClick={() => window.open(`/rb/${t.id}`, '_blank')}
                           className="flex-1 bg-slate-900 hover:bg-amber-500 text-slate-300 hover:text-slate-950 py-3 rounded-xl font-bold text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 border border-slate-800 hover:border-amber-500/25 active:scale-95"
                         >
                           <ExternalLink size={13} />
