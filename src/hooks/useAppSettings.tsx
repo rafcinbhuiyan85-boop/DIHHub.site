@@ -150,8 +150,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin'],
-  newTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin'],
+  newTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin'],
   newBadgeText: 'NEW',
   toolLabels: {
     'tenmin-ai': '10Min AI Voice',
@@ -319,8 +319,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       if (!parsed) return DEFAULT_SETTINGS;
       
       const parsedVisibleTools = Array.isArray(parsed.visibleTools) ? parsed.visibleTools : [];
-      const healedVisibleTools = [...new Set([...parsedVisibleTools, ...DEFAULT_SETTINGS.visibleTools])]
-        .filter(id => id !== 'nid' && id !== 'speed-test' && id !== 'daily-compound' && id !== 'temp-sms' && id !== 'passport' && id !== 'design-editor' && id !== 'cut-downloader' && id !== 'tenmin-ai' && id !== 'bg-remover' && id !== 'apk-store' && id !== 'temp-mail');
+      const healedVisibleTools = [...new Set([...parsedVisibleTools, ...DEFAULT_SETTINGS.visibleTools])];
       
       // Ensure all default templates are present
       const existingIds = new Set(parsed.templates?.map((t: any) => t.id) || []);
@@ -361,8 +360,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           const globalSettings = await res.json();
           if (globalSettings) {
              const serverVisibleTools = Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : [];
-             const healedVisibleTools = [...new Set([...serverVisibleTools, ...DEFAULT_SETTINGS.visibleTools])]
-               .filter(id => id !== 'nid' && id !== 'speed-test' && id !== 'daily-compound' && id !== 'temp-sms' && id !== 'passport' && id !== 'design-editor' && id !== 'cut-downloader' && id !== 'tenmin-ai' && id !== 'bg-remover' && id !== 'apk-store' && id !== 'temp-mail');
+             const healedVisibleTools = [...new Set([...serverVisibleTools, ...DEFAULT_SETTINGS.visibleTools])];
 
              setSettings(prev => ({
                ...prev,

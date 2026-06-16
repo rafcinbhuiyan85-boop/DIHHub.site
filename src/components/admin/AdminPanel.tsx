@@ -1348,6 +1348,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
               <div className="grid grid-cols-1 gap-2.5">
                 {[
+                  { id: 'tenmin-ai', label: '10Min AI Voice', icon: Zap },
                   { id: 'qr', label: 'QR Generator & Decoder', icon: QrCode },
                   { id: 'encryption', label: 'Text Encryption', icon: ShieldCheck },
                   { id: 'to-base64', label: 'File to Base64 (Legacy)', icon: Image },
@@ -1359,12 +1360,15 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   { id: 'video', label: 'Video Downloader', icon: Download },
                   { id: 'cut-downloader', label: 'Cut Downloader', icon: Scissors },
                   { id: 'dih-movies', label: 'Dih Movies Streaming', icon: Film },
+                  { id: 'bachelor-point', label: 'Bachelor Point S-5', icon: Film },
                   { id: 'lib-encryptor', label: 'Lib Encryptor', icon: ShieldAlert },
                   { id: 'dex-protector', label: 'DEX Protector', icon: Cpu },
                   { id: 'apk-store', label: 'APK Store', icon: Package },
                   { id: 'temp-mail', label: 'Temp Mail', icon: MessageSquare },
                   { id: 'temp-sms', label: 'Temp SMS', icon: Smartphone },
                   { id: 'mobile-bypass', label: 'Mobile Bypass Pro', icon: ShieldAlert },
+                  { id: 'migration', label: 'Migration Tool', icon: Cloud },
+                  { id: 'hosted-admin', label: 'DIH TEMPLATE (Hosted)', icon: Globe },
                 ].map(tool => (
                   <div key={tool.id} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
