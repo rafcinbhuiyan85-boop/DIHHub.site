@@ -4,7 +4,7 @@ import {
   Trash2, Save, LogOut, ChevronRight, Activity, Menu,
   LayoutDashboard, Palette, QrCode, ShieldCheck, Download, Image, ShieldAlert, Cpu, Smartphone, Mail, MessageSquare, Film, Scissors, Cloud,
   Users, ListFilter, Calendar, Clock, Upload, Package, Star, ArrowUp, ArrowDown, Layout, Calculator, RefreshCcw, Globe, Edit2, Code2, Settings2, ExternalLink, Zap, Search, X, Copy, Check, Shield, DollarSign, Rocket,
-  Tv, Video
+  Tv, Video, Flame
 } from 'lucide-react';
 import { 
   collection, 
@@ -234,7 +234,7 @@ const BP_INITIAL_CONTENTS: BP_ContentItem[] = [
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const { settings, updateSettings, addTemplate, removeTemplate } = useAppSettings();
-  const [activeTab, setActiveTab] = useState<'tools' | 'templates' | 'store' | 'users' | 'general' | 'appearance' | 'dashboard' | 'dashboard-stats' | 'dashboard-counter' | 'dashboard-traffic' | 'api-keys' | 'api-systems' | 'api-payment' | 'config-video' | 'config-movies' | 'config-ai' | 'config-ads' | 'hosted-templates' | 'config-maintenance' | 'config-bachelor-point'>('tools');
+  const [activeTab, setActiveTab] = useState<'tools' | 'templates' | 'store' | 'users' | 'general' | 'appearance' | 'dashboard' | 'dashboard-stats' | 'dashboard-counter' | 'dashboard-traffic' | 'api-keys' | 'api-systems' | 'api-payment' | 'config-video' | 'config-movies' | 'config-ai' | 'config-ads' | 'hosted-templates' | 'config-maintenance' | 'config-bachelor-point' | 'config-smm'>('tools');
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({ name: '', width: 800, height: 600, category: 'Custom' });
   
@@ -257,6 +257,444 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [maintenanceModeLive, setMaintenanceModeLive] = useState<boolean | null>(null);
   const [maintenanceConnectionStatus, setMaintenanceConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [isCopiedHtmlCode, setIsCopiedHtmlCode] = useState(false);
+
+  // SMM Management States
+  const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'users' | 'deposits' | 'settings' | 'providers'>('dashboard');
+  const [smmOrders, setSmmOrders] = useState<any[]>([]);
+  const [smmUsers, setSmmUsers] = useState<any[]>([]);
+  const [smmDeposits, setSmmDeposits] = useState<any[]>([]);
+  const [smmServicesList, setSmmServicesList] = useState<any[]>([]);
+  const [smmProviders, setSmmProviders] = useState<any[]>([]);
+  const [smmManualGateways, setSmmManualGateways] = useState<any[]>([]);
+
+  // Inline deletion state managers for safe iframe action flow
+  const [smmDeletingServiceId, setSmmDeletingServiceId] = useState<number | null>(null);
+  const [smmDeletingProviderId, setSmmDeletingProviderId] = useState<number | null>(null);
+  const [smmDeletingOrderId, setSmmDeletingOrderId] = useState<number | null>(null);
+  const [smmDeletingUserId, setSmmDeletingUserId] = useState<number | null>(null);
+  const [smmDeletingDepositId, setSmmDeletingDepositId] = useState<number | null>(null);
+
+  // Search & Filter States
+  const [smmOrderSearch, setSmmOrderSearch] = useState('');
+  const [smmOrderStatusFilter, setSmmOrderStatusFilter] = useState('');
+  const [smmSvcSearch, setSmmSvcSearch] = useState('');
+  const [smmSvcCatFilter, setSmmSvcCatFilter] = useState('');
+  const [smmUserSearch, setSmmUserSearch] = useState('');
+  const [smmDepStatusFilter, setSmmDepStatusFilter] = useState('');
+
+  // Modals / Forms States
+  const [isSmmModalOpen, setIsSmmModalOpen] = useState(false);
+  const [smmModalTitle, setSmmModalTitle] = useState('');
+  const [smmModalType, setSmmModalType] = useState<'add-service' | 'edit-service' | 'edit-order' | 'edit-user' | 'add-provider' | 'edit-provider' | 'edit-gateway' | null>(null);
+  const [selectedSmmItem, setSelectedSmmItem] = useState<any>(null);
+
+  // SMM Form values state
+  const [smmFormName, setSmmFormName] = useState('');
+  const [smmFormCategory, setSmmFormCategory] = useState('Instagram');
+  const [smmFormQuality, setSmmFormQuality] = useState('Standard');
+  const [smmFormPrice, setSmmFormPrice] = useState('0.00');
+  const [smmFormTime, setSmmFormTime] = useState('0-24 hours');
+  const [smmFormMin, setSmmFormMin] = useState('100');
+  const [smmFormMax, setSmmFormMax] = useState('1000000');
+  const [smmFormDesc, setSmmFormDesc] = useState('');
+  const [smmFormSvcProviderId, setSmmFormSvcProviderId] = useState('manual');
+  const [smmFormSvcProviderServiceId, setSmmFormSvcProviderServiceId] = useState('');
+
+  const [smmFormStatus, setSmmFormStatus] = useState('pending');
+  const [smmFormLink, setSmmFormLink] = useState('');
+  const [smmFormQty, setSmmFormQty] = useState('1000');
+  const [smmFormAmount, setSmmFormAmount] = useState('1.50');
+
+  const [smmFormUserEmail, setSmmFormUserEmail] = useState('');
+  const [smmFormUserName, setSmmFormUserName] = useState('');
+  const [smmFormUserBalance, setSmmFormUserBalance] = useState('50.00');
+
+  // SMM Provider Forms State
+  const [smmFormProvName, setSmmFormProvName] = useState('');
+  const [smmFormProvUrl, setSmmFormProvUrl] = useState('');
+  const [smmFormProvKey, setSmmFormProvKey] = useState('');
+  const [smmFormProvStatus, setSmmFormProvStatus] = useState('active');
+  const [smmFormProvBalance, setSmmFormProvBalance] = useState('500.00');
+
+  // SMM Manual Gateway Forms State
+  const [smmFormGatewayTitle, setSmmFormGatewayTitle] = useState('');
+  const [smmFormGatewayNumber, setSmmFormGatewayNumber] = useState('');
+  const [smmFormGatewayType, setSmmFormGatewayType] = useState('Personal');
+  const [smmFormGatewayInstructions, setSmmFormGatewayInstructions] = useState('');
+  const [smmFormGatewayEnabled, setSmmFormGatewayEnabled] = useState(true);
+
+  // SMM Sync Effect
+  useEffect(() => {
+    const loadSmmData = () => {
+      // 1. SERVICES
+      const cachedServices = localStorage.getItem('dih_smm_services_v2');
+      if (cachedServices) {
+        try {
+          const parsed = JSON.parse(cachedServices);
+          setSmmServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const defaultSvcs = [
+          {id:1,name:"Instagram Followers - Real & Active",category:"Instagram",price:1.50,min:100,max:100000,desc:"High quality real-looking followers.",time:"0-12 hours",quality:"Standard"},
+          {id:2,name:"Instagram Followers - Premium Quality",category:"Instagram",price:3.20,min:100,max:50000,desc:"Premium quality followers with photos.",time:"0-6 hours",quality:"Premium"},
+          {id:3,name:"Instagram Likes - Fast Delivery",category:"Instagram",price:0.80,min:50,max:500000,desc:"Instant likes from active accounts.",time:"0-1 hours",quality:"Standard"},
+          {id:4,name:"Instagram Views - Reels & Videos",category:"Instagram",price:0.20,min:500,max:10000000,desc:"Fast views for Reels and videos.",time:"0-30 minutes",quality:"Standard"},
+          {id:5,name:"Instagram Comments - Custom",category:"Instagram",price:12.00,min:5,max:500,desc:"Real custom comments.",time:"1-6 hours",quality:"Premium"},
+          {id:6,name:"Instagram Story Views",category:"Instagram",price:0.15,min:100,max:5000000,desc:"Fast story views delivery.",time:"0-15 minutes",quality:"Standard"},
+          {id:7,name:"Facebook Page Likes",category:"Facebook",price:1.20,min:100,max:500000,desc:"Real-looking page likes.",time:"0-24 hours",quality:"Standard"},
+          {id:8,name:"Facebook Post Likes",category:"Facebook",price:0.60,min:50,max:200000,desc:"Fast likes on posts.",time:"0-6 hours",quality:"Standard"},
+          {id:9,name:"Facebook Video Views",category:"Facebook",price:0.10,min:1000,max:50000000,desc:"Boost video count instantly.",time:"0-30 minutes",quality:"Standard"},
+          {id:10,name:"Facebook Followers - Premium",category:"Facebook",price:2.50,min:100,max:100000,desc:"Premium quality followers.",time:"0-12 hours",quality:"Premium"},
+          {id:11,name:"YouTube Views - High Retention",category:"YouTube",price:1.80,min:500,max:10000000,desc:"High retention views.",time:"0-24 hours",quality:"Premium"},
+          {id:12,name:"YouTube Subscribers - Real",category:"YouTube",price:8.50,min:50,max:50000,desc:"Real subscribers.",time:"1-3 days",quality:"Premium"},
+          {id:13,name:"YouTube Likes",category:"YouTube",price:1.20,min:100,max:500000,desc:"Fast YouTube likes.",time:"0-6 hours",quality:"Standard"},
+          {id:14,name:"YouTube Watch Hours",category:"YouTube",price:18.00,min:100,max:10000,desc:"Real watch hours for monetization.",time:"7-30 days",quality:"VIP"},
+          {id:15,name:"TikTok Followers",category:"TikTok",price:2.00,min:100,max:500000,desc:"Fast TikTok followers.",time:"0-12 hours",quality:"Standard"},
+          {id:16,name:"TikTok Likes",category:"TikTok",price:0.50,min:100,max:1000000,desc:"Boost TikTok engagement.",time:"0-2 hours",quality:"Standard"},
+          {id:17,name:"TikTok Views",category:"TikTok",price:0.12,min:1000,max:100000000,desc:"Viral-boost your videos.",time:"0-30 minutes",quality:"Standard"},
+          {id:18,name:"TikTok Comments - Custom",category:"TikTok",price:15.00,min:5,max:200,desc:"Custom comments.",time:"1-12 hours",quality:"Premium"},
+          {id:19,name:"Twitter/X Followers",category:"Twitter/X",price:2.80,min:100,max:500000,desc:"Real-looking X followers.",time:"0-24 hours",quality:"Standard"},
+          {id:20,name:"Twitter/X Likes",category:"Twitter/X",price:0.70,min:50,max:500000,desc:"Fast post likes.",time:"0-6 hours",quality:"Standard"},
+          {id:21,name:"Twitter/X Retweets",category:"Twitter/X",price:1.50,min:50,max:100000,desc:"Boost reach with retweets.",time:"0-12 hours",quality:"Standard"},
+          {id:22,name:"Telegram Channel Members",category:"Telegram",price:3.50,min:100,max:1000000,desc:"Real-looking channel members.",time:"0-24 hours",quality:"Standard"},
+          {id:23,name:"Telegram Post Views",category:"Telegram",price:0.08,min:500,max:100000000,desc:"Boost post views.",time:"0-15 minutes",quality:"Standard"},
+          {id:24,name:"Telegram Group Members",category:"Telegram",price:4.00,min:100,max:500000,desc:"Add group members.",time:"0-24 hours",quality:"Premium"}
+        ];
+        setSmmServicesList(defaultSvcs);
+        localStorage.setItem('dih_smm_services_v2', JSON.stringify(defaultSvcs));
+      }
+
+      // 2. ORDERS
+      const cachedOrders = localStorage.getItem('dih_smm_orders_v2');
+      if (cachedOrders) {
+        try {
+          const parsed = JSON.parse(cachedOrders);
+          setSmmOrders(prev => JSON.stringify(prev) !== cachedOrders ? parsed : prev);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const defaultOrders = [
+          {id:1,userId:1,serviceId:1,serviceName:"Instagram Followers - Real & Active",category:"Instagram",link:"https://instagram.com/dihsmm",quantity:1000,amount:1.50,status:"completed",createdAt:"2026-06-14"},
+          {id:2,userId:1,serviceId:3,serviceName:"Instagram Likes - Fast Delivery",category:"Instagram",link:"https://instagram.com/p/abc123",quantity:5000,amount:4.00,status:"completed",createdAt:"2026-06-15"},
+          {id:3,userId:2,serviceId:11,serviceName:"YouTube Views - High Retention",category:"YouTube",link:"https://youtube.com/watch?v=xyz",quantity:10000,amount:18.00,status:"processing",createdAt:"2026-06-11"},
+          {id:4,userId:3,serviceId:15,serviceName:"TikTok Followers",category:"TikTok",link:"https://tiktok.com/@user3",quantity:500,amount:1.00,status:"pending",createdAt:"2026-06-16"},
+          {id:5,userId:2,serviceId:7,serviceName:"Facebook Page Likes",category:"Facebook",link:"https://facebook.com/page2",quantity:2000,amount:2.40,status:"completed",createdAt:"2026-06-13"},
+          {id:6,userId:4,serviceId:14,serviceName:"YouTube Watch Hours",category:"YouTube",link:"https://youtube.com/watch?v=abc",quantity:500,amount:9.00,status:"pending",createdAt:"2026-06-16"},
+          {id:7,userId:5,serviceId:22,serviceName:"Telegram Channel Members",category:"Telegram",link:"https://t.me/testchannel",quantity:1000,amount:3.50,status:"processing",createdAt:"2026-06-15"}
+        ];
+        setSmmOrders(defaultOrders);
+        localStorage.setItem('dih_smm_orders_v2', JSON.stringify(defaultOrders));
+      }
+
+      // 3. USERS (SMM simulate)
+      const cachedUsers = localStorage.getItem('dih_smm_users_v2');
+      let currentActiveBalance = localStorage.getItem('dih_smm_balance');
+      const parsedBalance = currentActiveBalance ? parseFloat(currentActiveBalance) : (settings.smmDefaultBalance !== undefined ? settings.smmDefaultBalance : 50.00);
+      
+      const defaultUsers = [
+        {id:999,name:"Active SMM User (My Account)",email: auth.currentUser?.email || "me@dihsmm.com",balance:parsedBalance,joined:"2026-06-01"},
+        {id:1,name:"Rahim Uddin",email:"rahim@example.com",balance:50.00,joined:"2026-06-01"},
+        {id:2,name:"Karim Hossain",email:"karim@example.com",balance:120.50,joined:"2026-06-03"},
+        {id:3,name:"Nasrin Akter",email:"nasrin@example.com",balance:8.20,joined:"2026-06-07"},
+        {id:4,name:"Farhan Ahmed",email:"farhan@example.com",balance:200.00,joined:"2026-06-10"},
+        {id:5,name:"Sumaiya Khatun",email:"sumaiya@example.com",balance:35.75,joined:"2026-06-12"}
+      ];
+
+      if (cachedUsers) {
+        try {
+          const parsedUsers = JSON.parse(cachedUsers);
+          const updatedUsers = parsedUsers.map((u: any) => {
+            if (u.id === 999) {
+              return { ...u, balance: parsedBalance, email: auth.currentUser?.email || u.email };
+            }
+            return u;
+          });
+          setSmmUsers(prev => JSON.stringify(prev) !== JSON.stringify(updatedUsers) ? updatedUsers : prev);
+          localStorage.setItem('dih_smm_users_v2', JSON.stringify(updatedUsers));
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setSmmUsers(defaultUsers);
+        localStorage.setItem('dih_smm_users_v2', JSON.stringify(defaultUsers));
+      }
+
+      // 4. DEPOSITS
+      const cachedDeposits = localStorage.getItem('dih_smm_deposits_v2');
+      if (cachedDeposits) {
+        try {
+          const parsed = JSON.parse(cachedDeposits);
+          setSmmDeposits(prev => JSON.stringify(prev) !== cachedDeposits ? parsed : prev);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const defaultDeposits = [
+          {id:1,userId:1,amount:50.00,method:"bkash",status:"approved",date:"2026-06-01"},
+          {id:2,userId:2,amount:120.00,method:"nagad",status:"approved",date:"2026-06-03"},
+          {id:3,userId:3,amount:10.00,method:"rocket",status:"pending",date:"2026-06-16"},
+          {id:4,userId:4,amount:200.00,method:"card",status:"pending",date:"2026-06-16"},
+          {id:5,userId:5,amount:35.00,method:"bkash",status:"pending",date:"2026-06-17"}
+        ];
+        setSmmDeposits(defaultDeposits);
+        localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(defaultDeposits));
+      }
+
+      // 5. PROVIDERS
+      const cachedProviders = localStorage.getItem('dih_smm_providers_v2');
+      if (cachedProviders) {
+        try {
+          const parsed = JSON.parse(cachedProviders);
+          setSmmProviders(prev => JSON.stringify(prev) !== cachedProviders ? parsed : prev);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const defaultProviders = [
+          { id: 1, name: 'JustAnotherPanel (JAP)', apiUrl: 'https://justanotherpanel.com/api/v2', apiKey: '89a7f8b90a4c28d98e7287ff2e', status: 'active', balance: 450.85, serviceCount: 247 },
+          { id: 2, name: 'SMM Lite', apiUrl: 'https://smmlite.com/api/v2', apiKey: '9f28a38dfc7a829d10eefcd223', status: 'inactive', balance: 12.40, serviceCount: 120 }
+        ];
+        setSmmProviders(defaultProviders);
+        localStorage.setItem('dih_smm_providers_v2', JSON.stringify(defaultProviders));
+      }
+
+      // 6. MANUAL GATEWAYS
+      const cachedGateways = localStorage.getItem('dih_smm_manual_gateways_v2');
+      if (cachedGateways) {
+        try {
+          const parsed = JSON.parse(cachedGateways);
+          setSmmManualGateways(prev => JSON.stringify(prev) !== cachedGateways ? parsed : prev);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const defaultGateways = [
+          { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true },
+          { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true },
+          { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true },
+          { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true },
+          { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true },
+          { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true },
+          { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true }
+        ];
+        setSmmManualGateways(defaultGateways);
+        localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(defaultGateways));
+      }
+    };
+
+    loadSmmData();
+    const interval = setInterval(loadSmmData, 1500);
+    return () => clearInterval(interval);
+  }, [settings.smmDefaultBalance, auth.currentUser?.email]);
+
+  const handleApproveSmmDeposit = (depId: number) => {
+    const updatedDeposits = smmDeposits.map(d => {
+      if (d.id === depId && d.status === 'pending') {
+        const updatedUsers = smmUsers.map(u => {
+          if (u.id === d.userId) {
+            const newBal = u.balance + d.amount;
+            if (u.id === 999) {
+              localStorage.setItem('dih_smm_balance', newBal.toFixed(2));
+            }
+            return { ...u, balance: newBal };
+          }
+          return u;
+        });
+        setSmmUsers(updatedUsers);
+        localStorage.setItem('dih_smm_users_v2', JSON.stringify(updatedUsers));
+        return { ...d, status: 'approved' };
+      }
+      return d;
+    });
+    setSmmDeposits(updatedDeposits);
+    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeposits));
+  };
+
+  const handleRejectSmmDeposit = (depId: number) => {
+    const updatedDeposits = smmDeposits.map(d => {
+      if (d.id === depId && d.status === 'pending') {
+        return { ...d, status: 'rejected' };
+      }
+      return d;
+    });
+    setSmmDeposits(updatedDeposits);
+    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeposits));
+  };
+
+  const handleDeleteSmmService = (svcId: number) => {
+    const nextList = smmServicesList.filter(s => s.id !== svcId);
+    setSmmServicesList(nextList);
+    localStorage.setItem('dih_smm_services_v2', JSON.stringify(nextList));
+  };
+
+  const handleDeleteSmmOrder = (orderId: number) => {
+    const nextList = smmOrders.filter(o => o.id !== orderId);
+    setSmmOrders(nextList);
+    localStorage.setItem('dih_smm_orders_v2', JSON.stringify(nextList));
+  };
+
+  const handleDeleteSmmUser = (userId: number) => {
+    if (userId === 999) return;
+    const nextList = smmUsers.filter(u => u.id !== userId);
+    setSmmUsers(nextList);
+    localStorage.setItem('dih_smm_users_v2', JSON.stringify(nextList));
+  };
+
+  const handleDeleteSmmDeposit = (depId: number) => {
+    const nextList = smmDeposits.filter(d => d.id !== depId);
+    setSmmDeposits(nextList);
+    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(nextList));
+  };
+
+  const handleSaveSmmService = () => {
+    if (!smmFormName.trim()) return;
+
+    let updatedList = [];
+    if (smmModalType === 'add-service') {
+      const newSvc = {
+        id: smmServicesList.length ? Math.max(...smmServicesList.map(s => s.id)) + 1 : 1,
+        name: smmFormName,
+        category: smmFormCategory,
+        quality: smmFormQuality,
+        price: parseFloat(smmFormPrice) || 0.0,
+        min: parseInt(smmFormMin) || 100,
+        max: parseInt(smmFormMax) || 1000000,
+        desc: smmFormDesc,
+        time: smmFormTime,
+        providerId: smmFormSvcProviderId,
+        providerServiceId: smmFormSvcProviderServiceId
+      };
+      updatedList = [...smmServicesList, newSvc];
+    } else if (smmModalType === 'edit-service' && selectedSmmItem) {
+      updatedList = smmServicesList.map(s => {
+        if (s.id === selectedSmmItem.id) {
+          return {
+            ...s,
+            name: smmFormName,
+            category: smmFormCategory,
+            quality: smmFormQuality,
+            price: parseFloat(smmFormPrice) || 0.0,
+            min: parseInt(smmFormMin) || 100,
+            max: parseInt(smmFormMax) || 1000000,
+            desc: smmFormDesc,
+            time: smmFormTime,
+            providerId: smmFormSvcProviderId,
+            providerServiceId: smmFormSvcProviderServiceId
+          };
+        }
+        return s;
+      });
+    }
+
+    setSmmServicesList(updatedList);
+    localStorage.setItem('dih_smm_services_v2', JSON.stringify(updatedList));
+    setIsSmmModalOpen(false);
+  };
+
+  const handleSaveSmmProvider = () => {
+    if (!smmFormProvName.trim() || !smmFormProvUrl.trim()) return;
+    let updated = [];
+    if (smmModalType === 'add-provider') {
+      const newProv = {
+        id: smmProviders.length ? Math.max(...smmProviders.map(p => p.id)) + 1 : 1,
+        name: smmFormProvName,
+        apiUrl: smmFormProvUrl,
+        apiKey: smmFormProvKey,
+        status: smmFormProvStatus,
+        balance: parseFloat(smmFormProvBalance) || 500.00,
+        serviceCount: 0
+      };
+      updated = [...smmProviders, newProv];
+    } else if (smmModalType === 'edit-provider' && selectedSmmItem) {
+      updated = smmProviders.map(p => {
+        if (p.id === selectedSmmItem.id) {
+          return {
+            ...p,
+            name: smmFormProvName,
+            apiUrl: smmFormProvUrl,
+            apiKey: smmFormProvKey,
+            status: smmFormProvStatus,
+            balance: parseFloat(smmFormProvBalance) || p.balance
+          };
+        }
+        return p;
+      });
+    }
+    setSmmProviders(updated);
+    localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updated));
+    setIsSmmModalOpen(false);
+  };
+
+  const handleDeleteSmmProvider = (id: number) => {
+    const updated = smmProviders.filter(p => p.id !== id);
+    setSmmProviders(updated);
+    localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updated));
+  };
+
+  const handleSaveSmmGateway = () => {
+    if (!smmFormGatewayTitle.trim() || !selectedSmmItem) return;
+    const updated = smmManualGateways.map(g => {
+      if (g.id === selectedSmmItem.id) {
+        return {
+          ...g,
+          title: smmFormGatewayTitle,
+          numberOrAddress: smmFormGatewayNumber,
+          type: smmFormGatewayType,
+          instructions: smmFormGatewayInstructions,
+          enabled: smmFormGatewayEnabled
+        };
+      }
+      return g;
+    });
+    setSmmManualGateways(updated);
+    localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(updated));
+    setIsSmmModalOpen(false);
+  };
+
+  const handleSaveSmmOrder = () => {
+    if (!selectedSmmItem) return;
+    const updated = smmOrders.map(o => {
+      if (o.id === selectedSmmItem.id) {
+        return {
+          ...o,
+          serviceName: smmFormName,
+          status: smmFormStatus,
+          link: smmFormLink,
+          quantity: parseInt(smmFormQty) || o.quantity,
+          amount: parseFloat(smmFormAmount) || o.amount
+        };
+      }
+      return o;
+    });
+    setSmmOrders(updated);
+    localStorage.setItem('dih_smm_orders_v2', JSON.stringify(updated));
+    setIsSmmModalOpen(false);
+  };
+
+  const handleSaveSmmUser = () => {
+    if (!selectedSmmItem) return;
+    const updated = smmUsers.map(u => {
+      if (u.id === selectedSmmItem.id) {
+        const newBal = parseFloat(smmFormUserBalance) || u.balance;
+        if (u.id === 999) {
+          localStorage.setItem('dih_smm_balance', newBal.toFixed(2));
+        }
+        return {
+          ...u,
+          name: smmFormUserName,
+          email: smmFormUserEmail,
+          balance: newBal
+        };
+      }
+      return u;
+    });
+    setSmmUsers(updated);
+    localStorage.setItem('dih_smm_users_v2', JSON.stringify(updated));
+    setIsSmmModalOpen(false);
+  };
 
   const handleCopyLink = (id: string) => {
     const url = `${window.location.origin}/rb/${id}`;
@@ -866,6 +1304,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             { id: 'config-video', icon: Download, label: 'Video Downloader' },
             { id: 'config-movies', icon: Film, label: 'Dih Movie Pro' },
             { id: 'config-bachelor-point', icon: Film, label: 'Bachelor Point' },
+            { id: 'config-smm', icon: Flame, label: 'DIH SMM PRO' },
             { id: 'config-ai', icon: Star, label: 'Advanced Engine Tools' },
             { id: 'config-ads', icon: MessageSquare, label: 'Ads Management' },
             
@@ -1364,6 +1803,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   { id: 'mobile-bypass', label: 'Mobile Bypass Pro', icon: ShieldAlert },
                   { id: 'migration', label: 'Migration Tool', icon: Cloud },
                   { id: 'hosted-admin', label: 'DIH TEMPLATE (Hosted)', icon: Globe },
+                  { id: 'dih-smm', label: 'DIH SMM (Social Media)', icon: Flame },
                 ].map(tool => (
                   <div key={tool.id} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
@@ -2507,6 +2947,19 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                            </div>
                         </div>
                         <ChevronRight size={14} className="text-slate-600 group-hover:text-red-500 transition-colors" />
+                     </button>
+
+                     <button onClick={() => setActiveTab('config-smm')} className="flex items-center justify-between p-5 bg-slate-950 border border-slate-800 rounded-2xl hover:border-blue-500/50 transition-all group shadow-sm">
+                        <div className="flex items-center gap-4">
+                           <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
+                              <Flame size={20} />
+                           </div>
+                           <div className="text-left">
+                              <p className="text-sm font-black tracking-tight">DIH SMM Panel</p>
+                              <p className="text-[10px] text-slate-500 font-medium">Control rates, default cash, & news.</p>
+                           </div>
+                        </div>
+                        <ChevronRight size={14} className="text-slate-600 group-hover:text-blue-500 transition-colors" />
                      </button>
                   </div>
                 </div>
@@ -3988,6 +4441,1645 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
               </div>
             </div>
           )}
+
+          {activeTab === 'config-smm' && (
+            <div className="flex flex-col xl:flex-row bg-[#0d0f14] text-slate-100 rounded-3xl overflow-hidden border border-slate-800/80 shadow-2xl animate-in font-sans min-h-[680px] text-left">
+              {/* SIDEBAR */}
+              <div className="w-full xl:w-[240px] xl:shrink-0 bg-[#08090d] border-b xl:border-b-0 xl:border-r border-slate-800/80 flex flex-col p-5 space-y-6">
+                {/* LOGO & TITLE */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400">
+                      <Flame size={16} className="animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold tracking-tight text-white text-sm">DIH SMM</h3>
+                    </div>
+                    <span className="text-[8px] tracking-widest font-black uppercase bg-red-500/15 border border-red-500/30 text-red-500 px-1 py-0.5 rounded leading-none">ADMIN</span>
+                  </div>
+                </div>
+
+                {/* COMPACT STATS BOX INSIDE SIDEBAR */}
+                <div className="bg-[#0c0d12] border border-slate-800/60 rounded-2xl p-3 grid grid-cols-2 gap-3 text-left">
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider">Total Orders</span>
+                    <div className="text-sm font-black font-mono text-slate-200">{smmOrders.length}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider">Total Users</span>
+                    <div className="text-sm font-black font-mono text-slate-200">{smmUsers.length}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider">Revenue</span>
+                    <div className="text-sm font-black font-mono text-emerald-400">${smmOrders.reduce((sum, o) => sum + o.amount, 0).toFixed(1)}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] font-black uppercase text-slate-500 tracking-wider">Pending Dep.</span>
+                    <div className="text-sm font-black font-mono text-amber-500">{smmDeposits.filter(d => d.status === 'pending').length}</div>
+                  </div>
+                </div>
+
+                {/* NAVIGATION MENUS */}
+                <div className="flex-1 flex flex-col space-y-4">
+                  <div className="space-y-1.5 text-left">
+                    <h4 className="text-[9px] font-black tracking-widest text-slate-500 uppercase px-2">Overview</h4>
+                    {[
+                      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
+                    ].map(nav => {
+                      const isAct = smmSubTab === nav.id;
+                      const Icon = nav.icon;
+                      return (
+                        <button
+                          key={nav.id}
+                          onClick={() => setSmmSubTab(nav.id as any)}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                            isAct 
+                              ? "bg-blue-600/10 text-white border-l-2 border-blue-500 font-bold" 
+                              : "text-slate-400 hover:text-white hover:bg-slate-900/55"
+                          )}
+                        >
+                          <Icon size={14} className={isAct ? "text-blue-500" : "text-slate-500"} />
+                          <span>{nav.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-1.5 text-left">
+                    <h4 className="text-[9px] font-black tracking-widest text-slate-500 uppercase px-2">Management</h4>
+                    {[
+                      { id: 'orders', label: 'Orders', icon: Package, count: smmOrders.filter(o => o.status === 'pending').length },
+                      { id: 'services', label: 'Services', icon: Layers },
+                      { id: 'users', label: 'Users', icon: Users },
+                      { id: 'deposits', label: 'Deposits', icon: DollarSign, count: smmDeposits.filter(d => d.status === 'pending').length, countColor: 'bg-amber-500/15 text-amber-500' }
+                    ].map(nav => {
+                      const isAct = smmSubTab === nav.id;
+                      const Icon = nav.icon;
+                      return (
+                        <button
+                          key={nav.id}
+                          onClick={() => setSmmSubTab(nav.id as any)}
+                          className={cn(
+                            "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                            isAct 
+                              ? "bg-blue-600/10 text-white border-l-2 border-blue-500 font-bold" 
+                              : "text-slate-400 hover:text-white hover:bg-slate-900/55"
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Icon size={14} className={isAct ? "text-blue-500" : "text-slate-500"} />
+                            <span>{nav.label}</span>
+                          </div>
+                          {nav.count !== undefined && nav.count > 0 && (
+                            <span className={cn("px-1.5 py-0.5 rounded-full text-[9px] font-black leading-none", nav.countColor || "bg-blue-500/10 text-blue-400 border border-blue-500/20")}>
+                              {nav.count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-1.5 text-left font-sans">
+                    <h4 className="text-[9px] font-black tracking-widest text-slate-500 uppercase px-2">Settings & Integration</h4>
+                    {[
+                      { id: 'providers', label: 'API Providers', icon: Cpu },
+                      { id: 'settings', label: 'Settings', icon: Settings }
+                    ].map(nav => {
+                      const isAct = smmSubTab === nav.id;
+                      const Icon = nav.icon;
+                      return (
+                        <button
+                          key={nav.id}
+                          onClick={() => setSmmSubTab(nav.id as any)}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all",
+                            isAct 
+                              ? "bg-blue-600/10 text-white border-l-2 border-blue-500 font-bold" 
+                              : "text-slate-400 hover:text-white hover:bg-slate-900/55"
+                          )}
+                        >
+                          <Icon size={14} className={isAct ? "text-blue-500" : "text-slate-500"} />
+                          <span>{nav.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* LOGOUT OR EXIT SMM SUITE */}
+                <div className="pt-4 border-t border-slate-800/60">
+                  <button 
+                    onClick={() => setActiveTab('tools')} 
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-400 text-[10px] font-black uppercase rounded-xl transition border border-slate-800/80 active:scale-95"
+                  >
+                    <ChevronRight size={12} className="rotate-180" /> Back To Hub
+                  </button>
+                </div>
+              </div>
+
+              {/* MAIN RIGHT AREA */}
+              <div className="flex-1 bg-[#0b0c10] p-6 space-y-6 text-left overflow-y-auto custom-scrollbar">
+                {/* HEADER */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/60">
+                  <div>
+                    <span className="text-[9px] tracking-widest font-black uppercase text-slate-500">DIH SMM PRO SUITE</span>
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-white capitalize mt-0.5">
+                      {smmSubTab === 'dashboard' ? 'Dashboard Summary' : smmSubTab === 'orders' ? 'Customer Orders' : smmSubTab === 'services' ? 'Services Catalogue' : smmSubTab === 'users' ? 'User Directory' : smmSubTab === 'deposits' ? 'Deposits Pipeline' : 'Global Settings'}
+                    </h2>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {smmSubTab === 'services' && (
+                      <button
+                        onClick={() => {
+                          setSmmFormName('');
+                          setSmmFormCategory('Instagram');
+                          setSmmFormQuality('Standard');
+                          setSmmFormPrice('1.50');
+                          setSmmFormTime('0-24 hours');
+                          setSmmFormMin('100');
+                          setSmmFormMax('500000');
+                          setSmmFormDesc('');
+                          setSmmFormSvcProviderId('manual');
+                          setSmmFormSvcProviderServiceId('');
+                          setSmmModalTitle('Add SMM Service');
+                          setSmmModalType('add-service');
+                          setIsSmmModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-blue-500/10 transition active:scale-95"
+                      >
+                        <Plus size={13} /> Add SMM Service
+                      </button>
+                    )}
+
+                    <div className="flex items-center gap-2 bg-[#0d0f14] border border-slate-800/80 rounded-full pl-3 pr-1.5 py-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[10px] text-slate-400 font-bold">Admin: rafcinbhuiyan</span>
+                      <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs font-black text-white uppercase ml-1 shadow select-none">
+                        R
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PAGES */}
+                {smmSubTab === 'dashboard' && (
+                  <div className="space-y-6">
+                    {/* STATS COUNT */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-[#0d0f14] border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden group text-left">
+                        <div className="absolute right-4 top-4 text-slate-850 pointer-events-none group-hover:text-blue-500/10 duration-200">
+                          <DollarSign size={36} />
+                        </div>
+                        <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Total Revenue</span>
+                        <h4 className="text-xl font-black font-mono text-white mt-1">
+                          ${smmOrders.reduce((sum, o) => sum + o.amount, 0).toFixed(2)}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mt-1">From all live orders</p>
+                      </div>
+
+                      <div className="bg-[#0d0f14] border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden group text-left">
+                        <div className="absolute right-4 top-4 text-slate-850 pointer-events-none group-hover:text-emerald-500/10 duration-200">
+                          <Package size={36} />
+                        </div>
+                        <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Total Orders</span>
+                        <h4 className="text-xl font-black font-mono text-white mt-1">{smmOrders.length}</h4>
+                        <p className="text-[10px] text-slate-450 mt-1">
+                          <span className="text-emerald-400 font-bold">{smmOrders.filter(o => o.status === 'completed').length}</span> completed
+                        </p>
+                      </div>
+
+                      <div className="bg-[#0d0f14] border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden group text-left">
+                        <div className="absolute right-4 top-4 text-slate-850 pointer-events-none group-hover:text-purple-500/10 duration-200">
+                          <Users size={36} />
+                        </div>
+                        <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Total Users</span>
+                        <h4 className="text-xl font-black font-mono text-white mt-1">{smmUsers.length}</h4>
+                        <p className="text-[10px] text-slate-500 mt-1">Registered consumer roles</p>
+                      </div>
+
+                      <div className="bg-[#0d0f14] border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden group text-left">
+                        <div className="absolute right-4 top-4 text-slate-855 pointer-events-none group-hover:text-amber-500/10 duration-200">
+                          <DollarSign size={36} />
+                        </div>
+                        <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Pending Deposits</span>
+                        <h4 className="text-xl font-black font-mono text-amber-500 mt-1">
+                          {smmDeposits.filter(d => d.status === 'pending').length}
+                        </h4>
+                        <p className="text-[10px] text-amber-500/70 mt-1">Awaiting verification</p>
+                      </div>
+                    </div>
+
+                    {/* LOWER CONTENT */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Column 1 & 2: Recent Orders & Top Services */}
+                      <div className="lg:col-span-2 space-y-6">
+                        {/* Recent Orders */}
+                        <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 space-y-4 text-left">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Recent Orders</h3>
+                              <p className="text-[10px] text-slate-500 mt-0.5">Last submitted actions stream</p>
+                            </div>
+                            <button onClick={() => setSmmSubTab('orders')} className="text-[10px] text-blue-400 hover:text-blue-300 border-b border-blue-400/35 pb-0.5 font-bold tracking-tight">View All</button>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs text-slate-300">
+                              <thead>
+                                <tr className="border-b border-slate-800 text-slate-500 font-bold">
+                                  <th className="pb-3 text-[10px] uppercase">ID</th>
+                                  <th className="pb-3 text-[10px] uppercase">User</th>
+                                  <th className="pb-3 text-[10px] uppercase">Service</th>
+                                  <th className="pb-3 text-[10px] uppercase text-right">Charged</th>
+                                  <th className="pb-3 text-[10px] uppercase text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-800/40">
+                                {smmOrders.slice().reverse().slice(0, 6).map((o) => {
+                                  const usr = smmUsers.find(u => u.id === o.userId) || { name: 'Guest Client' };
+                                  const colors = ['bg-blue-500/10 text-blue-400', 'bg-violet-500/10 text-violet-400', 'bg-pink-500/10 text-pink-400', 'bg-emerald-500/10 text-emerald-400'];
+                                  const color = colors[o.id % colors.length];
+                                  return (
+                                    <tr key={o.id} className="hover:bg-slate-900/10 transition">
+                                      <td className="py-3 font-mono text-slate-500 text-[11px]">#{o.id}</td>
+                                      <td className="py-3">
+                                        <div className="flex items-center gap-2">
+                                          <div className={cn("w-5 h-5 rounded flex items-center justify-center text-[10px] font-black uppercase", color)}>
+                                            {usr.name[0]}
+                                          </div>
+                                          <span className="font-semibold text-slate-300">{usr.name}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3 max-w-[180px] truncate text-slate-350 font-medium">{o.serviceName}</td>
+                                      <td className="py-3 text-right font-mono text-blue-400 font-bold">${o.amount.toFixed(2)}</td>
+                                      <td className="py-3 text-center">
+                                        <span className={cn(
+                                          "px-2 py-0.5 rounded-full text-[9px] font-bold capitalize border",
+                                          o.status === 'completed' ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/15" :
+                                          o.status === 'processing' ? "bg-blue-500/5 text-blue-400 border-blue-500/15" :
+                                          o.status === 'pending' ? "bg-amber-500/5 text-amber-400 border-amber-500/15" :
+                                          "bg-red-500/5 text-red-500 border-red-500/15"
+                                        )}>
+                                          {o.status}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Top Services */}
+                        <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 space-y-4 text-left">
+                          <div>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Top Services Usage</h3>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Primary campaigns ranking and volume</p>
+                          </div>
+                          <div className="space-y-3.5 pt-1.5">
+                            {Array.from(new Set(smmOrders.map(o => o.serviceName))).length === 0 ? (
+                              <div className="text-xs text-slate-500 py-4 text-center">No orders logged yet. Wait for visitor checkouts.</div>
+                            ) : (
+                              Array.from(new Set(smmOrders.map(o => o.serviceName))).slice(0, 5).map((name) => {
+                                const count = smmOrders.filter(o => o.serviceName === name).length;
+                                const percentage = Math.min(100, Math.max(10, (count / smmOrders.length) * 100));
+                                return (
+                                  <div key={name} className="space-y-1.5 text-left">
+                                    <div className="flex justify-between text-xs text-slate-350 font-medium">
+                                      <span className="truncate max-w-[320px]">{name}</span>
+                                      <span className="font-mono text-blue-400 font-extrabold">{count} orders</span>
+                                    </div>
+                                    <div className="w-full bg-[#08090d] rounded-full h-1.5 border border-slate-800/40">
+                                      <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Column 3: Order Status breakdown & Pending Deposits list */}
+                      <div className="space-y-6">
+                        {/* Order Status */}
+                        <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 space-y-4 text-left">
+                          <div>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Order Status</h3>
+                            <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Overall process state split ratios</p>
+                          </div>
+                          <div className="space-y-3 pt-1">
+                            {['pending', 'processing', 'completed', 'cancelled', 'partial'].map((st) => {
+                              const count = smmOrders.filter(o => o.status === st).length;
+                              const percentage = smmOrders.length > 0 ? (count / smmOrders.length) * 100 : 0;
+                              const color = st === 'completed' ? 'bg-emerald-500' : st === 'processing' ? 'bg-blue-500' : st === 'pending' ? 'bg-amber-500' : st === 'cancelled' ? 'bg-red-500' : 'bg-purple-500';
+                              return (
+                                <div key={st} className="space-y-1 text-left">
+                                  <div className="flex justify-between text-xs text-slate-300 font-medium capitalize animate-none">
+                                    <span>{st}</span>
+                                    <span className="font-mono text-slate-400 font-extrabold">{count}</span>
+                                  </div>
+                                  <div className="w-full bg-[#08090d] rounded-full h-1.5 border border-slate-800/45">
+                                    <div className={cn("h-1.5 rounded-full transition-all duration-500", color)} style={{ width: `${percentage}%` }}></div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Pending Deposits list box */}
+                        <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 space-y-4 text-left">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Pending Deposits</h3>
+                              <p className="text-[10px] text-slate-500 mt-0.5">Requests waiting clearance</p>
+                            </div>
+                            <button onClick={() => setSmmSubTab('deposits')} className="text-[10px] font-bold text-slate-400 hover:text-white transition">Manage</button>
+                          </div>
+
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+                            {smmDeposits.filter(d => d.status === 'pending').length === 0 ? (
+                              <div className="p-8 text-center bg-[#08090d] border border-slate-800 rounded-xl text-slate-500 text-xs font-medium">
+                                All pipeline clear. No pending deposits.
+                              </div>
+                            ) : (
+                              smmDeposits.filter(d => d.status === 'pending').slice(0, 4).map((d) => {
+                                const usr = smmUsers.find(u => u.id === d.userId) || { name: 'Customer Client' };
+                                return (
+                                  <div key={d.id} className="p-3 bg-[#08090d] border border-slate-800 rounded-xl space-y-2 flex flex-col justify-between text-left">
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded bg-blue-500/10 text-blue-400 font-bold text-[10px] flex items-center justify-center uppercase">
+                                          {usr.name[0]}
+                                        </div>
+                                        <span className="text-xs font-bold text-slate-200 truncate max-w-[100px]">{usr.name}</span>
+                                      </div>
+                                      <span className="text-[8px] font-black tracking-tight uppercase px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                                        {d.method}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-mono font-black text-emerald-450">${d.amount.toFixed(2)}</span>
+                                      <div className="flex gap-1.5">
+                                        <button
+                                          onClick={() => handleRejectSmmDeposit(d.id)}
+                                          className="px-2 py-1 rounded border border-red-500/30 hover:bg-rose-500/10 text-red-400 font-extrabold text-[9px] transition"
+                                        >
+                                          Reject
+                                        </button>
+                                        <button
+                                          onClick={() => handleApproveSmmDeposit(d.id)}
+                                          className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-[9px] transition animate-none"
+                                        >
+                                          Approve
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 2: CUSTOMER ORDERS */}
+                {smmSubTab === 'orders' && (
+                  <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4 text-left animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">All Customer Orders</h3>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Inspect, process, complete, or reject live client tasks</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 text-slate-500" size={13} />
+                          <input
+                            type="text"
+                            placeholder="Search details..."
+                            value={smmOrderSearch}
+                            onChange={(e) => setSmmOrderSearch(e.target.value)}
+                            className="bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 duration-150 w-44"
+                          />
+                        </div>
+                        <select
+                          value={smmOrderStatusFilter}
+                          onChange={(e) => setSmmOrderStatusFilter(e.target.value)}
+                          className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
+                        >
+                          <option value="">All Statuses</option>
+                          <option value="pending">Pending</option>
+                          <option value="processing">Processing</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead>
+                          <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
+                            <th className="pb-3 text-[10px] uppercase">ID</th>
+                            <th className="pb-3 text-[10px] uppercase">User Profile</th>
+                            <th className="pb-3 text-[10px] uppercase">Ordered package</th>
+                            <th className="pb-3 text-[10px] uppercase w-[150px]">Target Social Link</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Quantity</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Charged</th>
+                            <th className="pb-3 text-[10px] uppercase text-center">Status</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/40">
+                          {smmOrders
+                            .slice()
+                            .reverse()
+                            .filter(o => {
+                              const matchTerm = (o.id.toString() + o.serviceName + o.link).toLowerCase();
+                              const matchesSearch = matchTerm.includes(smmOrderSearch.toLowerCase());
+                              const matchesStatus = !smmOrderStatusFilter || o.status === smmOrderStatusFilter;
+                              return matchesSearch && matchesStatus;
+                            })
+                            .map((o) => {
+                              const usr = smmUsers.find(u => u.id === o.userId) || { name: 'Guest Client', email: 'guest@smm.com' };
+                              return (
+                                <tr key={o.id} className="hover:bg-slate-900/10 transition">
+                                  <td className="py-3.5 font-mono text-slate-500 text-[11px]">#{o.id}</td>
+                                  <td className="py-3.5">
+                                    <p className="font-bold text-slate-200">{usr.name}</p>
+                                    <span className="text-[10px] text-slate-500">{usr.email}</span>
+                                  </td>
+                                  <td className="py-3.5 max-w-[200px] leading-relaxed truncate">
+                                    <p className="font-medium text-slate-200">{o.serviceName}</p>
+                                    <span className="text-[9px] text-slate-500 uppercase font-black font-mono tracking-wider">{o.category}</span>
+                                  </td>
+                                  <td className="py-3.5 max-w-[150px] truncate">
+                                    <a href={o.link} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{o.link}</a>
+                                  </td>
+                                  <td className="py-3.5 text-right font-mono text-slate-300 font-bold">{o.quantity.toLocaleString()}</td>
+                                  <td className="py-3.5 text-right font-mono text-blue-400 font-bold">${o.amount.toFixed(2)}</td>
+                                  <td className="py-3.5 text-center">
+                                    <span className={cn(
+                                      "px-2.5 py-0.5 rounded-full text-[9px] font-bold capitalize border",
+                                      o.status === 'completed' ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/15" :
+                                      o.status === 'processing' ? "bg-blue-500/5 text-blue-400 border-blue-500/15" :
+                                      o.status === 'pending' ? "bg-amber-500/5 text-amber-400 border-amber-500/15" :
+                                      "bg-red-500/5 text-red-500 border-red-500/15"
+                                    )}>
+                                      {o.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3.5 text-right font-medium">
+                                    <div className="flex gap-1.5 justify-end items-center">
+                                      {smmDeletingOrderId === o.id ? (
+                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
+                                          <button
+                                            onClick={() => {
+                                              handleDeleteSmmOrder(o.id);
+                                              setSmmDeletingOrderId(null);
+                                            }}
+                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingOrderId(null)}
+                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedSmmItem(o);
+                                              setSmmFormName(o.serviceName);
+                                              setSmmFormStatus(o.status);
+                                              setSmmFormLink(o.link);
+                                              setSmmFormQty(o.quantity.toString());
+                                              setSmmFormAmount(o.amount.toString());
+                                              setSmmModalTitle(`Edit Order #${o.id}`);
+                                              setSmmModalType('edit-order');
+                                              setIsSmmModalOpen(true);
+                                            }}
+                                            className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingOrderId(o.id)}
+                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
+                                            title="Delete Order"
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 3: SERVICES CATALOG */}
+                {smmSubTab === 'services' && (
+                  <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4 text-left animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Services Catalog (Live Rates)</h3>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Configure live price rates, descriptions and speeds</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 text-slate-500" size={13} />
+                          <input
+                            type="text"
+                            placeholder="Search package..."
+                            value={smmSvcSearch}
+                            onChange={(e) => setSmmSvcSearch(e.target.value)}
+                            className="bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 duration-150 w-44"
+                          />
+                        </div>
+                        <select
+                          value={smmSvcCatFilter}
+                          onChange={(e) => setSmmSvcCatFilter(e.target.value)}
+                          className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
+                        >
+                          <option value="">All Social Networks</option>
+                          {['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram'].map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead>
+                          <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
+                            <th className="pb-3 text-[10px] uppercase">ID</th>
+                            <th className="pb-3 text-[10px] uppercase">Service Name</th>
+                            <th className="pb-3 text-[10px] uppercase">Category</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Active Price/1k</th>
+                            <th className="pb-3 text-[10px] uppercase text-center">Quality</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Min Qty</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Max Qty</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/40">
+                          {smmServicesList
+                            .filter(s => {
+                              const match = (s.name + s.category).toLowerCase().includes(smmSvcSearch.toLowerCase());
+                              const matchesCat = !smmSvcCatFilter || s.category === smmSvcCatFilter;
+                              return match && matchesCat;
+                            })
+                            .map((s) => {
+                              const activePrice = s.price * (settings.smmPriceMultiplier || 1.0);
+                              return (
+                                <tr key={s.id} className="hover:bg-slate-900/10 transition">
+                                  <td className="py-3 font-mono text-slate-500 text-[11px]">#{s.id}</td>
+                                  <td className="py-3 text-left">
+                                    <p className="font-bold text-slate-200">{s.name}</p>
+                                    <span className="text-[10px] text-slate-500">{s.time || 'Instant'} delivery speed</span>
+                                  </td>
+                                  <td className="py-3">
+                                    <span className="px-2 py-0.5 rounded bg-[#08090d] border border-slate-800 text-[9px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                                      {s.category}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 text-right font-mono text-emerald-400 font-bold">${activePrice.toFixed(4)}</td>
+                                  <td className="py-3 text-center">
+                                    <span className={cn(
+                                      "px-2 py-0.5 rounded text-[8px] tracking-wider uppercase font-extrabold",
+                                      s.quality === 'VIP' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
+                                      s.quality === 'Premium' ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
+                                      "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                    )}>
+                                      {s.quality || 'Standard'}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 text-right font-mono text-slate-400">{s.min?.toLocaleString() || 100}</td>
+                                  <td className="py-3 text-right font-mono text-slate-400">{s.max?.toLocaleString() || '1,000,000'}</td>
+                                  <td className="py-3 text-right">
+                                    <div className="flex gap-1.5 justify-end items-center">
+                                      {smmDeletingServiceId === s.id ? (
+                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
+                                          <button
+                                            onClick={() => {
+                                              handleDeleteSmmService(s.id);
+                                              setSmmDeletingServiceId(null);
+                                            }}
+                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingServiceId(null)}
+                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedSmmItem(s);
+                                              setSmmFormName(s.name);
+                                              setSmmFormCategory(s.category);
+                                              setSmmFormQuality(s.quality || 'Standard');
+                                              setSmmFormPrice(s.price.toString());
+                                              setSmmFormTime(s.time || '0-24 hours');
+                                              setSmmFormMin(s.min?.toString() || '100');
+                                              setSmmFormMax(s.max?.toString() || '1000000');
+                                              setSmmFormDesc(s.desc || '');
+                                              setSmmFormSvcProviderId(s.providerId || 'manual');
+                                              setSmmFormSvcProviderServiceId(s.providerServiceId || '');
+                                              setSmmModalTitle(`Edit Service #${s.id}`);
+                                              setSmmModalType('edit-service');
+                                              setIsSmmModalOpen(true);
+                                            }}
+                                            className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingServiceId(s.id)}
+                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-450"
+                                            title="Delete Service"
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 4: USER INDEX */}
+                {smmSubTab === 'users' && (
+                  <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4 text-left animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Customer Directory</h3>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Top-up interactive user balances and moderate registration profiles</p>
+                      </div>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 text-slate-500" size={13} />
+                        <input
+                          type="text"
+                          placeholder="Filter users..."
+                          value={smmUserSearch}
+                          onChange={(e) => setSmmUserSearch(e.target.value)}
+                          className="bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 duration-150 w-48"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead>
+                          <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
+                            <th className="pb-3 text-[10px] uppercase">User Details</th>
+                            <th className="pb-3 text-[10px] uppercase">Email Address</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Available Balance</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Orders Placed</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Total Spent</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Joined Date</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Action Gateway</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/40">
+                          {smmUsers
+                            .filter(u => {
+                              const term = (u.name + u.email).toLowerCase();
+                              return term.includes(smmUserSearch.toLowerCase());
+                            })
+                            .map((u) => {
+                              const placed = smmOrders.filter(o => o.userId === u.id);
+                              const spent = placed.reduce((sum, o) => sum + o.amount, 0);
+                              return (
+                                <tr key={u.id} className="hover:bg-slate-900/10 transition">
+                                  <td className="py-3 text-left">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-[11px] flex items-center justify-center shadow select-none">
+                                        {u.name[0]}
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-slate-200">{u.name}</p>
+                                        {u.id === 999 && (
+                                          <span className="text-[8px] font-black uppercase text-emerald-450 bg-emerald-500/15 border border-emerald-500/35 px-1 rounded">Active Tester</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 text-slate-400 text-[11px] font-mono select-all">{u.email}</td>
+                                  <td className="py-3 text-right font-mono text-emerald-400 font-black text-sm">${u.balance.toFixed(2)}</td>
+                                  <td className="py-3 text-right font-mono text-slate-400">{placed.length}</td>
+                                  <td className="py-3 text-right font-mono text-slate-400">${spent.toFixed(2)}</td>
+                                  <td className="py-3 text-right text-slate-500">{u.joined}</td>
+                                  <td className="py-3 text-right font-medium">
+                                    <div className="flex gap-1.5 justify-end items-center">
+                                      {smmDeletingUserId === u.id ? (
+                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
+                                          <button
+                                            onClick={() => {
+                                              handleDeleteSmmUser(u.id);
+                                              setSmmDeletingUserId(null);
+                                            }}
+                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingUserId(null)}
+                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedSmmItem(u);
+                                              setSmmFormUserName(u.name);
+                                              setSmmFormUserEmail(u.email);
+                                              setSmmFormUserBalance(u.balance.toFixed(2));
+                                              setSmmModalTitle(`Edit User Info: ${u.name}`);
+                                              setSmmModalType('edit-user');
+                                              setIsSmmModalOpen(true);
+                                            }}
+                                            className="px-2.5 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
+                                          >
+                                            Adjust Funds
+                                          </button>
+                                          {u.id !== 999 && (
+                                            <button
+                                              onClick={() => setSmmDeletingUserId(u.id)}
+                                              className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
+                                              title="Delete Customer Profile"
+                                            >
+                                              <Trash2 size={12} />
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 5: DEPOSITS PIPELINE */}
+                {smmSubTab === 'deposits' && (
+                  <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4 text-left animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Deposits Pipeline Control</h3>
+                        <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Approve, reject, or filter transaction deposit receipts submitted by customers</p>
+                      </div>
+                      <select
+                        value={smmDepStatusFilter}
+                        onChange={(e) => setSmmDepStatusFilter(e.target.value)}
+                        className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
+                      >
+                        <option value="">All Transactions</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead>
+                          <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
+                            <th className="pb-3 text-[10px] uppercase">Tx Id</th>
+                            <th className="pb-3 text-[10px] uppercase">User Profile</th>
+                            <th className="pb-3 text-[10px] uppercase">Gateway Channel</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Deposited Cash</th>
+                            <th className="pb-3 text-[10px] uppercase text-right mr-3">Date</th>
+                            <th className="pb-3 text-[10px] uppercase text-center">Status</th>
+                            <th className="pb-3 text-[10px] uppercase text-right">Action Gate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/40">
+                          {smmDeposits
+                            .slice()
+                            .reverse()
+                            .filter(d => !smmDepStatusFilter || d.status === smmDepStatusFilter)
+                            .map((d) => {
+                              const usr = smmUsers.find(u => u.id === d.userId) || { name: 'Customer Client', email: 'user@smm.com' };
+                              return (
+                                <tr key={d.id} className="hover:bg-slate-900/10 transition">
+                                  <td className="py-3">
+                                    <div className="font-mono text-slate-500 text-[11px]">#DEP{d.id}</div>
+                                    {d.txid && (
+                                      <div className="text-[9px] bg-slate-950 border border-slate-850 rounded px-1.5 py-0.5 mt-1 font-mono text-blue-400 font-bold select-all inline-block truncate max-w-[124px]">
+                                        Tx: {d.txid}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="py-3 text-left">
+                                    <p className="font-bold text-slate-200">{usr.name}</p>
+                                    <span className="text-[10px] text-slate-500">{usr.email}</span>
+                                  </td>
+                                  <td className="py-3">
+                                    <div className="flex flex-col gap-1 items-start">
+                                      <span className={cn(
+                                        "px-2.5 py-0.5 rounded text-[9px] font-extrabold uppercase border",
+                                        d.method === 'bkash' ? "bg-pink-500/10 text-pink-400 border-pink-500/20" :
+                                        d.method === 'nagad' ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
+                                        d.method === 'rocket' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                                        d.method === 'upay' ? "bg-teal-500/10 text-teal-400 border-teal-500/20" :
+                                        d.method === 'binance' ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" :
+                                        d.method === 'usdt' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                        "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                      )}>
+                                        {d.method}
+                                      </span>
+                                      {d.sender && (
+                                        <span className="text-[9px] text-slate-400 font-mono font-bold mt-0.5 bg-slate-900 px-1 rounded">
+                                          Sndr: {d.sender}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 text-right font-mono text-emerald-400 font-bold">${d.amount.toFixed(2)}</td>
+                                  <td className="py-3 text-right text-slate-500">{d.date}</td>
+                                  <td className="py-3 text-center">
+                                    <span className={cn(
+                                      "px-2 py-0.5 rounded-full text-[9px] font-bold capitalize border",
+                                      d.status === 'approved' ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
+                                      d.status === 'pending' ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
+                                      "bg-red-500/15 text-red-400 border-red-500/30"
+                                    )}>
+                                      {d.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 text-right">
+                                    <div className="flex gap-2 justify-end items-center">
+                                      {smmDeletingDepositId === d.id ? (
+                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
+                                          <button
+                                            onClick={() => {
+                                              handleDeleteSmmDeposit(d.id);
+                                              setSmmDeletingDepositId(null);
+                                            }}
+                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingDepositId(null)}
+                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          {d.status === 'pending' ? (
+                                            <div className="flex gap-1.5 justify-end">
+                                              <button
+                                                onClick={() => handleRejectSmmDeposit(d.id)}
+                                                className="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[10px] transition"
+                                              >
+                                                Reject
+                                              </button>
+                                              <button
+                                                onClick={() => handleApproveSmmDeposit(d.id)}
+                                                className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] transition"
+                                              >
+                                                Approve
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <span className="text-[10px] text-slate-400 font-mono bg-slate-900 border border-slate-850 px-1.5 py-0.5 rounded">Reviewed</span>
+                                          )}
+                                          <button
+                                            onClick={() => setSmmDeletingDepositId(d.id)}
+                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-450 transition"
+                                            title="Delete Deposit Record"
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 5: SMM API PROVIDERS & MANUAL GATEWAYS */}
+                {smmSubTab === 'providers' && (
+                  <div className="space-y-6 text-left animate-in fade-in duration-200 font-sans">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                      
+                      {/* Left: SMM API Providers list (7 Columns) */}
+                      <div className="lg:col-span-7 bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-800/50">
+                          <div>
+                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">SMM API Providers</h3>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Integrate 3rd party APIs to synchronize services and automate orders</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSmmFormProvName('');
+                              setSmmFormProvUrl('https://');
+                              setSmmFormProvKey('');
+                              setSmmFormProvStatus('active');
+                              setSmmFormProvBalance('500.00');
+                              setSmmModalTitle('Add SMM API Provider');
+                              setSmmModalType('add-provider');
+                              setIsSmmModalOpen(true);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] rounded-lg transition active:scale-95"
+                          >
+                            <Plus size={11} /> Add Provider
+                          </button>
+                        </div>
+
+                        <div className="space-y-3.5 pt-2">
+                          {smmProviders.length === 0 ? (
+                            <div className="py-8 text-center text-slate-500 text-xs">
+                              No SMM API providers added yet. Click "Add Provider" above to start.
+                            </div>
+                          ) : (
+                            smmProviders.map((prov) => {
+                              const linkedCount = smmServicesList.filter(s => s.providerId === prov.id.toString()).length;
+                              return (
+                                <div key={prov.id} className="bg-[#08090d] border border-slate-800 rounded-xl p-4 space-y-3 hover:border-slate-700/80 transition-all">
+                                  <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-xs font-bold text-slate-200">{prov.name}</h4>
+                                        <span className={cn(
+                                          "px-2 py-0.5 rounded-full text-[8px] font-black tracking-wider uppercase",
+                                          prov.status === 'active' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
+                                        )}>
+                                          {prov.status}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-500 font-mono select-all truncate max-w-xs">{prov.apiUrl}</p>
+                                    </div>
+
+                                    <div className="text-right">
+                                      <p className="text-[10px] text-slate-500">API Balance</p>
+                                      <p className="text-xs font-extrabold text-emerald-400 font-mono">${prov.balance?.toFixed(2) || '0.00'}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-850 text-[10px]">
+                                    <div className="flex items-center gap-4 text-slate-400 font-medium font-sans">
+                                      <span>Key: <code className="text-slate-500 font-mono">{prov.apiKey ? '••••••••' + prov.apiKey.slice(-5) : 'None'}</code></span>
+                                      <span className="flex items-center gap-1 bg-slate-900 px-1.5 py-0.5 rounded text-blue-400 text-[9px] font-bold">
+                                        {linkedCount} Linked Services
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 mt-2 sm:mt-0 font-sans">
+                                      {smmDeletingProviderId === prov.id ? (
+                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
+                                          <button
+                                            onClick={() => {
+                                              handleDeleteSmmProvider(prov.id);
+                                              setSmmDeletingProviderId(null);
+                                            }}
+                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingProviderId(null)}
+                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-350 text-[9px] font-bold uppercase transition active:scale-95"
+                                          >
+                                            No
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              alert(`Initiating synchronizing procedures with API Provider "${prov.name}"...\n\nSuccessfully retrieved live rate prices for ${linkedCount || 10} categories and updated local SMM database.`);
+                                            }}
+                                            className="px-2 py-1 rounded bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 font-bold hover:text-blue-300"
+                                          >
+                                            Sync Rate
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedSmmItem(prov);
+                                              setSmmFormProvName(prov.name);
+                                              setSmmFormProvUrl(prov.apiUrl);
+                                              setSmmFormProvKey(prov.apiKey);
+                                              setSmmFormProvStatus(prov.status);
+                                              setSmmFormProvBalance(prov.balance?.toString() || '0.00');
+                                              setSmmModalTitle(`Edit Provider: ${prov.name}`);
+                                              setSmmModalType('edit-provider');
+                                              setIsSmmModalOpen(true);
+                                            }}
+                                            className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 text-slate-300 font-medium hover:border-slate-700"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => setSmmDeletingProviderId(prov.id)}
+                                            className="p-1.5 rounded bg-red-500/5 hover:bg-red-500/10 text-red-500 hover:text-red-400"
+                                            title="Delete Provider"
+                                          >
+                                            <Trash2 size={11} />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Manual Deposit Gateways (5 Columns) */}
+                      <div className="lg:col-span-5 bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                        <div>
+                          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Manual Deposit System</h3>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Customize payment wallets (bKash, Nagad, Upay, USDT, etc.) for visitors</p>
+                        </div>
+
+                        <div className="space-y-3 pt-2">
+                          {smmManualGateways.map((gate) => (
+                            <div key={gate.id} className={cn(
+                              "bg-[#08090d] border rounded-xl p-3.5 space-y-2.5 transition-all text-xs",
+                              gate.enabled ? "border-slate-800" : "border-slate-850 opacity-60"
+                            )}>
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500/25 flex items-center justify-center text-blue-400">
+                                    <span className="w-1.5 h-1.5 bg-blue-405 rounded-full" />
+                                  </div>
+                                  <h4 className="font-bold text-slate-200 uppercase tracking-tight">{gate.title}</h4>
+                                </div>
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                                  gate.enabled ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/20" : "bg-slate-900 text-slate-500 border-slate-850"
+                                )}>
+                                  {gate.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                              </div>
+
+                              <div className="space-y-1 bg-[#0b0c10] p-2.5 rounded-lg border border-slate-850 font-mono text-[10px]">
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Wallet Account:</span>
+                                  <span className="font-bold text-slate-251 select-all">{gate.numberOrAddress || 'Not Assigned'}</span>
+                                </div>
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Transfer Type:</span>
+                                  <span className="font-bold text-blue-400">{gate.type || 'Personal'}</span>
+                                </div>
+                              </div>
+
+                              <p className="text-[10px] text-slate-500 italic font-medium leading-relaxed bg-slate-900/30 p-2 rounded border border-slate-850/60">
+                                Instructions: {gate.instructions || 'No special instructions defined.'}
+                              </p>
+
+                              <div className="flex justify-end pt-1">
+                                <button
+                                  onClick={() => {
+                                    setSelectedSmmItem(gate);
+                                    setSmmFormGatewayTitle(gate.title);
+                                    setSmmFormGatewayNumber(gate.numberOrAddress);
+                                    setSmmFormGatewayType(gate.type || 'Personal');
+                                    setSmmFormGatewayInstructions(gate.instructions || '');
+                                    setSmmFormGatewayEnabled(gate.enabled !== false);
+                                    setSmmModalTitle(`Edit Gateway: ${gate.title}`);
+                                    setSmmModalType('edit-gateway');
+                                    setIsSmmModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-300 transition active:scale-95"
+                                >
+                                  Modify Configurations
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 6: GLOBAL PARAMETERS */}
+                {smmSubTab === 'settings' && (
+                  <div className="space-y-6 text-left animate-in fade-in duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      
+                      {/* Notice Broadcast Card */}
+                      <div className="md:col-span-2 bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between">
+                        <div className="space-y-4">
+                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Announcement System</span>
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight">System broadcast notice</h3>
+                          <p className="text-xs text-slate-500 font-medium">This banner notification is displayed prominently at the top of the SMM Panel dashboard.</p>
+                          
+                          <textarea
+                            rows={4}
+                            value={settings.smmSystemNotice || ''}
+                            onChange={(e) => updateSettings({ smmSystemNotice: e.target.value })}
+                            placeholder="Enter operational system announcements..."
+                            className="w-full bg-[#08090d] border border-slate-850 rounded-xl p-4 text-xs text-slate-300 outline-none focus:border-blue-500 duration-150 resize-none font-medium custom-scrollbar"
+                          />
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-4 font-mono">Updates auto-save to global state.</div>
+                      </div>
+
+                      {/* Pricing & Balances Panel */}
+                      <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between">
+                        <div className="space-y-6">
+                          <div>
+                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Core Parameters</span>
+                            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Financial operations</h3>
+                          </div>
+
+                          {/* SMM Default Starts Balances */}
+                          <div className="space-y-2 text-left">
+                            <label className="text-[11px] font-bold text-slate-400">Default Starting Funds ($)</label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-2.5 text-xs text-slate-550 font-mono font-bold">$</span>
+                              <input
+                                type="number"
+                                step="5"
+                                min="0"
+                                value={settings.smmDefaultBalance !== undefined ? settings.smmDefaultBalance : 50}
+                                onChange={(e) => updateSettings({ smmDefaultBalance: parseFloat(e.target.value) || 0 })}
+                                className="w-full bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3.5 py-2 text-xs text-white outline-none focus:border-blue-500 duration-150 font-mono font-bold"
+                              />
+                            </div>
+                            <p className="text-[9px] text-slate-500">Starting funds loaded automatically for new visitor profiles.</p>
+                          </div>
+
+                          {/* Rates Multiplier */}
+                          <div className="space-y-2 text-left">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[11px] font-bold text-slate-400">Services Rate Multiplier</label>
+                              <span className="text-xs font-mono font-black text-blue-500">{(settings.smmPriceMultiplier || 1.0).toFixed(1)}x</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="5.0"
+                              step="0.1"
+                              value={settings.smmPriceMultiplier || 1.0}
+                              onChange={(e) => updateSettings({ smmPriceMultiplier: parseFloat(e.target.value) })}
+                              className="w-full h-1 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                            <p className="text-[9px] text-slate-500">Calculates and inflates/deflates all SMM service prices globally instantly.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Supported Payment Options Card */}
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5">
+                      <div className="mb-4 text-left">
+                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Payment Configuration</span>
+                        <h3 className="text-xs font-bold text-slate-205 mt-0.5 uppercase tracking-tight">Deposit Gateways</h3>
+                        <p className="text-xs text-slate-500 mt-0.5 font-medium">Toggle active deposit pipelines available in SMM Panel.</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5 pt-2">
+                        {[
+                          { key: 'bkash', label: 'bKash Deposit' },
+                          { key: 'nagad', label: 'Nagad Wallet' },
+                          { key: 'rocket', label: 'Rocket Mobile' },
+                          { key: 'card', label: 'Cards (Visa/Master)' },
+                          { key: 'crypto', label: 'Crypto Gateways' },
+                        ].map((gateway) => {
+                          const activeMethods = settings.smmPaymentMethods || [];
+                          const isEnabled = activeMethods.includes(gateway.key);
+                          return (
+                            <button
+                              key={gateway.key}
+                              onClick={() => {
+                                const nextMethods = isEnabled 
+                                  ? activeMethods.filter(k => k !== gateway.key)
+                                  : [...activeMethods, gateway.key];
+                                updateSettings({ smmPaymentMethods: nextMethods });
+                              }}
+                              className={cn(
+                                "p-4 border rounded-2xl flex flex-col items-center gap-3 transition-all text-center select-none",
+                                isEnabled
+                                  ? `bg-[#08090d] border-blue-500 text-white shadow shadow-blue-500/10 ring-1 ring-blue-500/20`
+                                  : "bg-[#0d0f14]/40 border-slate-900 text-slate-600 hover:text-slate-400"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-3.5 h-3.5 rounded-full flex items-center justify-center border border-slate-800 relative",
+                                isEnabled ? "bg-blue-500" : "bg-slate-950"
+                              )}>
+                                {isEnabled && <Check size={8} className="text-white font-bold" />}
+                              </div>
+                              <span className="text-xs font-bold tracking-tight">{gateway.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SHARED MODALS OVERLAY FOR SMM ACTIONS */}
+          {isSmmModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+                  <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up text-left">
+                    <div className="px-6 py-4.5 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">{smmModalTitle}</h3>
+                      <button onClick={() => setIsSmmModalOpen(false)} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-slate-850">
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4">
+                      {(smmModalType === 'add-service' || smmModalType === 'edit-service') ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Service Name</label>
+                            <input
+                              type="text"
+                              value={smmFormName}
+                              onChange={(e) => setSmmFormName(e.target.value)}
+                              placeholder="e.g., instagram followers active"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Category</label>
+                            <select
+                              value={smmFormCategory}
+                              onChange={(e) => setSmmFormCategory(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
+                            >
+                              {['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram'].map(c => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Quality Class</label>
+                            <select
+                              value={smmFormQuality}
+                              onChange={(e) => setSmmFormQuality(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
+                            >
+                              {['Standard', 'Premium', 'VIP'].map(ql => (
+                                <option key={ql} value={ql}>{ql}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Base Price per 1k ($)</label>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              value={smmFormPrice}
+                              onChange={(e) => setSmmFormPrice(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Speed speed delivery</label>
+                            <input
+                              type="text"
+                              value={smmFormTime}
+                              onChange={(e) => setSmmFormTime(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Minimum Order Qty</label>
+                            <input
+                              type="number"
+                              value={smmFormMin}
+                              onChange={(e) => setSmmFormMin(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Maximum Order Qty</label>
+                            <input
+                              type="number"
+                              value={smmFormMax}
+                              onChange={(e) => setSmmFormMax(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">SMM Provider API Connection</label>
+                            <select
+                              value={smmFormSvcProviderId}
+                              onChange={(e) => setSmmFormSvcProviderId(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
+                            >
+                              <option value="manual">Manual Execution (Fulfill Offline)</option>
+                              {smmProviders.map(p => (
+                                <option key={p.id} value={p.id.toString()}>{p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Provider Service ID (API Match)</label>
+                            <input
+                              type="text"
+                              value={smmFormSvcProviderServiceId}
+                              onChange={(e) => setSmmFormSvcProviderServiceId(e.target.value)}
+                              placeholder="e.g. 1024"
+                              disabled={smmFormSvcProviderId === 'manual'}
+                              className={cn(
+                                "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold",
+                                smmFormSvcProviderId === 'manual' && "opacity-40 cursor-not-allowed"
+                              )}
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Service Description</label>
+                            <textarea
+                              value={smmFormDesc}
+                              rows={3}
+                              onChange={(e) => setSmmFormDesc(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-300 outline-none focus:border-blue-500 mt-1 resize-none custom-scrollbar font-medium"
+                            />
+                          </div>
+                        </div>
+                      ) : smmModalType === 'edit-order' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Ordered Service</label>
+                            <input
+                              type="text"
+                              value={smmFormName}
+                              onChange={(e) => setSmmFormName(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Order Status</label>
+                            <select
+                              value={smmFormStatus}
+                              onChange={(e) => setSmmFormStatus(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 capitalize cursor-pointer font-medium"
+                            >
+                              {['pending', 'processing', 'completed', 'cancelled', 'partial'].map(stt => (
+                                <option key={stt} value={stt}>{stt}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Quantity</label>
+                            <input
+                              type="number"
+                              value={smmFormQty}
+                              onChange={(e) => setSmmFormQty(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Target Social Media Link</label>
+                            <input
+                              type="text"
+                              value={smmFormLink}
+                              onChange={(e) => setSmmFormLink(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Amount Charged ($)</label>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              value={smmFormAmount}
+                              onChange={(e) => setSmmFormAmount(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+                      ) : smmModalType === 'edit-user' ? (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Name</label>
+                            <input
+                              type="text"
+                              value={smmFormUserName}
+                              onChange={(e) => setSmmFormUserName(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Email Address</label>
+                            <input
+                              type="email"
+                              value={smmFormUserEmail}
+                              onChange={(e) => setSmmFormUserEmail(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Interactive Balance ($)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={smmFormUserBalance}
+                              onChange={(e) => setSmmFormUserBalance(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+                      ) : (smmModalType === 'add-provider' || smmModalType === 'edit-provider') ? (
+                        <div className="space-y-4 font-sans">
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Provider Name</label>
+                            <input
+                              type="text"
+                              value={smmFormProvName}
+                              onChange={(e) => setSmmFormProvName(e.target.value)}
+                              placeholder="e.g. SMM Experts"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">V2 API Endpoint URL</label>
+                            <input
+                              type="text"
+                              value={smmFormProvUrl}
+                              onChange={(e) => setSmmFormProvUrl(e.target.value)}
+                              placeholder="https://provider-api.com/api/v2"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">API Key (Secure Access Token)</label>
+                            <input
+                              type="password"
+                              value={smmFormProvKey}
+                              onChange={(e) => setSmmFormProvKey(e.target.value)}
+                              placeholder="SECRET_API_TOKEN_KEY"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Service Status</label>
+                              <select
+                                value={smmFormProvStatus}
+                                onChange={(e) => setSmmFormProvStatus(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
+                              >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Account Balance ($)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={smmFormProvBalance}
+                                onChange={(e) => setSmmFormProvBalance(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : smmModalType === 'edit-gateway' ? (
+                        <div className="space-y-4 font-sans">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Deposit Channel Title</span>
+                            <input
+                              type="text"
+                              value={smmFormGatewayTitle}
+                              onChange={(e) => setSmmFormGatewayTitle(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-bold"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Wallet Account / Address</label>
+                              <input
+                                type="text"
+                                value={smmFormGatewayNumber}
+                                onChange={(e) => setSmmFormGatewayNumber(e.target.value)}
+                                placeholder="e.g., +8801700000000"
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Transfer Category</label>
+                              <input
+                                type="text"
+                                value={smmFormGatewayType}
+                                onChange={(e) => setSmmFormGatewayType(e.target.value)}
+                                placeholder="e.g. Personal / Merchant / TRC-20"
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Funding Instructions for Visitors</label>
+                            <textarea
+                              value={smmFormGatewayInstructions}
+                              rows={3}
+                              onChange={(e) => setSmmFormGatewayInstructions(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-350 outline-none focus:border-blue-500 mt-1 resize-none custom-scrollbar font-medium"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 pt-2">
+                            <input
+                              type="checkbox"
+                              id="gateway-enabled-chk"
+                              checked={smmFormGatewayEnabled}
+                              onChange={(e) => setSmmFormGatewayEnabled(e.target.checked)}
+                              className="w-4 h-4 bg-slate-950 rounded border-slate-800 text-blue-550 focus:ring-0 cursor-pointer"
+                            />
+                            <label htmlFor="gateway-enabled-chk" className="text-[11px] text-slate-300 font-bold cursor-pointer select-none">
+                              Publish deposit gateway pipeline live
+                            </label>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+ 
+                    <div className="px-6 py-4.5 border-t border-slate-800 flex justify-end gap-2.5 bg-slate-950">
+                      <button
+                        onClick={() => setIsSmmModalOpen(false)}
+                        className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-850 font-semibold transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (smmModalType === 'add-service' || smmModalType === 'edit-service') {
+                            handleSaveSmmService();
+                          } else if (smmModalType === 'edit-order') {
+                            handleSaveSmmOrder();
+                          } else if (smmModalType === 'edit-user') {
+                            handleSaveSmmUser();
+                          } else if (smmModalType === 'add-provider' || smmModalType === 'edit-provider') {
+                            handleSaveSmmProvider();
+                          } else if (smmModalType === 'edit-gateway') {
+                            handleSaveSmmGateway();
+                          }
+                        }}
+                        className="px-5 py-2 rounded-xl text-xs bg-blue-500 hover:bg-blue-600 text-white font-black transition shadow-lg shadow-blue-500/10 active:scale-95"
+                      >
+                        Save Configurations
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
           
           {/* Hidden inputs to guarantee robust support for the admin-panel.js script selectors */}
           <input 
@@ -4011,7 +6103,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             checked={settings.visibleTools !== undefined && settings.visibleTools.length > 0} 
             onChange={(e) => {
               if (e.target.checked) {
-                updateSettings({ visibleTools: ['tenmin-ai', 'qr', 'encryption', 'to-base64', 'bg-remover', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'temp-mail', 'mobile-bypass', 'hosted-admin'] });
+                updateSettings({ visibleTools: ['tenmin-ai', 'qr', 'encryption', 'to-base64', 'bg-remover', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'temp-mail', 'mobile-bypass', 'hosted-admin', 'dih-smm'] });
               } else {
                 updateSettings({ visibleTools: [] });
               }

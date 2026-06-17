@@ -34,33 +34,76 @@ import DihMoviesApp from './movies/DihMoviesApp';
 import UnderMaintenance from './components/tools/UnderMaintenance';
 import TenminAI from './components/tools/TenminAI';
 import BachelorPoint from './components/tools/BachelorPoint';
+import DihSmm from './components/tools/DihSmm';
 
-type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'temp-mail' | 'temp-sms' | 'cut-downloader' | 'mobile-bypass' | 'migration' | 'dih-movies' | 'bachelor-point' | 'hosted-admin';
+type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'temp-mail' | 'temp-sms' | 'cut-downloader' | 'mobile-bypass' | 'migration' | 'dih-movies' | 'bachelor-point' | 'hosted-admin' | 'dih-smm';
 
 function MainApp() {
   const { settings } = useAppSettings();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTool, setActiveTool] = useState<ToolId>('dashboard');
+  const [activeTool, setActiveTool] = useState<ToolId>(() => {
+    if (typeof window !== 'undefined') {
+      const rawPath = window.location.pathname;
+      const cleanPath = rawPath.replace(/^\//, '').replace(/\/$/, '');
+      
+      try {
+        const savedUser = localStorage.getItem('dihhub_user');
+        if (savedUser && savedUser !== "undefined") {
+          const parsedUser = JSON.parse(savedUser);
+          if (parsedUser?.role === 'admin' || parsedUser?.isAdmin || parsedUser?.email === 'rafcin.b') {
+            return 'admin-panel';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to parse admin session:', err);
+      }
+
+      const ignorePaths = ['templates', 'movies', 'migration', 'payment'];
+      if (!ignorePaths.some(p => cleanPath.startsWith(p)) && !rawPath.startsWith('/rb/')) {
+        if (cleanPath === 'admin' || cleanPath === 'admin-login') {
+          return 'admin-login';
+        }
+        if (cleanPath === 'admin-panel') {
+          return 'admin-panel';
+        }
+        if (cleanPath === 'dih-templates') {
+          return 'hosted-admin';
+        }
+        
+        const toolIds: ToolId[] = [
+          'tenmin-ai', 'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
+          'passport', 'auto-passport', 'video', 'design-editor', 'lib-encryptor', 
+          'dex-protector', 'apk-store', 'temp-mail', 'temp-sms', 'cut-downloader', 
+          'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm'
+        ];
+        if (toolIds.includes(cleanPath as ToolId)) {
+          return cleanPath as ToolId;
+        }
+      }
+    }
+    return 'dashboard';
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const savedUser = localStorage.getItem('dihhub_user');
+        if (savedUser && savedUser !== "undefined") {
+          return JSON.parse(savedUser);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse dihhub_user on init:', e);
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (settings.tmdbApiKey) {
       tmdb.setApiKey(settings.tmdbApiKey);
     }
   }, [settings.tmdbApiKey]);
-
-  useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('dihhub_user');
-      if (savedUser && savedUser !== "undefined") {
-        setCurrentUser(JSON.parse(savedUser));
-      }
-    } catch (e) {
-      console.error('Failed to parse dihhub_user:', e);
-    }
-  }, []);
 
   // Sync URL pathname -> activeTool on mount & path changes
   useEffect(() => {
@@ -70,6 +113,16 @@ function MainApp() {
     // Ignore pages with their own custom routes
     const ignorePaths = ['templates', 'movies', 'migration', 'payment'];
     if (ignorePaths.some(p => cleanPath.startsWith(p)) || rawPath.startsWith('/rb/')) {
+      return;
+    }
+
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.isAdmin || currentUser?.email === 'rafcin.b';
+    if (isAdmin) {
+      if (cleanPath !== 'admin-panel') {
+        setActiveTool('admin-panel');
+        navigate('/admin-panel', { replace: true });
+        return;
+      }
       return;
     }
 
@@ -97,7 +150,7 @@ function MainApp() {
       'tenmin-ai', 'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
       'passport', 'auto-passport', 'video', 'design-editor', 'lib-encryptor', 
       'dex-protector', 'apk-store', 'temp-mail', 'temp-sms', 'cut-downloader', 
-      'mobile-bypass', 'dih-movies', 'bachelor-point'
+      'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm'
     ];
 
     if (toolIds.includes(cleanPath as ToolId)) {
@@ -195,6 +248,7 @@ function MainApp() {
       case 'mobile-bypass': return <MobileBypass />;
       case 'dih-movies': return <DihMoviesApp />;
       case 'bachelor-point': return <BachelorPoint />;
+      case 'dih-smm': return <DihSmm />;
       case 'hosted-admin': return <TemplatesGallery onBack={() => setActiveToolWithNavigation('dashboard')} />;
       case 'admin-login': return (
         <AdminLogin onLogin={() => {

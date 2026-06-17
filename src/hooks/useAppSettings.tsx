@@ -112,6 +112,10 @@ export interface AppSettings {
   downloaderEnableThreads: boolean;
   storeEnableApks: boolean;
   storeEnableAccounts: boolean;
+  smmDefaultBalance: number;
+  smmPriceMultiplier: number;
+  smmSystemNotice: string;
+  smmPaymentMethods: string[];
   disabledTools?: string[];
   toolNotices?: Record<string, string>;
   upcomingTools?: string[];
@@ -152,8 +156,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin'],
-  newTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
+  newTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
   newBadgeText: 'NEW',
   faviconUrl: '/favicon-dih.png',
   appLogoUrl: '',
@@ -298,6 +302,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   downloaderEnableThreads: true,
   storeEnableApks: true,
   storeEnableAccounts: true,
+  smmDefaultBalance: 50.00,
+  smmPriceMultiplier: 1.0,
+  smmSystemNotice: 'Welcome to DIH SMM Panel! Enjoy safe, fast SMM panel services at the best rates in Bangladesh.',
+  smmPaymentMethods: ['bkash', 'nagad', 'rocket', 'card', 'crypto'],
   disabledTools: ['mobile-bypass'],
   toolNotices: {},
   upcomingTools: [],

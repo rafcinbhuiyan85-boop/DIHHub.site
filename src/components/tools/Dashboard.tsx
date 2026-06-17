@@ -3,7 +3,7 @@ import {
   LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, 
   UserSquare2, Download, Palette, ArrowRight, CreditCard, 
   ShieldAlert, Cpu, Package, Users, Star, Film, Smartphone,
-  FileArchive, RefreshCcw, Globe, Server, Volume2, Tv
+  FileArchive, RefreshCcw, Globe, Server, Volume2, Tv, Flame
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -37,6 +37,7 @@ const tools = [
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
   { id: 'migration', icon: FileArchive, label: 'Migration Tool', description: 'Migrate your Replit projects by uploading a ZIP file.', color: 'bg-emerald-500', isNew: true },
   { id: 'hosted-admin', icon: Globe, label: 'DIH Templates', description: 'Premium quality landing page showcase and live deployment portal.', color: 'bg-orange-500', isNew: true },
+  { id: 'dih-smm', icon: Flame, label: 'DIH SMM', description: 'Premium tier Social Media Marketing likes, views, followers booster panel.', color: 'bg-indigo-600', isNew: true },
 ];
 
 export default function Dashboard({ onSelectTool }: DashboardProps) {

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
 
-type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'cut-downloader' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'temp-mail' | 'temp-sms' | 'mobile-bypass' | 'hosted-admin';
+type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'cut-downloader' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'temp-mail' | 'temp-sms' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -37,6 +37,7 @@ const navItems = [
   { id: 'temp-sms' as ToolId, icon: MessageSquare, label: 'Temp SMS' },
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
   { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
+  { id: 'dih-smm' as ToolId, icon: Flame, label: 'DIH SMM' },
 ];
 
 declare global {
@@ -410,26 +411,17 @@ export default function Layout({
           <div className="flex items-center gap-3 md:gap-6">
             {currentUser ? (
               <div className="flex items-center gap-3">
-                <div className="hidden xs:flex flex-col items-end">
-                   <p className="text-[9px] font-black tracking-widest text-emerald-500 uppercase leading-none mb-1">Balance</p>
-                   <p className="text-xs font-mono font-black text-slate-900 dark:text-white leading-none">
-                     {settings.paybdCurrency === 'USD' ? '$' : '৳'}{balance.toFixed(settings.paybdCurrency === 'USD' ? 2 : 0)}
-                   </p>
-                </div>
-                <button 
-                  onClick={handleAddFunds}
-                  className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg border border-emerald-500/20 transition-all group/funds active:scale-95"
-                  title="Add Funds"
-                >
-                  <Lock size={14} className="group-hover/funds:rotate-12 transition-transform" />
-                </button>
                 <div className="relative">
                   <div 
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center gap-2.5 md:gap-3 group cursor-pointer select-none"
                   >
                     <div className="hidden sm:block text-right">
-                      <p className="text-[10px] font-black tracking-tighter text-slate-400 uppercase leading-none">{settings.headerOperatorLabel || 'Operator'}</p>
+                      {activeTool === 'admin-panel' ? (
+                        <p className="text-[10px] font-black tracking-tighter text-slate-400 uppercase leading-none">{settings.headerOperatorLabel || 'Admin'}</p>
+                      ) : (
+                        <p className="text-[10px] font-black tracking-tighter text-slate-400 uppercase leading-none">&nbsp;</p>
+                      )}
                       <p className="text-xs font-black leading-none group-hover:text-primary transition-colors">{currentUser.name}</p>
                     </div>
                     <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-[10px] md:text-xs font-black shadow-lg shadow-indigo-500/20 rotate-3 group-hover:rotate-0 transition-all border border-indigo-400/20">
