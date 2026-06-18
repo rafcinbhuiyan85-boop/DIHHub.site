@@ -3,7 +3,9 @@ import {
   LayoutDashboard, PlusCircle, List, ArrowDownToLine, 
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
   AlertCircle, RefreshCw, X, HelpCircle, Activity, Star,
-  TrendingUp, Users, CheckCircle, ExternalLink, Sparkles
+  TrendingUp, Users, CheckCircle, ExternalLink, Sparkles,
+  Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
+  Send, Globe, Music, MessageSquare, Video
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -125,6 +127,25 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     ...s,
     price: s.price * (settings.smmPriceMultiplier || 1.0)
   }));
+
+  const orderFilteredServices = activeServices.filter(s => {
+    if (orderActiveCat === 'All') return true;
+    
+    const catLower = orderActiveCat.toLowerCase();
+    const svcCatLower = s.category.toLowerCase();
+    
+    if (catLower === 'youtube') {
+      return svcCatLower.includes('youtube');
+    } else if (catLower === 'tiktok') {
+      return svcCatLower.includes('tiktok');
+    } else if (catLower === 'twitter/x' || catLower === 'twitter') {
+      return svcCatLower.includes('twitter') || svcCatLower.includes('x');
+    } else if (catLower === 'linkedin') {
+      return svcCatLower.includes('linkedin');
+    } else {
+      return svcCatLower === catLower;
+    }
+  });
   
   // States
   const [balance, setBalance] = useState<number>(0.00);
@@ -135,6 +156,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   
   // New Order Form States
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [ddSearchQuery, setDdSearchQuery] = useState<string>('');
   const [orderLink, setOrderLink] = useState<string>('');
@@ -322,6 +344,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
   };
 
+  const getCategoryIcon = (cat: string) => {
+    const c = cat.toLowerCase();
+    if (c === 'all') return <Layers size={13} />;
+    if (c === 'instagram') return <Instagram size={13} />;
+    if (c === 'facebook') return <Facebook size={13} />;
+    if (c === 'youtube') return <Youtube size={13} />;
+    if (c === 'tiktok') return <Video size={13} />;
+    if (c === 'twitter/x' || c === 'twitter') return <Twitter size={13} />;
+    if (c === 'telegram') return <Send size={13} />;
+    if (c === 'spotify') return <Music size={13} />;
+    if (c === 'linkedin') return <Linkedin size={13} />;
+    if (c === 'discord') return <MessageSquare size={13} />;
+    if (c === 'website traffic') return <Globe size={13} />;
+    return <Sparkles size={13} />;
+  };
+
   const navigate = (page: 'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit', serviceId?: number) => {
     setActivePage(page);
     if (page === 'new-order' && serviceId) {
@@ -329,6 +367,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       const s = activeServices.find(x => x.id === serviceId);
       if (s) {
         setOrderQty(s.min.toString());
+        setOrderActiveCat(s.category);
       }
     }
     setOrderError(null);
@@ -932,16 +971,137 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
             {/* NEW ORDER PAGE */}
             {activePage === 'new-order' && (
-              <div className="max-w-2xl mx-auto">
+              <div className="max-w-2xl mx-auto space-y-5">
                 <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
-                  <div className="px-5 py-4 border-b border-[#1e2336]">
+                  <div className="px-5 py-4 border-b border-[#1e2336] flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-white">Place New Order</h3>
+                    <span className="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/25 uppercase tracking-wider">
+                      Easy Selection Enabled
+                    </span>
                   </div>
                   <div className="p-5.5 space-y-5">
                     
+                    {/* QUICK CATEGORY SELECTOR */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center pl-0.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select Platform</label>
+                        {orderActiveCat !== 'All' && (
+                          <button 
+                            type="button"
+                            onClick={() => setOrderActiveCat('All')} 
+                            className="text-[10px] text-blue-500 hover:underline font-semibold"
+                          >
+                            Show All
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
+                        {CATEGORIES.map(c => {
+                          const isSelected = orderActiveCat === c;
+                          const label = c === 'All' ? 'Everythings' : c;
+                          return (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => {
+                                setOrderActiveCat(c);
+                                setDdSearchQuery('');
+                              }}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 select-none active:scale-95 justify-center cursor-pointer h-10",
+                                isSelected
+                                  ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/10 font-bold"
+                                  : "bg-[#1c2135]/40 text-slate-400 border-[#1e2336] hover:text-white hover:bg-[#1c2135]/85 hover:border-slate-700"
+                              )}
+                            >
+                              {getCategoryIcon(c)}
+                              <span className="truncate">{label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* QUICK SERVICE SELECTION GRID */}
+                    <div className="space-y-2 pb-1">
+                      <div className="flex justify-between items-center pl-0.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select Service (Tap to choose)</label>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Found {orderFilteredServices.length} options
+                        </span>
+                      </div>
+                      
+                      <div className="bg-[#0e111a]/80 border border-[#1e2336] rounded-xl p-2.5 max-h-52 overflow-y-auto custom-scrollbar space-y-1.5">
+                        {orderFilteredServices.length === 0 ? (
+                          <div className="text-center py-6 text-slate-500 text-xs">
+                            No services available in this category.
+                          </div>
+                        ) : (
+                          orderFilteredServices.map(s => {
+                            const isSelected = s.id === selectedServiceId;
+                            return (
+                              <div
+                                key={s.id}
+                                onClick={() => {
+                                  setSelectedServiceId(s.id);
+                                  setOrderQty(s.min.toString());
+                                  setOrderError(null);
+                                }}
+                                className={cn(
+                                  "w-full px-3 py-2.5 rounded-lg border text-left flex items-start justify-between gap-3 transition-all duration-150 cursor-pointer hover:bg-blue-500/[0.04] active:scale-[0.99]",
+                                  isSelected 
+                                    ? "bg-blue-600/10 border-blue-550 shadow-md shadow-blue-550/5" 
+                                    : "bg-[#141720]/40 border-[#1e2336] hover:border-slate-700"
+                                )}
+                              >
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                      "w-1.5 h-1.5 rounded-full shrink-0",
+                                      isSelected ? "bg-blue-400" : "bg-slate-700"
+                                    )} />
+                                    <p className={cn(
+                                      "text-xs font-semibold truncate leading-tight",
+                                      isSelected ? "text-blue-400" : "text-slate-200"
+                                    )}>
+                                      {s.name}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-slate-500 pl-3.5">
+                                    <span>Rate: <strong className="text-slate-400">${s.price.toFixed(2)}/1k</strong></span>
+                                    <span>•</span>
+                                    <span>Min: <strong className="text-slate-400">{fmt(s.min)}</strong></span>
+                                    <span>•</span>
+                                    {s.refill && (
+                                      <>
+                                        <span className="text-[#38bdf8] font-medium">{s.refill}</span>
+                                        <span>•</span>
+                                      </>
+                                    )}
+                                    <span>{s.time}</span>
+                                  </div>
+                                </div>
+                                <div className="shrink-0 flex items-center h-full pt-1">
+                                  {isSelected ? (
+                                    <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border border-blue-500/30">
+                                      Active
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500 bg-[#141720] hover:text-slate-300 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border border-slate-800">
+                                      Select
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                    
                     {/* CUSTOM DROPDOWN */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Select Service</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Selected Service (Review/Change)</label>
                       <div className="relative" ref={dropdownRef}>
                         <button
                           type="button"
