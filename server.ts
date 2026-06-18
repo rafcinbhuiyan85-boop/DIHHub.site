@@ -221,6 +221,28 @@ async function startServer() {
     res.json(users);
   });
 
+  app.post("/api/admin/users/update-balance", async (req, res) => {
+    const { email, balance } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.email === email);
+    if (user) {
+      user.balance = parseFloat(balance) || 0;
+      await saveData(USERS_FILE, users);
+      return res.json({ status: 'ok', user });
+    }
+    return res.status(404).json({ error: 'User not found' });
+  });
+
+  app.get("/api/smm/balance/:email", (req, res) => {
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.email === req.params.email);
+    if (user) {
+      return res.json({ balance: user.balance || 0 });
+    }
+    return res.json({ balance: 0 });
+  });
+
   // --- PERSISTENCE ENDPOINTS ---
 
   app.get("/api/admin/logs", (req, res) => {
@@ -272,6 +294,176 @@ async function startServer() {
   app.post("/api/admin/settings", async (req, res) => {
     await saveData(SETTINGS_FILE, req.body);
     res.json({ status: 'ok' });
+  });
+
+  // --- SMM PROVIDER LIVE SERVICES AGGREGATION & FETCH PROXY ---
+  app.post("/api/admin/smm/fetch-services", async (req, res) => {
+    const { url, key } = req.body;
+    if (!url || !key) {
+      return res.status(400).json({ error: "SMM Provider API URL and API Key are required fields." });
+    }
+
+    try {
+      console.log(`[SMM Proxy] Initiating connection to: ${url}`);
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+        normalizedUrl = "https://" + normalizedUrl;
+      }
+
+      // 1. Try forms-urlencoded POST first (SMM panel standard)
+      const params = new URLSearchParams();
+      params.append('key', key.trim());
+      params.append('action', 'services');
+
+      let response;
+      let usedMethod = 'POST';
+      try {
+        response = await axios.post(normalizedUrl, params.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 15000
+        });
+      } catch (postErr: any) {
+        console.warn(`[SMM Proxy] POST failed: ${postErr.message}. Attempting resilient GET fallback...`);
+        usedMethod = 'GET';
+        
+        // 2. Fallback to GET with URL parameters
+        const separator = normalizedUrl.includes('?') ? '&' : '?';
+        const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(key.trim())}&action=services`;
+        
+        response = await axios.get(getUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 15000
+        });
+      }
+
+      const rawData = response.data;
+      if (!rawData) {
+        throw new Error("No payload/response returned from SMM provider.");
+      }
+
+      // Check for SMM service provider errors embedded in JSON
+      if (typeof rawData === 'object' && rawData.error) {
+        return res.status(400).json({ error: `SMM Panel Error: ${rawData.error}` });
+      }
+
+      // Handle normal list responses
+      let rawServicesList: any[] = [];
+      if (Array.isArray(rawData)) {
+        rawServicesList = rawData;
+      } else if (rawData && typeof rawData === 'object') {
+        // Look inside keys for potential lists
+        const foundArray = Object.values(rawData).find(v => Array.isArray(v));
+        if (foundArray) {
+          rawServicesList = foundArray as any[];
+        } else {
+          // If it's key-value mapped index (IDs as object keys)
+          const keys = Object.keys(rawData);
+          if (keys.length > 0 && typeof rawData[keys[0]] === 'object') {
+            rawServicesList = Object.entries(rawData).map(([id, sObj]: [string, any]) => ({
+              service: id,
+              ...sObj
+            }));
+          }
+        }
+      }
+
+      if (!rawServicesList || rawServicesList.length === 0) {
+        console.warn("[SMM Proxy] Failed to parse services from raw SMM panel response:", rawData);
+        // Fallback or send structured message
+        return res.status(400).json({ 
+          error: "Unrecognized SMM API format. Server response contains no clear list of SMM services.",
+          debug: typeof rawData === 'object' ? JSON.stringify(rawData).slice(0, 400) : String(rawData).slice(0, 400)
+        });
+      }
+
+      // Normalize services into standard DIH Hub SMM structure
+      const normalizedServices = rawServicesList.map((svc: any, idx: number) => {
+        const idVal = parseInt(svc.service || svc.id || svc.service_id) || (20000 + idx);
+        
+        // Robust SMM Service Name, Category, Description and Limits decoding
+        const nameVal = (svc.name || svc.title || svc.service_name || svc.label || `Service #${idVal}`).toString().trim();
+        const catVal = (svc.category || svc.group || svc.cat || svc.service_category || svc.section || "Others").toString().trim();
+        
+        let rateStr = String(svc.rate || svc.price || svc.charge || svc.cost || "0.0").trim();
+        rateStr = rateStr.replace(/[^0-9.]/g, ''); // Robust sanitizer for any currency symbols
+        const rateVal = parseFloat(rateStr) || 0.0;
+
+        let minStr = String(svc.min || svc.min_quantity || svc.min_qty || "50").trim();
+        minStr = minStr.replace(/[^0-9]/g, '');
+        const minVal = parseInt(minStr) || 50;
+
+        let maxStr = String(svc.max || svc.max_quantity || svc.max_qty || "100000").trim();
+        maxStr = maxStr.replace(/[^0-9]/g, '');
+        const maxVal = parseInt(maxStr) || 100000;
+
+        const descVal = svc.desc || svc.description || "Live directly connected service from provider package.";
+        
+        // Smart Refill Extractor
+        let refillStatus = "No Refill";
+        const hasNoRefillWord = /no[n\s-]*refill|without\s*refill/i.test(nameVal);
+
+        if (!hasNoRefillWord) {
+          // Check explicit refill property from SMM API response (supported by most providers)
+          if (svc.refill !== undefined && svc.refill !== null) {
+            const r = svc.refill;
+            if (r === true || r === 1 || r === '1' || r === 'true' || r === 'Yes' || r === 'yes') {
+              refillStatus = "Yes (Refill)";
+            } else if (r === false || r === 0 || r === '0' || r === 'false' || r === 'No' || r === 'no') {
+              refillStatus = "No Refill";
+            } else {
+              refillStatus = String(r).trim(); // e.g., "30" or "30 days"
+              if (/^\d+$/.test(refillStatus)) {
+                refillStatus = `${refillStatus}D Refill`;
+              }
+            }
+          }
+
+          // Inspect service name fallback for refill pattern indicators
+          if (refillStatus === "No Refill" || refillStatus === "Yes (Refill)") {
+            const lifetimeMatch = /lifetime/i.test(nameVal);
+            const daysMatch = nameVal.match(/(\d+)\s*(?:days?|d)\s*refill/i) || 
+                              nameVal.match(/refill\s*(?:button|guarantee)?\s*(\d+)\s*days?/i) ||
+                              nameVal.match(/r(\d{2,3})(?:\D|$)/i) ||
+                              nameVal.match(/(\d+)\s*d\s*refill/i);
+            
+            if (lifetimeMatch) {
+              refillStatus = "Lifetime Refill";
+            } else if (daysMatch) {
+              refillStatus = `${daysMatch[1]}D Refill`;
+            } else if (/refill/i.test(nameVal)) {
+              refillStatus = (refillStatus === "No Refill") ? "Refill Supported" : refillStatus;
+            }
+          }
+        }
+
+        return {
+          id: idVal,
+          name: nameVal,
+          category: catVal,
+          originalPrice: rateVal,
+          min: minVal,
+          max: maxVal,
+          desc: descVal,
+          time: svc.time || svc.speed || svc.delivery || "0-24 hours",
+          quality: svc.quality || svc.class || svc.tier || svc.type || "Standard",
+          refill: refillStatus
+        };
+      });
+
+      console.log(`[SMM Proxy] Successfully parsed ${normalizedServices.length} SMM services from real provider via ${usedMethod}.`);
+      return res.json(normalizedServices);
+
+    } catch (apiError: any) {
+      console.error("[SMM Proxy] Error contacting SMM Provider URL:", apiError.message);
+      return res.status(500).json({ 
+        error: `Could not verify/connect SMM API endpoint: ${apiError.message}. Clarify if your Provider URL is open and allows connections.` 
+      });
+    }
   });
 
   // --- APK STORE ENDPOINTS ---

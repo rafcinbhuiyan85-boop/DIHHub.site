@@ -302,7 +302,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   downloaderEnableThreads: true,
   storeEnableApks: true,
   storeEnableAccounts: true,
-  smmDefaultBalance: 50.00,
+  smmDefaultBalance: 0.00,
   smmPriceMultiplier: 1.0,
   smmSystemNotice: 'Welcome to DIH SMM Panel! Enjoy safe, fast SMM panel services at the best rates in Bangladesh.',
   smmPaymentMethods: ['bkash', 'nagad', 'rocket', 'card', 'crypto'],

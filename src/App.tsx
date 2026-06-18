@@ -248,7 +248,7 @@ function MainApp() {
       case 'mobile-bypass': return <MobileBypass />;
       case 'dih-movies': return <DihMoviesApp />;
       case 'bachelor-point': return <BachelorPoint />;
-      case 'dih-smm': return <DihSmm />;
+      case 'dih-smm': return <DihSmm currentUser={currentUser} onAuthClick={() => setIsAuthModalOpen(true)} />;
       case 'hosted-admin': return <TemplatesGallery onBack={() => setActiveToolWithNavigation('dashboard')} />;
       case 'admin-login': return (
         <AdminLogin onLogin={() => {

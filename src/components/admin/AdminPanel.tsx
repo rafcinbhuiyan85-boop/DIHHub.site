@@ -259,13 +259,26 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [isCopiedHtmlCode, setIsCopiedHtmlCode] = useState(false);
 
   // SMM Management States
-  const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'users' | 'deposits' | 'settings' | 'providers'>('dashboard');
+  const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'users' | 'deposits' | 'settings' | 'providers' | 'gateways'>('dashboard');
   const [smmOrders, setSmmOrders] = useState<any[]>([]);
   const [smmUsers, setSmmUsers] = useState<any[]>([]);
   const [smmDeposits, setSmmDeposits] = useState<any[]>([]);
   const [smmServicesList, setSmmServicesList] = useState<any[]>([]);
   const [smmProviders, setSmmProviders] = useState<any[]>([]);
   const [smmManualGateways, setSmmManualGateways] = useState<any[]>([]);
+  const [selectedCatalogSvcIds, setSelectedCatalogSvcIds] = useState<number[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // SMM API Live Fetch & Import States
+  const [activeImportProvider, setActiveImportProvider] = useState<any | null>(null);
+  const [isImportLoading, setIsImportLoading] = useState(false);
+  const [importStep, setImportStep] = useState<'connecting' | 'loading' | 'ready' | 'importing' | 'completed'>('connecting');
+  const [apiServices, setApiServices] = useState<any[]>([]);
+  const [selectedApiSvcIds, setSelectedApiSvcIds] = useState<number[]>([]);
+  const [importMarkup, setImportMarkup] = useState('1.5'); // Multiplier (e.g. 1.5x)
+  const [apiSearchQuery, setApiSearchQuery] = useState('');
+  const [apiCatFilter, setApiCatFilter] = useState('All');
+  const [smmToast, setSmmToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   // Inline deletion state managers for safe iframe action flow
   const [smmDeletingServiceId, setSmmDeletingServiceId] = useState<number | null>(null);
@@ -273,6 +286,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmDeletingOrderId, setSmmDeletingOrderId] = useState<number | null>(null);
   const [smmDeletingUserId, setSmmDeletingUserId] = useState<number | null>(null);
   const [smmDeletingDepositId, setSmmDeletingDepositId] = useState<number | null>(null);
+  const [smmConfirmClearAll, setSmmConfirmClearAll] = useState(false);
+  const [smmConfirmBatchDelete, setSmmConfirmBatchDelete] = useState(false);
 
   // Search & Filter States
   const [smmOrderSearch, setSmmOrderSearch] = useState('');
@@ -297,6 +312,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormMin, setSmmFormMin] = useState('100');
   const [smmFormMax, setSmmFormMax] = useState('1000000');
   const [smmFormDesc, setSmmFormDesc] = useState('');
+  const [smmFormRefill, setSmmFormRefill] = useState('No Refill');
   const [smmFormSvcProviderId, setSmmFormSvcProviderId] = useState('manual');
   const [smmFormSvcProviderServiceId, setSmmFormSvcProviderServiceId] = useState('');
 
@@ -324,6 +340,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormGatewayEnabled, setSmmFormGatewayEnabled] = useState(true);
 
   // SMM Sync Effect
+  useEffect(() => {
+    if (smmToast) {
+      const t = setTimeout(() => setSmmToast(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [smmToast]);
+
   useEffect(() => {
     const loadSmmData = () => {
       // 1. SERVICES
@@ -389,10 +412,10 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         localStorage.setItem('dih_smm_orders_v2', JSON.stringify(defaultOrders));
       }
 
-      // 3. USERS (SMM simulate)
+      // 3. USERS (SMM simulate + REAL Server Users)
       const cachedUsers = localStorage.getItem('dih_smm_users_v2');
       let currentActiveBalance = localStorage.getItem('dih_smm_balance');
-      const parsedBalance = currentActiveBalance ? parseFloat(currentActiveBalance) : (settings.smmDefaultBalance !== undefined ? settings.smmDefaultBalance : 50.00);
+      const parsedBalance = currentActiveBalance ? parseFloat(currentActiveBalance) : 0.00;
       
       const defaultUsers = [
         {id:999,name:"Active SMM User (My Account)",email: auth.currentUser?.email || "me@dihsmm.com",balance:parsedBalance,joined:"2026-06-01"},
@@ -403,24 +426,74 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         {id:5,name:"Sumaiya Khatun",email:"sumaiya@example.com",balance:35.75,joined:"2026-06-12"}
       ];
 
-      if (cachedUsers) {
-        try {
-          const parsedUsers = JSON.parse(cachedUsers);
-          const updatedUsers = parsedUsers.map((u: any) => {
-            if (u.id === 999) {
-              return { ...u, balance: parsedBalance, email: auth.currentUser?.email || u.email };
+      fetch('/api/admin/users')
+        .then(res => res.json())
+        .then(serverUsers => {
+          if (Array.isArray(serverUsers)) {
+            const mappedServerUsers = serverUsers.map((su: any) => {
+              const localBalKey = `dih_smm_balance_${su.email}`;
+              const cachedBal = localStorage.getItem(localBalKey);
+              const balanceToUse = cachedBal ? parseFloat(cachedBal) : (su.balance || 0.00);
+              return {
+                id: su.id,
+                name: su.name,
+                email: su.email,
+                balance: balanceToUse,
+                joined: su.registeredAt ? su.registeredAt.split('T')[0] : '2026-06-18'
+              };
+            });
+
+            const merged = [...mappedServerUsers];
+            defaultUsers.forEach(du => {
+              if (!merged.find(u => u.email === du.email)) {
+                merged.push(du);
+              }
+            });
+
+            // Ensure real balances get applied
+            const final = merged.map((u: any) => {
+              if (u.id === 999 || u.email === auth.currentUser?.email) {
+                const myKey = `dih_smm_balance_${u.email}`;
+                const realMyBal = parseFloat(localStorage.getItem(myKey) || localStorage.getItem('dih_smm_balance') || '0.00');
+                return { ...u, balance: realMyBal, email: auth.currentUser?.email || u.email };
+              }
+              const specificKey = `dih_smm_balance_${u.email}`;
+              const specBal = localStorage.getItem(specificKey);
+              if (specBal) {
+                return { ...u, balance: parseFloat(specBal) };
+              }
+              return u;
+            });
+
+            setSmmUsers(prev => JSON.stringify(prev) !== JSON.stringify(final) ? final : prev);
+            localStorage.setItem('dih_smm_users_v2', JSON.stringify(final));
+          } else {
+            setSmmUsers(defaultUsers);
+          }
+        })
+        .catch(() => {
+          if (cachedUsers) {
+            try {
+              const parsedUsers = JSON.parse(cachedUsers);
+              const updatedUsers = parsedUsers.map((u: any) => {
+                if (u.id === 999) {
+                  return { ...u, balance: parsedBalance, email: auth.currentUser?.email || u.email };
+                }
+                const specificKey = `dih_smm_balance_${u.email}`;
+                const specBal = localStorage.getItem(specificKey);
+                if (specBal) {
+                  return { ...u, balance: parseFloat(specBal) };
+                }
+                return u;
+              });
+              setSmmUsers(prev => JSON.stringify(prev) !== JSON.stringify(updatedUsers) ? updatedUsers : prev);
+            } catch (e) {
+              setSmmUsers(defaultUsers);
             }
-            return u;
-          });
-          setSmmUsers(prev => JSON.stringify(prev) !== JSON.stringify(updatedUsers) ? updatedUsers : prev);
-          localStorage.setItem('dih_smm_users_v2', JSON.stringify(updatedUsers));
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        setSmmUsers(defaultUsers);
-        localStorage.setItem('dih_smm_users_v2', JSON.stringify(defaultUsers));
-      }
+          } else {
+            setSmmUsers(defaultUsers);
+          }
+        });
 
       // 4. DEPOSITS
       const cachedDeposits = localStorage.getItem('dih_smm_deposits_v2');
@@ -524,10 +597,24 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeposits));
   };
 
-  const handleDeleteSmmService = (svcId: number) => {
-    const nextList = smmServicesList.filter(s => s.id !== svcId);
-    setSmmServicesList(nextList);
+  const handleDeleteSmmService = (svcId: any) => {
+    const nextList = smmServicesList.filter(s => s.id.toString() !== svcId.toString());
     localStorage.setItem('dih_smm_services_v2', JSON.stringify(nextList));
+    setSmmServicesList(nextList);
+  };
+
+  const handleBulkDeleteServices = (svcIds: any[]) => {
+    const idsAsStrings = svcIds.map(id => id.toString());
+    const nextList = smmServicesList.filter(s => !idsAsStrings.includes(s.id.toString()));
+    localStorage.setItem('dih_smm_services_v2', JSON.stringify(nextList));
+    setSmmServicesList(nextList);
+    setSelectedCatalogSvcIds([]);
+  };
+
+  const handleClearAllServices = () => {
+    localStorage.setItem('dih_smm_services_v2', JSON.stringify([]));
+    setSmmServicesList([]);
+    setSelectedCatalogSvcIds([]);
   };
 
   const handleDeleteSmmOrder = (orderId: number) => {
@@ -555,7 +642,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     let updatedList = [];
     if (smmModalType === 'add-service') {
       const newSvc = {
-        id: smmServicesList.length ? Math.max(...smmServicesList.map(s => s.id)) + 1 : 1,
+        id: smmServicesList.length ? Math.max(...smmServicesList.map(s => Number(s.id) || 0)) + 1 : 1,
         name: smmFormName,
         category: smmFormCategory,
         quality: smmFormQuality,
@@ -564,13 +651,14 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         max: parseInt(smmFormMax) || 1000000,
         desc: smmFormDesc,
         time: smmFormTime,
+        refill: smmFormRefill,
         providerId: smmFormSvcProviderId,
         providerServiceId: smmFormSvcProviderServiceId
       };
       updatedList = [...smmServicesList, newSvc];
     } else if (smmModalType === 'edit-service' && selectedSmmItem) {
       updatedList = smmServicesList.map(s => {
-        if (s.id === selectedSmmItem.id) {
+        if (s.id.toString() === selectedSmmItem.id.toString()) {
           return {
             ...s,
             name: smmFormName,
@@ -581,16 +669,19 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             max: parseInt(smmFormMax) || 1000000,
             desc: smmFormDesc,
             time: smmFormTime,
+            refill: smmFormRefill,
             providerId: smmFormSvcProviderId,
             providerServiceId: smmFormSvcProviderServiceId
           };
         }
         return s;
       });
+    } else {
+      updatedList = smmServicesList;
     }
 
-    setSmmServicesList(updatedList);
     localStorage.setItem('dih_smm_services_v2', JSON.stringify(updatedList));
+    setSmmServicesList(updatedList);
     setIsSmmModalOpen(false);
   };
 
@@ -632,6 +723,316 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     const updated = smmProviders.filter(p => p.id !== id);
     setSmmProviders(updated);
     localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updated));
+  };
+
+  // SMM PROVIDER REAL INTEGRATION ENGINE MOCK DATA & FUNCTIONS
+  const MOCK_API_SERVICES = [
+    // Instagram
+    { id: 101, name: "Instagram Followers - Organic [Real Active Accounts]", category: "Instagram", originalPrice: 0.38, min: 100, max: 100000, desc: "Ultra stable organic-looking active followers. Non drop.", time: "1-6 hours", quality: "Premium" },
+    { id: 102, name: "Instagram Followers - Fast [Direct Server]", category: "Instagram", originalPrice: 0.18, min: 100, max: 200000, desc: "Fast instant delivery followers.", time: "0-30 minutes", quality: "Standard" },
+    { id: 103, name: "Instagram Likes - Non Drop [30 Days Refill Button]", category: "Instagram", originalPrice: 0.05, min: 50, max: 500000, desc: "Organic-paced secure likes.", time: "0-1 hours", quality: "Standard" },
+    { id: 104, name: "Instagram Likes - Cheapest [Instant Spark]", category: "Instagram", originalPrice: 0.025, min: 50, max: 1000000, desc: "Cheapest fast instant likes worldwide.", time: "0-15 minutes", quality: "Standard" },
+    { id: 105, name: "Instagram Story Views - Organic", category: "Instagram", originalPrice: 0.02, min: 100, max: 5000000, desc: "Story views update instantly.", time: "5-15 minutes", quality: "Standard" },
+    { id: 106, name: "Instagram Custom Comments - Real Profiles", category: "Instagram", originalPrice: 1.80, min: 5, max: 1000, desc: "Verified comments or custom text inputs.", time: "1-3 hours", quality: "Premium" },
+    
+    // Facebook
+    { id: 110, name: "Facebook Page Likes + Followers [Lifetime Stable]", category: "Facebook", originalPrice: 0.65, min: 100, max: 500000, desc: "Stable profile or page likes, permanent warranty.", time: "0-24 hours", quality: "Standard" },
+    { id: 111, name: "Facebook Post Likes - Instant Liquid Speed", category: "Facebook", originalPrice: 0.18, min: 50, max: 200000, desc: "Quick reaction boosts on posts, photos and text.", time: "0-6 hours", quality: "Standard" },
+    { id: 112, name: "Facebook Live Stream Viewers - 60 Minutes", category: "Facebook", originalPrice: 1.25, min: 10, max: 10000, desc: "Stable viewers for your live stream.", time: "Instant", quality: "Premium" },
+    { id: 113, name: "Facebook Video Views - Organic Monetization Ready", category: "Facebook", originalPrice: 0.08, min: 1000, max: 10000000, desc: "Monetization compliant video watch views.", time: "0-4 hours", quality: "Premium" },
+
+    // YouTube
+    { id: 120, name: "YouTube Views - High Retention [Organic Ads Traffic]", category: "YouTube", originalPrice: 0.95, min: 500, max: 10000000, desc: "High retention video views backed by Google Ads pattern.", time: "0-24 hours", quality: "Premium" },
+    { id: 121, name: "YouTube Subscribers - Permanent [30D Refill]", category: "YouTube", originalPrice: 3.50, min: 50, max: 50000, desc: "Guaranteed subscribers with real profile signals.", time: "1-3 days", quality: "Premium" },
+    { id: 122, name: "YouTube Watch Hours - Monetization Target 4K", category: "YouTube", originalPrice: 9.80, min: 100, max: 10000, desc: "Real watch hours to unlock partner program.", time: "7-30 days", quality: "VIP" },
+    { id: 123, name: "YouTube Likes - High Engaged", category: "YouTube", originalPrice: 0.40, min: 50, max: 100000, desc: "High rating organic video likes.", time: "0-12 hours", quality: "Standard" },
+
+    // TikTok
+    { id: 130, name: "TikTok Followers - Real Looking [Stable Slow Feed]", category: "TikTok", originalPrice: 0.85, min: 100, max: 500000, desc: "Steady account growth with real-looking users.", time: "0-12 hours", quality: "Standard" },
+    { id: 131, name: "TikTok Followers - Ultra Fast Instant Delivery", category: "TikTok", originalPrice: 0.45, min: 100, max: 1000000, desc: "Instant visual followers count boost.", time: "0-1 hours", quality: "Standard" },
+    { id: 132, name: "TikTok Likes - Real Active Users", category: "TikTok", originalPrice: 0.18, min: 100, max: 1000000, desc: "High quality authentic video likes.", time: "0-2 hours", quality: "Standard" },
+    { id: 133, name: "TikTok Views - Super Traffic Viral Speed", category: "TikTok", originalPrice: 0.015, min: 1000, max: 100000000, desc: "Fastest viral view server stream.", time: "0-10 minutes", quality: "Standard" },
+
+    // Twitter/X
+    { id: 140, name: "Twitter/X Followers - Premium Verified Accounts", category: "Twitter/X", originalPrice: 1.80, min: 100, max: 500000, desc: "High quality accounts with active timeline.", time: "0-24 hours", quality: "Premium" },
+    { id: 141, name: "Twitter/X Likes - Fast Delivery", category: "Twitter/X", originalPrice: 0.35, min: 50, max: 100000, desc: "Fast post likes.", time: "0-4 hours", quality: "Standard" },
+    { id: 142, name: "Twitter/X Retweets - Premium Shares", category: "Twitter/X", originalPrice: 0.75, min: 50, max: 100000, desc: "Increases virality organic reach.", time: "0-6 hours", quality: "Standard" },
+
+    // Telegram
+    { id: 150, name: "Telegram Channel Members - Stable No Drop", category: "Telegram", originalPrice: 1.15, min: 100, max: 1000000, desc: "Extremely stable high-quality members.", time: "0-24 hours", quality: "Standard" },
+    { id: 151, name: "Telegram Group Members - Real Profiles", category: "Telegram", originalPrice: 1.45, min: 100, max: 500000, desc: "Group members with distinct name tags.", time: "0-24 hours", quality: "Premium" },
+    { id: 152, name: "Telegram Post Views - Multi Post Auto Feed", category: "Telegram", originalPrice: 0.05, min: 100, max: 10000000, desc: "Views across last 5 posts instantly.", time: "0-15 minutes", quality: "Standard" },
+
+    // Spotify
+    { id: 160, name: "Spotify Track Plays - Unique Listeners", category: "Spotify", originalPrice: 0.65, min: 1000, max: 10000000, desc: "Compliant track streams for artists.", time: "2-24 hours", quality: "Standard" },
+    { id: 161, name: "Spotify Artist/User Profile Followers", category: "Spotify", originalPrice: 0.95, min: 100, max: 500000, desc: "Stable active profile followers.", time: "0-12 hours", quality: "Premium" },
+    { id: 162, name: "Spotify Playlist Saves / Followers", category: "Spotify", originalPrice: 0.40, min: 50, max: 100000, desc: "Saves with playlist optimization.", time: "1-6 hours", quality: "Standard" },
+
+    // LinkedIn
+    { id: 170, name: "LinkedIn Personal Profile Followers", category: "LinkedIn", originalPrice: 4.80, min: 100, max: 50000, desc: "HQ enterprise professionals.", time: "1-3 days", quality: "Premium" },
+    { id: 171, name: "LinkedIn Company Page Followers", category: "LinkedIn", originalPrice: 6.20, min: 100, max: 50000, desc: "Page subscribers from valid corporates.", time: "1-3 days", quality: "Premium" },
+    { id: 172, name: "LinkedIn Post Likes & Reactions", category: "LinkedIn", originalPrice: 3.50, min: 25, max: 10000, desc: "Reactions (Thumbs, Insightful, Support).", time: "2-12 hours", quality: "Standard" },
+
+    // Discord
+    { id: 180, name: "Discord Server Members - Offline Cheap", category: "Discord", originalPrice: 1.10, min: 100, max: 20000, desc: "Instant offline token invites.", time: "0-12 hours", quality: "Standard" },
+    { id: 181, name: "Discord Server Members - Real Looking Online", category: "Discord", originalPrice: 2.90, min: 100, max: 10000, desc: "Online accounts that stay in server.", time: "1-6 hours", quality: "Premium" },
+
+    // Website Traffic
+    { id: 190, name: "Website Traffic - Worldwide Cheap [Organic Direct]", category: "Website Traffic", originalPrice: 0.08, min: 1000, max: 10000000, desc: "Cheap direct organic clicks.", time: "Instant", quality: "Standard" },
+    { id: 191, name: "Website Traffic - USA Geotargeted Organic", category: "Website Traffic", originalPrice: 0.35, min: 1000, max: 5000000, desc: "100% US IP organic views.", time: "0-24 hours", quality: "Premium" },
+    { id: 192, name: "Website Traffic - Google Organic Search Ref", category: "Website Traffic", originalPrice: 0.45, min: 1000, max: 1000000, desc: "Custom search organic hits with high session durations.", time: "2-12 hours", quality: "Premium" },
+
+    // Others
+    { id: 201, name: "YouTube Comments Like / Reply Threads", category: "Others", originalPrice: 1.12, min: 10, max: 5000, desc: "Real written comments thread.", time: "0-6 hours", quality: "Premium" },
+    { id: 202, name: "Google One 2TB + Gemini Pro Global (1 Month Trial)", category: "Others", originalPrice: 0.45, min: 1, max: 100, desc: "Active invite accounts.", time: "0-6 hours", quality: "VIP" },
+    { id: 203, name: "Shopee Video/Live Stream Followers & Views", category: "Others", originalPrice: 0.25, min: 500, max: 500500, desc: "Ecommerce traffic boost.", time: "0-1 hours", quality: "Standard" }
+  ];
+
+  const matchesFuzzyCategory = (svcCategory: string, filterCat: string) => {
+    if (filterCat === 'All') return true;
+    
+    const filterLower = filterCat.toLowerCase();
+    const svcLower = svcCategory.toLowerCase();
+    
+    if (filterLower === 'instagram') {
+      return svcLower.includes('instagram') || svcLower.includes('ig');
+    }
+    if (filterLower === 'facebook') {
+      return svcLower.includes('facebook') || svcLower.includes('fb');
+    }
+    if (filterLower === 'youtube') {
+      return svcLower.includes('youtube') || svcLower.includes('yt');
+    }
+    if (filterLower === 'tiktok') {
+      return svcLower.includes('tiktok') || svcLower.includes('tt');
+    }
+    if (filterLower === 'telegram') {
+      return svcLower.includes('telegram') || svcLower.includes('tg');
+    }
+    if (filterLower === 'twitter' || filterLower === 'twitter/x') {
+      return svcLower.includes('twitter') || svcLower.includes('x ');
+    }
+    if (filterLower === 'linkedin') {
+      return svcLower.includes('linkedin');
+    }
+    if (filterLower === 'spotify') {
+      return svcLower.includes('spotify');
+    }
+    if (filterLower === 'discord') {
+      return svcLower.includes('discord');
+    }
+    if (filterLower === 'website traffic') {
+      return svcLower.includes('website') || svcLower.includes('traffic') || svcLower.includes('web');
+    }
+    if (filterLower === 'others') {
+      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcLower.includes(k));
+      return !isKnown;
+    }
+    return svcLower === filterLower;
+  };
+
+  const startImportWizard = async (prov: any) => {
+    setActiveImportProvider(prov);
+    setImportStep('connecting');
+    setIsImportLoading(true);
+    setSelectedApiSvcIds([]);
+    setApiSearchQuery('');
+    setApiCatFilter('All');
+
+    const hasRealApi = prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
+    
+    if (hasRealApi) {
+      setSmmToast({ message: `Connecting API: Fetching live services from SMM Panel URL...`, type: 'info' });
+      try {
+        const response = await fetch('/api/admin/smm/fetch-services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: prov.apiUrl, key: prov.apiKey })
+        });
+        
+        if (response.ok) {
+          const liveServices = await response.json();
+          if (Array.isArray(liveServices) && liveServices.length > 0) {
+            setApiServices(liveServices);
+            setImportStep('ready');
+            setIsImportLoading(false);
+            setSmmToast({ message: `Live services fetched! Found ${liveServices.length} packages from SMM Panel.`, type: 'success' });
+            return;
+          }
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          setSmmToast({ message: `Panel Connected, but: ${errData.error || "failed listing packages"}. Loading standard fallback database.`, type: 'error' });
+        }
+      } catch (err: any) {
+        console.error("Live fetch error:", err);
+        setSmmToast({ message: `API Connection warning: Loading standard database fallback.`, type: 'error' });
+      }
+    }
+
+    // fallback
+    setTimeout(() => {
+      setImportStep('loading');
+      setTimeout(() => {
+        const priceScale = prov.id === 2 ? 0.92 : 1.0;
+        const loadedServices = MOCK_API_SERVICES.map(s => ({
+          ...s,
+          originalPrice: parseFloat((s.originalPrice * priceScale).toFixed(4)),
+          id: s.id + (prov.id * 1000)
+        }));
+        setApiServices(loadedServices);
+        setImportStep('ready');
+        setIsImportLoading(false);
+      }, 800);
+    }, 600);
+  };
+
+  const handleSyncSmmProviderRates = async (prov: any) => {
+    setSmmToast({ message: `Connecting API: Querying wholesale rates from ${prov.name}...`, type: 'info' });
+    
+    const hasRealApi = prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
+    let fetchedServicesList: any[] = [];
+    
+    if (hasRealApi) {
+      try {
+        const response = await fetch('/api/admin/smm/fetch-services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: prov.apiUrl, key: prov.apiKey })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            fetchedServicesList = data;
+          }
+        }
+      } catch (err) {
+        console.error("Live sync retrieval failed, using fallback.", err);
+      }
+    }
+
+    setTimeout(() => {
+      let syncCount = 0;
+      const priceScale = prov.id === 2 ? 0.92 : 1.0;
+      const markupVal = parseFloat(importMarkup) || 1.5;
+      
+      const updatedList = smmServicesList.map(s => {
+        if (s.providerId && s.providerId.toString() === prov.id.toString()) {
+          const apiSvcId = s.providerServiceId ? s.providerServiceId.toString() : '';
+          
+          let matchedApiSvc = fetchedServicesList.find(apiSvc => apiSvc.id.toString() === apiSvcId);
+          
+          if (matchedApiSvc) {
+            s.price = parseFloat((matchedApiSvc.originalPrice * markupVal).toFixed(4));
+            s.min = matchedApiSvc.min;
+            s.max = matchedApiSvc.max;
+            syncCount++;
+          } else {
+            const numericId = parseInt(apiSvcId);
+            const baseMock = MOCK_API_SERVICES.find(m => (m.id + (prov.id * 1000)) === numericId || m.id === numericId);
+            if (baseMock) {
+              s.price = parseFloat((baseMock.originalPrice * priceScale * markupVal).toFixed(4));
+              s.min = baseMock.min;
+              s.max = baseMock.max;
+              syncCount++;
+            }
+          }
+        }
+        return s;
+      });
+
+      if (syncCount > 0) {
+        setSmmServicesList(updatedList);
+        localStorage.setItem('dih_smm_services_v2', JSON.stringify(updatedList));
+        
+        const updatedProvs = smmProviders.map(p => {
+          if (p.id === prov.id) {
+            return { ...p, balance: Math.max(0, (p.balance || 500) - 0.15) };
+          }
+          return p;
+        });
+        setSmmProviders(updatedProvs);
+        localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProvs));
+
+        setSmmToast({ message: `Rates synced completely! Re-calculated prices using ${Math.round(markupVal * 100)}% markup for ${syncCount} active SMM services.`, type: 'success' });
+      } else {
+        setSmmToast({ message: `Connection established. No linked services currently configured for ${prov.name}. Import some services first!`, type: 'info' });
+      }
+    }, 1200);
+  };
+
+  const handleImportSelectedApiServices = () => {
+    if (!activeImportProvider || selectedApiSvcIds.length === 0) return;
+    
+    setImportStep('importing');
+    
+    setTimeout(() => {
+      let maxId = smmServicesList.length ? Math.max(...smmServicesList.map(s => s.id)) : 0;
+      const markupMultiplier = parseFloat(importMarkup) || 1.5;
+      
+      const newImportedServices = apiServices
+        .filter(s => selectedApiSvcIds.includes(s.id))
+        .map(apiSvc => {
+          maxId++;
+          const calculatedPrice = parseFloat((apiSvc.originalPrice * markupMultiplier).toFixed(4));
+          return {
+            id: maxId,
+            name: apiSvc.name,
+            category: apiSvc.category,
+            price: calculatedPrice,
+            min: apiSvc.min,
+            max: apiSvc.max,
+            desc: apiSvc.desc || "Imported automatic service.",
+            time: apiSvc.time || "0-24 hours",
+            quality: apiSvc.quality || "Standard",
+            refill: apiSvc.refill || "No Refill",
+            providerId: activeImportProvider.id.toString(),
+            providerServiceId: apiSvc.id.toString()
+          };
+        });
+        
+      const mergedList = [...smmServicesList];
+      let newlyAdded = 0;
+      newImportedServices.forEach(neu => {
+        const existingIndex = mergedList.findIndex(s => s.providerId === neu.providerId && s.providerServiceId === neu.providerServiceId);
+        if (existingIndex !== -1) {
+          mergedList[existingIndex] = {
+            ...mergedList[existingIndex],
+            price: neu.price,
+            min: neu.min,
+            max: neu.max,
+            name: neu.name,
+            refill: neu.refill
+          };
+        } else {
+          mergedList.push(neu);
+          newlyAdded++;
+        }
+      });
+      
+      const updatedProviders = smmProviders.map(p => {
+        if (p.id === activeImportProvider.id) {
+          const count = mergedList.filter(s => s.providerId === p.id.toString()).length;
+          return { ...p, serviceCount: count };
+        }
+        return p;
+      });
+      
+      setSmmProviders(updatedProviders);
+      localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProviders));
+      
+      setSmmServicesList(mergedList);
+      localStorage.setItem('dih_smm_services_v2', JSON.stringify(mergedList));
+      
+      setImportStep('completed');
+      setSmmToast({ 
+        message: `Import Completed! ${selectedApiSvcIds.length} services connected to ${activeImportProvider.name} with ${Math.round((markupMultiplier - 1.0) * 100)}% profit margin applied.`, 
+        type: 'success' 
+      });
+      
+      setTimeout(() => {
+        setActiveImportProvider(null);
+      }, 800);
+    }, 1500);
   };
 
   const handleSaveSmmGateway = () => {
@@ -4545,6 +4946,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                     <h4 className="text-[9px] font-black tracking-widest text-slate-500 uppercase px-2">Settings & Integration</h4>
                     {[
                       { id: 'providers', label: 'API Providers', icon: Cpu },
+                      { id: 'gateways', label: 'Payment Gateways', icon: DollarSign },
                       { id: 'settings', label: 'Settings', icon: Settings }
                     ].map(nav => {
                       const isAct = smmSubTab === nav.id;
@@ -4586,7 +4988,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   <div>
                     <span className="text-[9px] tracking-widest font-black uppercase text-slate-500">DIH SMM PRO SUITE</span>
                     <h2 className="text-xl font-bold flex items-center gap-2 text-white capitalize mt-0.5">
-                      {smmSubTab === 'dashboard' ? 'Dashboard Summary' : smmSubTab === 'orders' ? 'Customer Orders' : smmSubTab === 'services' ? 'Services Catalogue' : smmSubTab === 'users' ? 'User Directory' : smmSubTab === 'deposits' ? 'Deposits Pipeline' : 'Global Settings'}
+                      {smmSubTab === 'dashboard' ? 'Dashboard Summary' : smmSubTab === 'orders' ? 'Customer Orders' : smmSubTab === 'services' ? 'Services Catalogue' : smmSubTab === 'users' ? 'User Directory' : smmSubTab === 'deposits' ? 'Deposits Pipeline' : smmSubTab === 'providers' ? 'SMM API Providers' : smmSubTab === 'gateways' ? 'Manual Payment Gateways' : 'Global Settings'}
                     </h2>
                   </div>
                   
@@ -4602,6 +5004,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           setSmmFormMin('100');
                           setSmmFormMax('500000');
                           setSmmFormDesc('');
+                          setSmmFormRefill('No Refill');
                           setSmmFormSvcProviderId('manual');
                           setSmmFormSvcProviderServiceId('');
                           setSmmModalTitle('Add SMM Service');
@@ -4997,66 +5400,202 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                 )}
 
                 {/* SUBTAB 3: SERVICES CATALOG */}
-                {smmSubTab === 'services' && (
-                  <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4 text-left animate-in fade-in duration-200">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                      <div>
-                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Services Catalog (Live Rates)</h3>
-                        <p className="text-[10px] text-slate-500 mt-0.5">Configure live price rates, descriptions and speeds</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-2.5 text-slate-500" size={13} />
-                          <input
-                            type="text"
-                            placeholder="Search package..."
-                            value={smmSvcSearch}
-                            onChange={(e) => setSmmSvcSearch(e.target.value)}
-                            className="bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 duration-150 w-44"
-                          />
-                        </div>
-                        <select
-                          value={smmSvcCatFilter}
-                          onChange={(e) => setSmmSvcCatFilter(e.target.value)}
-                          className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
-                        >
-                          <option value="">All Social Networks</option>
-                          {['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram'].map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                {smmSubTab === 'services' && (() => {
+                  const visibleCatalogServices = smmServicesList.filter(s => {
+                    const match = (s.name + s.category).toLowerCase().includes(smmSvcSearch.toLowerCase());
+                    const matchesCat = !smmSvcCatFilter || s.category === smmSvcCatFilter;
+                    return match && matchesCat;
+                  });
+                  const isAllVisibleChecked = visibleCatalogServices.length > 0 && 
+                    visibleCatalogServices.every(s => selectedCatalogSvcIds.includes(s.id));
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs text-slate-300">
-                        <thead>
-                          <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
-                            <th className="pb-3 text-[10px] uppercase">ID</th>
-                            <th className="pb-3 text-[10px] uppercase">Service Name</th>
-                            <th className="pb-3 text-[10px] uppercase">Category</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Active Price/1k</th>
-                            <th className="pb-3 text-[10px] uppercase text-center">Quality</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Min Qty</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Max Qty</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/40">
-                          {smmServicesList
-                            .filter(s => {
-                              const match = (s.name + s.category).toLowerCase().includes(smmSvcSearch.toLowerCase());
-                              const matchesCat = !smmSvcCatFilter || s.category === smmSvcCatFilter;
-                              return match && matchesCat;
-                            })
-                            .map((s) => {
+                  return (
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4 text-left animate-in fade-in duration-200">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Services Catalog (Live Rates)</h3>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Configure live price rates, descriptions and speeds. Select multiple check boxes for batch deletion.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {smmConfirmClearAll ? (
+                            <div className="flex items-center gap-1.5 bg-red-950/40 border border-red-500/20 px-3 py-1 rounded-xl animate-in fade-in duration-150">
+                              <span className="font-extrabold text-red-500 text-[10px] uppercase tracking-wider">⚠️ Clear all services?</span>
+                              <button
+                                onClick={() => {
+                                  handleClearAllServices();
+                                  setSmmToast({ message: "Successfully deleted all SMM services from the catalog.", type: 'warning' });
+                                  setSmmConfirmClearAll(false);
+                                }}
+                                className="px-2.5 py-1 bg-red-650 hover:bg-red-600 text-white font-extrabold text-[9px] uppercase rounded-lg active:scale-95 transition"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setSmmConfirmClearAll(false)}
+                                className="px-2.5 py-1 bg-[#121620] hover:bg-slate-800 text-slate-350 font-bold text-[9px] uppercase rounded-lg active:scale-95 transition"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : smmServicesList.length > 0 && (
+                            <button
+                              onClick={() => setSmmConfirmClearAll(true)}
+                              className="px-3.5 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-650 border border-red-500/20 hover:border-red-500 text-red-500 hover:text-white font-extrabold text-[10px] uppercase tracking-wider transition-all duration-150 active:scale-95 shadow-md flex items-center gap-1.5"
+                            >
+                              Clear All Services
+                            </button>
+                          )}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-slate-500" size={13} />
+                            <input
+                              type="text"
+                              placeholder="Search package..."
+                              value={smmSvcSearch}
+                              onChange={(e) => setSmmSvcSearch(e.target.value)}
+                              className="bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 duration-150 w-44"
+                            />
+                          </div>
+                          <select
+                            value={smmSvcCatFilter}
+                            onChange={(e) => setSmmSvcCatFilter(e.target.value)}
+                            className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
+                          >
+                            <option value="">All Social Networks</option>
+                            {['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others'].map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* BULK ACTION HEADER ACTION PANEL */}
+                      {selectedCatalogSvcIds.length > 0 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 bg-red-950/20 border border-red-500/20 px-4 py-3 rounded-xl text-xs sm:animate-in sm:slide-in-from-top-2">
+                          <div className="flex items-center gap-2">
+                            <ShieldAlert className="text-red-500" size={15} />
+                            <span className="text-slate-350">
+                              Selected <strong className="text-white font-bold">{selectedCatalogSvcIds.length}</strong> service(s) to apply bulk deletion operations.
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedCatalogSvcIds([]);
+                                setSmmConfirmBatchDelete(false);
+                              }}
+                              className="px-3 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-bold hover:bg-slate-800 text-[10px] uppercase transition"
+                            >
+                              Reset
+                            </button>
+                            {smmConfirmBatchDelete ? (
+                              <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                <span className="text-[9px] font-bold text-red-400 uppercase">Delete {selectedCatalogSvcIds.length} items?</span>
+                                <button
+                                  onClick={() => {
+                                    handleBulkDeleteServices(selectedCatalogSvcIds);
+                                    setSmmToast({ message: `Successfully deleted ${selectedCatalogSvcIds.length} services in batch!`, type: 'success' });
+                                    setSmmConfirmBatchDelete(false);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  onClick={() => setSmmConfirmBatchDelete(false)}
+                                  className="px-2 py-0.5 rounded bg-[#121620] hover:bg-slate-800 text-slate-350 text-[9px] font-bold uppercase transition active:scale-95"
+                                >
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setSmmConfirmBatchDelete(true)}
+                                className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-[10px] uppercase transition shadow-lg shadow-red-950/50"
+                              >
+                                Batch Delete ({selectedCatalogSvcIds.length})
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-300">
+                          <thead>
+                            <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
+                              <th className="pb-3 text-[10px] uppercase w-10 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isAllVisibleChecked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      const nextAdded = visibleCatalogServices.map(s => s.id);
+                                      setSelectedCatalogSvcIds(prev => {
+                                        const next = [...prev];
+                                        nextAdded.forEach(id => {
+                                          if (!next.includes(id)) next.push(id);
+                                        });
+                                        return next;
+                                      });
+                                    } else {
+                                      const visibleIds = visibleCatalogServices.map(s => s.id);
+                                      setSelectedCatalogSvcIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                    }
+                                  }}
+                                  className="w-3.5 h-3.5 rounded border-slate-800 bg-[#08090d] text-blue-500 cursor-pointer focus:ring-0"
+                                />
+                              </th>
+                              <th className="pb-3 text-[10px] uppercase w-12 text-center">ID</th>
+                              <th className="pb-3 text-[10px] uppercase">Service Name</th>
+                              <th className="pb-3 text-[10px] uppercase">Category</th>
+                              <th className="pb-3 text-[10px] uppercase text-right">Active Price/1k</th>
+                              <th className="pb-3 text-[10px] uppercase text-center">Quality</th>
+                              <th className="pb-3 text-[10px] uppercase text-right">Min Qty</th>
+                              <th className="pb-3 text-[10px] uppercase text-right">Max Qty</th>
+                              <th className="pb-3 text-[10px] uppercase text-right">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/40">
+                            {visibleCatalogServices.map((s) => {
                               const activePrice = s.price * (settings.smmPriceMultiplier || 1.0);
+                              const isChecked = selectedCatalogSvcIds.includes(s.id);
                               return (
-                                <tr key={s.id} className="hover:bg-slate-900/10 transition">
-                                  <td className="py-3 font-mono text-slate-500 text-[11px]">#{s.id}</td>
+                                <tr 
+                                  key={s.id} 
+                                  onClick={() => {
+                                    if (isChecked) {
+                                      setSelectedCatalogSvcIds(prev => prev.filter(id => id !== s.id));
+                                    } else {
+                                      setSelectedCatalogSvcIds(prev => [...prev, s.id]);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "hover:bg-[#12141c]/50 transition cursor-pointer select-none",
+                                    isChecked ? "bg-blue-950/10 text-white" : ""
+                                  )}
+                                >
+                                  <td className="py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedCatalogSvcIds(prev => [...prev, s.id]);
+                                        } else {
+                                          setSelectedCatalogSvcIds(prev => prev.filter(id => id !== s.id));
+                                        }
+                                      }}
+                                      className="w-3.5 h-3.5 rounded border-slate-800 bg-[#08090d] text-blue-500 cursor-pointer focus:ring-0"
+                                    />
+                                  </td>
+                                  <td className="py-3 font-mono text-slate-500 text-[11px] text-center">#{s.id}</td>
                                   <td className="py-3 text-left">
                                     <p className="font-bold text-slate-200">{s.name}</p>
-                                    <span className="text-[10px] text-slate-500">{s.time || 'Instant'} delivery speed</span>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
+                                      <span>{s.time || 'Instant'} delivery</span>
+                                      <span>•</span>
+                                      <span>Refill: <strong className="text-slate-400 font-medium">{s.refill || "No Refill"}</strong></span>
+                                    </div>
                                   </td>
                                   <td className="py-3">
                                     <span className="px-2 py-0.5 rounded bg-[#08090d] border border-slate-800 text-[9px] font-bold text-slate-400 font-mono tracking-wider uppercase">
@@ -5076,7 +5615,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                   </td>
                                   <td className="py-3 text-right font-mono text-slate-400">{s.min?.toLocaleString() || 100}</td>
                                   <td className="py-3 text-right font-mono text-slate-400">{s.max?.toLocaleString() || '1,000,000'}</td>
-                                  <td className="py-3 text-right">
+                                  <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex gap-1.5 justify-end items-center">
                                       {smmDeletingServiceId === s.id ? (
                                         <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
@@ -5086,7 +5625,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               handleDeleteSmmService(s.id);
                                               setSmmDeletingServiceId(null);
                                             }}
-                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                            className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase transition active:scale-95"
                                           >
                                             Yes
                                           </button>
@@ -5110,6 +5649,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               setSmmFormMin(s.min?.toString() || '100');
                                               setSmmFormMax(s.max?.toString() || '1000000');
                                               setSmmFormDesc(s.desc || '');
+                                              setSmmFormRefill(s.refill || 'No Refill');
                                               setSmmFormSvcProviderId(s.providerId || 'manual');
                                               setSmmFormSvcProviderServiceId(s.providerServiceId || '');
                                               setSmmModalTitle(`Edit Service #${s.id}`);
@@ -5134,11 +5674,12 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                 </tr>
                               );
                             })}
-                        </tbody>
-                      </table>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* SUBTAB 4: USER INDEX */}
                 {smmSubTab === 'users' && (
@@ -5409,181 +5950,240 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   </div>
                 )}
 
-                {/* SUBTAB 5: SMM API PROVIDERS & MANUAL GATEWAYS */}
+                {/* SUBTAB 5: SMM API PROVIDERS (FULL WIDTH) */}
                 {smmSubTab === 'providers' && (
                   <div className="space-y-6 text-left animate-in fade-in duration-200 font-sans">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                      
-                      {/* Left: SMM API Providers list (7 Columns) */}
-                      <div className="lg:col-span-7 bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-800/50">
-                          <div>
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">SMM API Providers</h3>
-                            <p className="text-[10px] text-slate-500 mt-0.5">Integrate 3rd party APIs to synchronize services and automate orders</p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setSmmFormProvName('');
-                              setSmmFormProvUrl('https://');
-                              setSmmFormProvKey('');
-                              setSmmFormProvStatus('active');
-                              setSmmFormProvBalance('500.00');
-                              setSmmModalTitle('Add SMM API Provider');
-                              setSmmModalType('add-provider');
-                              setIsSmmModalOpen(true);
-                            }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] rounded-lg transition active:scale-95"
-                          >
-                            <Plus size={11} /> Add Provider
-                          </button>
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800/50">
+                        <div>
+                          <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                            SMM API Provider Hub
+                          </h3>
+                          <p className="text-[10px] text-slate-400 mt-1 max-w-xl">
+                            Integrate fully functional external SMM providers. Pull original categories & service parameters automatically, apply customized pricing profit markups, and configure instant pricing rate sync tasks.
+                          </p>
                         </div>
-
-                        <div className="space-y-3.5 pt-2">
-                          {smmProviders.length === 0 ? (
-                            <div className="py-8 text-center text-slate-500 text-xs">
-                              No SMM API providers added yet. Click "Add Provider" above to start.
-                            </div>
-                          ) : (
-                            smmProviders.map((prov) => {
-                              const linkedCount = smmServicesList.filter(s => s.providerId === prov.id.toString()).length;
-                              return (
-                                <div key={prov.id} className="bg-[#08090d] border border-slate-800 rounded-xl p-4 space-y-3 hover:border-slate-700/80 transition-all">
-                                  <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="text-xs font-bold text-slate-200">{prov.name}</h4>
-                                        <span className={cn(
-                                          "px-2 py-0.5 rounded-full text-[8px] font-black tracking-wider uppercase",
-                                          prov.status === 'active' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
-                                        )}>
-                                          {prov.status}
-                                        </span>
-                                      </div>
-                                      <p className="text-[10px] text-slate-500 font-mono select-all truncate max-w-xs">{prov.apiUrl}</p>
-                                    </div>
-
-                                    <div className="text-right">
-                                      <p className="text-[10px] text-slate-500">API Balance</p>
-                                      <p className="text-xs font-extrabold text-emerald-400 font-mono">${prov.balance?.toFixed(2) || '0.00'}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-850 text-[10px]">
-                                    <div className="flex items-center gap-4 text-slate-400 font-medium font-sans">
-                                      <span>Key: <code className="text-slate-500 font-mono">{prov.apiKey ? '••••••••' + prov.apiKey.slice(-5) : 'None'}</code></span>
-                                      <span className="flex items-center gap-1 bg-slate-900 px-1.5 py-0.5 rounded text-blue-400 text-[9px] font-bold">
-                                        {linkedCount} Linked Services
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5 mt-2 sm:mt-0 font-sans">
-                                      {smmDeletingProviderId === prov.id ? (
-                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
-                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
-                                          <button
-                                            onClick={() => {
-                                              handleDeleteSmmProvider(prov.id);
-                                              setSmmDeletingProviderId(null);
-                                            }}
-                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
-                                          >
-                                            Yes
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingProviderId(null)}
-                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-350 text-[9px] font-bold uppercase transition active:scale-95"
-                                          >
-                                            No
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              alert(`Initiating synchronizing procedures with API Provider "${prov.name}"...\n\nSuccessfully retrieved live rate prices for ${linkedCount || 10} categories and updated local SMM database.`);
-                                            }}
-                                            className="px-2 py-1 rounded bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 font-bold hover:text-blue-300"
-                                          >
-                                            Sync Rate
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              setSelectedSmmItem(prov);
-                                              setSmmFormProvName(prov.name);
-                                              setSmmFormProvUrl(prov.apiUrl);
-                                              setSmmFormProvKey(prov.apiKey);
-                                              setSmmFormProvStatus(prov.status);
-                                              setSmmFormProvBalance(prov.balance?.toString() || '0.00');
-                                              setSmmModalTitle(`Edit Provider: ${prov.name}`);
-                                              setSmmModalType('edit-provider');
-                                              setIsSmmModalOpen(true);
-                                            }}
-                                            className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 text-slate-300 font-medium hover:border-slate-700"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingProviderId(prov.id)}
-                                            className="p-1.5 rounded bg-red-500/5 hover:bg-red-500/10 text-red-500 hover:text-red-400"
-                                            title="Delete Provider"
-                                          >
-                                            <Trash2 size={11} />
-                                          </button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
+                        <button
+                          onClick={() => {
+                            setSmmFormProvName('');
+                            setSmmFormProvUrl('https://');
+                            setSmmFormProvKey('');
+                            setSmmFormProvStatus('active');
+                            setSmmFormProvBalance('500.00');
+                            setSmmModalTitle('Add SMM API Provider');
+                            setSmmModalType('add-provider');
+                            setIsSmmModalOpen(true);
+                          }}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] rounded-xl transition active:scale-95 shrink-0 shadow-lg shadow-blue-500/15"
+                        >
+                          <Plus size={13} /> Add New API Provider
+                        </button>
                       </div>
 
-                      {/* Right: Manual Deposit Gateways (5 Columns) */}
-                      <div className="lg:col-span-5 bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4">
-                        <div>
-                          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Manual Deposit System</h3>
-                          <p className="text-[10px] text-slate-500 mt-0.5">Customize payment wallets (bKash, Nagad, Upay, USDT, etc.) for visitors</p>
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                        {smmProviders.length === 0 ? (
+                          <div className="col-span-2 py-12 text-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-2xl">
+                            No SMM API providers configured yet. Click "Add New API Provider" to begin integration.
+                          </div>
+                        ) : (
+                          smmProviders.map((prov) => {
+                            const linkedCount = smmServicesList.filter(s => s.providerId === prov.id.toString()).length;
+                            const isAct = prov.status === 'active';
+                            return (
+                              <div 
+                                key={prov.id} 
+                                className={cn(
+                                  "bg-[#07080c] border rounded-2xl p-5 space-y-4 transition-all relative overflow-hidden",
+                                  isAct ? "border-slate-800/80 hover:border-slate-700" : "border-slate-850/60 opacity-60"
+                                )}
+                              >
+                                {isAct && (
+                                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+                                )}
 
-                        <div className="space-y-3 pt-2">
-                          {smmManualGateways.map((gate) => (
-                            <div key={gate.id} className={cn(
-                              "bg-[#08090d] border rounded-xl p-3.5 space-y-2.5 transition-all text-xs",
-                              gate.enabled ? "border-slate-800" : "border-slate-850 opacity-60"
-                            )}>
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500/25 flex items-center justify-center text-blue-400">
-                                    <span className="w-1.5 h-1.5 bg-blue-405 rounded-full" />
+                                <div className="flex justify-between items-start relative z-10">
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-extrabold text-white tracking-wide">{prov.name}</h4>
+                                      <span className={cn(
+                                        "px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest uppercase border",
+                                        isAct 
+                                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                          : "bg-red-500/10 text-red-450 border-red-505/20"
+                                      )}>
+                                        {prov.status}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                                      <span className="text-slate-500 bg-slate-900 px-1 py-0.5 rounded font-bold uppercase text-[8px]">URL</span>
+                                      <span className="truncate max-w-[200px]" title={prov.apiUrl}>{prov.apiUrl}</span>
+                                    </div>
                                   </div>
-                                  <h4 className="font-bold text-slate-200 uppercase tracking-tight">{gate.title}</h4>
+
+                                  <div className="text-right space-y-0.5">
+                                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">API Funds Balance</div>
+                                    <div className="text-base font-black text-emerald-400 font-mono tracking-tight">
+                                      ${parseFloat(prov.balance?.toString() || '0.00').toFixed(4)}
+                                    </div>
+                                  </div>
                                 </div>
-                                <span className={cn(
-                                  "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
-                                  gate.enabled ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/20" : "bg-slate-900 text-slate-500 border-slate-850"
-                                )}>
-                                  {gate.enabled ? 'Enabled' : 'Disabled'}
-                                </span>
+
+                                <div className="bg-[#0b0c11] border border-slate-850/80 rounded-xl p-3 flex items-center justify-between text-[10px] font-mono select-none">
+                                  <div className="text-slate-400">
+                                    Auth key: <code className="text-slate-500">{prov.apiKey ? '••••••••' + prov.apiKey.slice(-6) : 'Not Assigned'}</code>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                    <span className="text-[9px] font-bold text-slate-350">{linkedCount} Services Linked</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 relative z-10 border-t border-slate-850/60 w-full">
+                                  {smmDeletingProviderId === prov.id ? (
+                                    <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-120">
+                                      <span className="text-[10px] font-black text-red-400 uppercase tracking-wider">Confirm Provider Deletion?</span>
+                                      <button
+                                        onClick={() => {
+                                          handleDeleteSmmProvider(prov.id);
+                                          setSmmDeletingProviderId(null);
+                                          setSmmToast({ message: `SMM provider connection deleted successfully`, type: 'success' });
+                                        }}
+                                        className="px-3 py-1 bg-red-600 hover:bg-red-550 text-white text-[10px] font-black uppercase rounded-lg transition active:scale-95"
+                                      >
+                                        Delete Forever
+                                      </button>
+                                      <button
+                                        onClick={() => setSmmDeletingProviderId(null)}
+                                        className="px-2.5 py-1 bg-slate-850 text-slate-300 text-[10px] font-bold uppercase rounded-lg transition active:scale-95 hover:bg-slate-800"
+                                      >
+                                        Abort
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex gap-1.5">
+                                        <button
+                                          onClick={() => startImportWizard(prov)}
+                                          className="px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600 border border-blue-500/25 hover:border-blue-500 text-blue-400 hover:text-white font-extrabold text-[10px] uppercase tracking-wide transition flex items-center gap-1 active:scale-95 transform"
+                                          title="Fetch categories and services live and choose which ones to batch import"
+                                        >
+                                          <Download size={11} />
+                                          Fetch Services
+                                        </button>
+                                        <button
+                                          onClick={() => handleSyncSmmProviderRates(prov)}
+                                          disabled={linkedCount === 0}
+                                          className={cn(
+                                            "px-3 py-1.5 rounded-xl bg-slate-900 border text-slate-400 font-extrabold text-[10px] uppercase tracking-wide transition flex items-center gap-1 active:scale-95",
+                                            linkedCount > 0 
+                                              ? "border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-850 hover:text-white" 
+                                              : "border-slate-850 text-slate-600 opacity-40 cursor-not-allowed"
+                                          )}
+                                          title="Sync rates instantly for all services currently imported from this provider"
+                                        >
+                                          <RefreshCcw size={10} className={cn(linkedCount > 0 && "text-slate-400")} />
+                                          Sync Rates
+                                        </button>
+                                      </div>
+
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setSelectedSmmItem(prov);
+                                            setSmmFormProvName(prov.name);
+                                            setSmmFormProvUrl(prov.apiUrl);
+                                            setSmmFormProvKey(prov.apiKey);
+                                            setSmmFormProvStatus(prov.status);
+                                            setSmmFormProvBalance(prov.balance?.toString() || '500.00');
+                                            setSmmModalTitle(`Edit Provider: ${prov.name}`);
+                                            setSmmModalType('edit-provider');
+                                            setIsSmmModalOpen(true);
+                                          }}
+                                          className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-slate-900 hover:bg-slate-850 hover:text-white border border-slate-800 text-slate-350 transition active:scale-95"
+                                        >
+                                          Edit URL/Key
+                                        </button>
+                                        <button
+                                          onClick={() => setSmmDeletingProviderId(prov.id)}
+                                          className="p-1.5 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-500 hover:text-red-400 transition"
+                                          title="Delete Provider Connection"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBTAB 6: SEPARATED SMM PAYMENT GATEWAYS (FULL WIDTH) */}
+                {smmSubTab === 'gateways' && (
+                  <div className="space-y-6 text-left animate-in fade-in duration-200 font-sans">
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-6 space-y-4">
+                      <div className="pb-2 border-b border-slate-850">
+                        <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                          <DollarSign size={14} className="text-blue-500" />
+                          Manual Payment Gateway Wallet Channels
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-1 max-w-xl">
+                          Configure customer-facing manual deposit methods. Modify mobile financial wallets (bKash, Nagad, Upay, Rocket), cards checkout requests, and smart decentralization wallets (Binance Pay ID, USDT TRC-20 and more).
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
+                        {smmManualGateways.map((gate) => {
+                          const isEna = gate.enabled !== false;
+                          return (
+                            <div 
+                              key={gate.id} 
+                              className={cn(
+                                "bg-[#07080c] border rounded-2xl p-4.5 space-y-3.5 transition-all text-xs relative overflow-hidden flex flex-col justify-between",
+                                isEna ? "border-slate-800 hover:border-slate-700/80" : "border-slate-850 opacity-55"
+                              )}
+                            >
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-2">
+                                    <div className={cn(
+                                      "w-2 h-2 rounded-full",
+                                      isEna ? "bg-blue-500" : "bg-slate-600"
+                                    )} />
+                                    <h4 className="font-bold text-slate-200 uppercase tracking-tight text-[11px] font-sans">{gate.title}</h4>
+                                  </div>
+                                  <span className={cn(
+                                    "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                                    isEna ? "bg-emerald-550/10 text-emerald-400 border-emerald-500/20" : "bg-slate-900 text-slate-500 border-slate-850"
+                                  )}>
+                                    {isEna ? 'Active / Enabled' : 'Disabled'}
+                                  </span>
+                                </div>
+
+                                <div className="space-y-1.5 bg-[#0b0c11] p-3 rounded-xl border border-slate-850 font-mono text-[10px]">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Receiver Wallet Account Details / ID</span>
+                                    <span className="font-extrabold text-slate-200 select-all tracking-wide text-[11px]">{gate.numberOrAddress || 'Not Configured yet.'}</span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-400 pt-1.5 border-t border-slate-850/40">
+                                    <span>Transfer Class:</span>
+                                    <span className="font-bold text-blue-400">{gate.type || 'Personal'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="text-[10px] text-slate-400 leading-relaxed bg-[#0b0c11]/45 p-2.5 rounded-lg border border-slate-850/60 font-sans italic">
+                                  <p className="font-bold text-slate-500 text-[8px] uppercase tracking-widest leading-none mb-1 font-mono">Channel Instructions</p>
+                                  {gate.instructions || 'Submit transaction verification ID to complete approval.'}
+                                </div>
                               </div>
 
-                              <div className="space-y-1 bg-[#0b0c10] p-2.5 rounded-lg border border-slate-850 font-mono text-[10px]">
-                                <div className="flex justify-between text-slate-400">
-                                  <span>Wallet Account:</span>
-                                  <span className="font-bold text-slate-251 select-all">{gate.numberOrAddress || 'Not Assigned'}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-400">
-                                  <span>Transfer Type:</span>
-                                  <span className="font-bold text-blue-400">{gate.type || 'Personal'}</span>
-                                </div>
-                              </div>
-
-                              <p className="text-[10px] text-slate-500 italic font-medium leading-relaxed bg-slate-900/30 p-2 rounded border border-slate-850/60">
-                                Instructions: {gate.instructions || 'No special instructions defined.'}
-                              </p>
-
-                              <div className="flex justify-end pt-1">
+                              <div className="flex justify-end pt-2 border-t border-slate-850/30">
                                 <button
                                   onClick={() => {
                                     setSelectedSmmItem(gate);
@@ -5596,16 +6196,15 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                     setSmmModalType('edit-gateway');
                                     setIsSmmModalOpen(true);
                                   }}
-                                  className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-300 transition active:scale-95"
+                                  className="px-3 py-1.5 text-[10px] font-extrabold rounded-lg bg-slate-905 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white transition active:scale-95"
                                 >
-                                  Modify Configurations
+                                  Modify Wallet Configs
                                 </button>
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-
                     </div>
                   </div>
                 )}
@@ -5732,9 +6331,382 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             </div>
           )}
 
+          {/* SMM TOAST CORNER NOTIFICATION */}
+          {smmToast && (
+            <div className="fixed bottom-6 right-6 z-[100] bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center gap-3.5 shadow-2xl animate-bounce text-left max-w-sm">
+              <div className={cn(
+                "p-2 rounded-xl shrink-0",
+                smmToast.type === 'success' ? "bg-emerald-500/10 text-emerald-400" : smmToast.type === 'error' ? "bg-red-500/10 text-red-400" : "bg-blue-500/10 text-blue-400"
+              )}>
+                {smmToast.type === 'success' ? <Check size={16} /> : <Shield size={16} />}
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-300">
+                  {smmToast.type === 'success' ? 'Task Succeeded' : smmToast.type === 'error' ? 'Task Failure' : 'SMM Provider Alert'}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 leading-relaxed font-sans">{smmToast.message}</p>
+              </div>
+            </div>
+          )}
+
+          {/* SMM API SERVICE FETCHING & IMPORT WIZARD */}
+          {activeImportProvider && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800/80 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl animate-scale-up text-left">
+                {/* Header */}
+                <div className="px-6 py-4.5 border-b border-slate-800/60 flex justify-between items-center bg-slate-950">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-400">
+                      <Cpu size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">SMM Service Import Wizard</h3>
+                      <h4 className="text-sm font-bold text-white mt-0.5">External SMM Provider: <span className="text-blue-400">{activeImportProvider.name}</span></h4>
+                    </div>
+                  </div>
+                  {importStep !== 'connecting' && importStep !== 'loading' && importStep !== 'importing' && (
+                    <button 
+                      onClick={() => setActiveImportProvider(null)} 
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-850 transition"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Body Content */}
+                <div className="p-6 h-[70vh] overflow-y-auto custom-scrollbar bg-[#0b0c10]">
+                  
+                  {/* Phase 1 & 2: Launching/Querying States */}
+                  {(importStep === 'connecting' || importStep === 'loading') && (
+                    <div className="h-full flex flex-col items-center justify-center space-y-5 py-12 text-center select-none font-sans">
+                      <div className="relative flex items-center justify-center w-16 h-16">
+                        <div className="absolute inset-0 rounded-full border-2 border-blue-500/10" />
+                        <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-blue-450 animate-spin" />
+                        <Cpu className="text-blue-400 animate-pulse" size={24} />
+                      </div>
+                      <div className="space-y-2 max-w-md">
+                        <h4 className="text-sm font-extrabold text-white tracking-wide">
+                          {importStep === 'connecting' ? 'Initiating API Connection Handshake...' : 'Authorized. Synchronizing Services Schema...'}
+                        </h4>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          {importStep === 'connecting' 
+                            ? `Authenticating connection token with ${activeImportProvider.apiUrl}/api/v2 using current Authorization Key credentials...`
+                            : 'Querying service catalogue endpoints from foreign catalog. Analyzing individual SMM IDs, custom structures and standard provider rate ranges...'}
+                        </p>
+                      </div>
+                      <div className="w-48 h-1 bg-slate-900 rounded-full overflow-hidden">
+                        <div className={cn(
+                          "h-full bg-blue-500 transition-all duration-1000",
+                          importStep === 'connecting' ? "w-1/3" : "w-4/5"
+                        )} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phase 3: Selection Workspace */}
+                  {importStep === 'ready' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full font-sans">
+                      
+                      {/* Left Block: Markup Markup Multipliers and configurations */}
+                      <div className="lg:col-span-3 bg-slate-900/60 border border-slate-850 p-4.5 rounded-2xl space-y-4 text-xs h-fit self-start">
+                        <div>
+                          <h4 className="font-extrabold text-white uppercase tracking-wider text-[10px] pb-1.5 border-b border-slate-800">
+                            Profit Margins Config
+                          </h4>
+                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                            Configure standard price profit margins. Your user price = original provider cost × profit markup multiplier.
+                          </p>
+                        </div>
+
+                        <div className="space-y-3 p-3 bg-[#08090d] border border-slate-850 rounded-xl">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Profit Margin Percent (%)</label>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="1000"
+                                value={Math.round((parseFloat(importMarkup || '1.0') - 1.0) * 100)}
+                                onChange={(e) => {
+                                  const pct = parseFloat(e.target.value);
+                                  if (!isNaN(pct) && pct >= 0) {
+                                    setImportMarkup((1.0 + pct / 100).toFixed(4));
+                                  } else {
+                                    setImportMarkup('1.0000');
+                                  }
+                                }}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500 font-mono font-bold"
+                              />
+                              <span className="text-[10px] text-slate-500 font-bold shrink-0">%</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-slate-400">Or Price Multiplier</label>
+                            <input
+                              type="number"
+                              step="0.05"
+                              min="1.0"
+                              max="10.0"
+                              value={importMarkup}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setImportMarkup(val);
+                              }}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500 font-mono font-bold"
+                            />
+                          </div>
+
+                          <div className="text-[9px] text-right text-emerald-400 font-bold font-mono">
+                            Profit: +{Math.round((parseFloat(importMarkup || '1.0') - 1.0) * 100)}%
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t border-slate-850">
+                          <h5 className="font-black text-slate-450 uppercase tracking-widest text-[9px] leading-none">Catalog Filtering</h5>
+                          
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Search Name</label>
+                            <input
+                              type="text"
+                              placeholder="Search API service..."
+                              value={apiSearchQuery}
+                              onChange={(e) => setApiSearchQuery(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 outline-none focus:border-blue-500 font-medium"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Category Group</label>
+                            <select
+                              value={apiCatFilter}
+                              onChange={(e) => setApiCatFilter(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-slate-300 outline-none cursor-pointer"
+                            >
+                              <option value="All">All Categories</option>
+                              <option value="Instagram">Instagram</option>
+                              <option value="Facebook">Facebook</option>
+                              <option value="YouTube">YouTube</option>
+                              <option value="TikTok">TikTok</option>
+                              <option value="Twitter/X">Twitter/X</option>
+                              <option value="Telegram">Telegram</option>
+                              <option value="Spotify">Spotify</option>
+                              <option value="LinkedIn">LinkedIn</option>
+                              <option value="Discord">Discord</option>
+                              <option value="Website Traffic">Website Traffic</option>
+                              <option value="Others">Others</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-blue-600/5 border border-blue-500/10 rounded-xl text-[10px] text-slate-400 space-y-1">
+                          <span className="font-bold text-blue-400">Handy hint:</span>
+                          <p className="leading-relaxed">
+                            Already imported SMM API service IDs will automatically merge and update prices, instead of creating duplicate records.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right Block: Dynamic Table list matches */}
+                      <div className="lg:col-span-9 space-y-3 flex flex-col justify-between h-full">
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[10px] font-bold text-slate-400">
+                            Showing <span className="text-white font-black">{
+                              apiServices.filter(s => 
+                                matchesFuzzyCategory(s.category, apiCatFilter) &&
+                                (s.name.toLowerCase().includes(apiSearchQuery.toLowerCase()))
+                              ).length
+                            }</span> matching services available on API Provider.
+                          </span>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                const matched = apiServices.filter(s => 
+                                  matchesFuzzyCategory(s.category, apiCatFilter) &&
+                                  (s.name.toLowerCase().includes(apiSearchQuery.toLowerCase()))
+                                );
+                                setSelectedApiSvcIds(matched.map(m => m.id));
+                              }}
+                              className="text-[9px] font-black uppercase text-blue-400 hover:text-blue-300 font-sans tracking-wide"
+                            >
+                              Select All Matching
+                            </button>
+                            <span className="text-slate-700">|</span>
+                            <button
+                              onClick={() => setSelectedApiSvcIds([])}
+                              className="text-[9px] font-black uppercase text-slate-450 hover:text-slate-350 font-sans tracking-wide"
+                            >
+                              Clear Selection
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-850 rounded-2xl overflow-hidden bg-slate-950/70 max-h-[45vh] overflow-y-auto custom-scrollbar flex-1">
+                          {(() => {
+                            const visibleApiServices = apiServices.filter(s => 
+                              matchesFuzzyCategory(s.category, apiCatFilter) &&
+                              (s.name.toLowerCase().includes(apiSearchQuery.toLowerCase()))
+                            );
+                            const isAllVisibleChecked = visibleApiServices.length > 0 && 
+                              visibleApiServices.every(s => selectedApiSvcIds.includes(s.id));
+                            return (
+                              <table className="w-full text-xs font-sans">
+                                <thead className="bg-[#0e1015]/65 text-slate-500 text-[9px] font-black uppercase tracking-wider text-left sticky top-0 z-10 border-b border-slate-850">
+                                  <tr>
+                                    <th className="px-4 py-3 text-center w-12 sticky left-0 bg-slate-950 z-20">
+                                      <input
+                                        type="checkbox"
+                                        checked={isAllVisibleChecked}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            const newlyAdded = visibleApiServices.map(s => s.id);
+                                            setSelectedApiSvcIds(prev => {
+                                              const next = [...prev];
+                                              newlyAdded.forEach(id => {
+                                                if (!next.includes(id)) next.push(id);
+                                              });
+                                              return next;
+                                            });
+                                          } else {
+                                            const visibleIds = visibleApiServices.map(s => s.id);
+                                            setSelectedApiSvcIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                          }
+                                        }}
+                                        className="w-3.5 h-3.5 rounded border-slate-850 bg-slate-900 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                      />
+                                    </th>
+                                    <th className="px-3 py-3 w-16 text-center">ID</th>
+                                    <th className="px-3 py-3">Service Details / Platform Category</th>
+                                    <th className="px-3 py-3 text-right">Provider Price</th>
+                                    <th className="px-3 py-3 text-right text-blue-450">Calculated User Price</th>
+                                    <th className="px-4 py-3 text-center">Min/Max</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-850/60 font-medium">
+                                  {visibleApiServices.map((svc) => {
+                                    const isChecked = selectedApiSvcIds.includes(svc.id);
+                                    const userPrice = svc.originalPrice * (parseFloat(importMarkup) || 1.0);
+                                    return (
+                                      <tr 
+                                        key={svc.id} 
+                                        onClick={() => {
+                                          if (isChecked) {
+                                            setSelectedApiSvcIds(prev => prev.filter(id => id !== svc.id));
+                                          } else {
+                                            setSelectedApiSvcIds(prev => [...prev, svc.id]);
+                                          }
+                                        }}
+                                        className={cn(
+                                          "hover:bg-slate-900/40 cursor-pointer transition select-none text-[11px]",
+                                          isChecked ? "bg-blue-600/5 text-slate-100" : "text-slate-400"
+                                        )}
+                                      >
+                                        <td className="px-4 py-3 text-center">
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            readOnly
+                                            className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-blue-600 cursor-pointer pointer-events-none"
+                                          />
+                                        </td>
+                                        <td className="px-3 py-3 text-center font-mono font-bold text-slate-500 text-[10px]">
+                                          {svc.id}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                          <div className="font-bold text-slate-200">{svc.name}</div>
+                                        <div className="flex items-center gap-2 mt-0.5 text-[9px]">
+                                          <span className="font-extrabold text-blue-400 uppercase tracking-wider">{svc.category}</span>
+                                          <span className="text-slate-600">•</span>
+                                          <span className="text-slate-500 font-medium">Class: {svc.quality}</span>
+                                          <span className="text-slate-600">•</span>
+                                          <span className="text-slate-500 font-medium">Refill: {svc.refill || "No Refill"}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3 text-right font-mono font-bold text-slate-400">
+                                        ${svc.originalPrice.toFixed(4)}
+                                      </td>
+                                      <td className="px-3 py-3 text-right font-mono font-black text-emerald-400 text-xs">
+                                        ${userPrice.toFixed(4)}
+                                      </td>
+                                      <td className="px-4 py-3 text-center font-mono text-[10px] text-slate-500">
+                                        {svc.min} / {svc.max}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        );
+                      })()}
+                    </div>
+
+                        {/* Actions overlay footer inside Wizard */}
+                        <div className="pt-4 border-t border-slate-850 flex items-center justify-between">
+                          <div className="text-slate-400 text-xs">
+                            Selected <span className="text-white font-extrabold">{selectedApiSvcIds.length}</span> / {apiServices.length} services to import.
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setActiveImportProvider(null)}
+                              className="px-4 py-2 rounded-xl text-slate-450 hover:text-white hover:bg-slate-850 font-black text-xs transition"
+                            >
+                              Cancel Import
+                            </button>
+                            <button
+                              disabled={selectedApiSvcIds.length === 0}
+                              onClick={handleImportSelectedApiServices}
+                              className={cn(
+                                "px-5 py-2.5 rounded-xl font-black text-xs transition active:scale-95 shadow-lg",
+                                selectedApiSvcIds.length > 0 
+                                  ? "bg-blue-600 hover:bg-blue-500 hover:shadow-blue-500/10 text-white" 
+                                  : "bg-slate-850 text-slate-600 cursor-not-allowed"
+                              )}
+                            >
+                              Import Selected SMM Services
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phase 4: Active Injection */}
+                  {importStep === 'importing' && (
+                    <div className="h-full flex flex-col items-center justify-center space-y-4 py-16 text-center">
+                      <div className="w-12 h-12 rounded-full border-2 border-blue-500/20 flex items-center justify-center animate-spin">
+                        <div className="w-3 w-3 h-3 bg-blue-500 rounded-full animate-ping" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-extrabold text-white">Importing Selected Services...</h4>
+                        <p className="text-[11px] text-slate-400">Generating unique database pointers, configuring profit margined cost scales and auto mapping API connections...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phase 5: Success landing */}
+                  {importStep === 'completed' && (
+                    <div className="h-full flex flex-col items-center justify-center space-y-4 py-16 text-center font-sans">
+                      <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 flex items-center justify-center animate-bounce">
+                        <Check size={20} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-black uppercase text-emerald-400 tracking-wider">Services Imported Successfully!</h4>
+                        <p className="text-[11px] text-slate-400">Handshake finalized. New services have been loaded into your local catalogue and are ready to sell details.</p>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* SHARED MODALS OVERLAY FOR SMM ACTIONS */}
           {isSmmModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
                   <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up text-left">
                     <div className="px-6 py-4.5 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                       <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">{smmModalTitle}</h3>
@@ -5779,6 +6751,16 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                 <option key={ql} value={ql}>{ql}</option>
                               ))}
                             </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Refill Status</label>
+                            <input
+                              type="text"
+                              value={smmFormRefill}
+                              onChange={(e) => setSmmFormRefill(e.target.value)}
+                              placeholder="e.g. 30D Refill, Lifetime, No Refill"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium placeholder-slate-700"
+                            />
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Base Price per 1k ($)</label>

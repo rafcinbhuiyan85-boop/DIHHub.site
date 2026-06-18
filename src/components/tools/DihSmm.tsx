@@ -62,10 +62,60 @@ const SERVICES: SMMService[] = [
   {id:24,name:"Telegram Group Members",category:"Telegram",price:4.00,min:100,max:500000,desc:"Add members to your Telegram group.",time:"0-24 hours",quality:"Premium"},
 ];
 
-const CATEGORIES = ['All', 'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram'];
+const CATEGORIES = [
+  'All', 
+  'Instagram', 
+  'Facebook', 
+  'YouTube', 
+  'TikTok', 
+  'Twitter/X', 
+  'Telegram', 
+  'Spotify', 
+  'LinkedIn', 
+  'Discord', 
+  'Website Traffic', 
+  'Others'
+];
 
-export default function DihSmm() {
+interface DihSmmProps {
+  currentUser?: any;
+  onAuthClick?: () => void;
+}
+
+export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const { settings } = useAppSettings();
+
+  // Handle active user dynamic synchronization
+  const [localUser, setLocalUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkUser = () => {
+      const savedUser = localStorage.getItem('dihhub_user');
+      if (savedUser && savedUser !== 'undefined') {
+        try {
+          const parsed = JSON.parse(savedUser);
+          setLocalUser(parsed);
+        } catch (e) {
+          setLocalUser(null);
+        }
+      } else {
+        setLocalUser(null);
+      }
+    };
+    
+    checkUser();
+    const interval = setInterval(checkUser, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const userToUse = currentUser || localUser;
+  const userEmail = userToUse?.email || 'guest@dihsmm.com';
+  const userName = userToUse?.name || 'Guest User';
+  const isLoggedIn = !!userToUse;
+
+  // Scoped localStorage keys
+  const balanceKey = isLoggedIn ? `dih_smm_balance_${userEmail}` : `dih_smm_balance_guest`;
+  const ordersKey = isLoggedIn ? `dih_smm_orders_v2_${userEmail}` : `dih_smm_orders_v2_guest`;
 
   // Dynamically managed services list
   const [servicesList, setServicesList] = useState<SMMService[]>([]);
@@ -77,7 +127,7 @@ export default function DihSmm() {
   }));
   
   // States
-  const [balance, setBalance] = useState<number>(settings.smmDefaultBalance !== undefined ? settings.smmDefaultBalance : 50.00);
+  const [balance, setBalance] = useState<number>(0.00);
   const [activePage, setActivePage] = useState<'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit'>('dashboard');
   const [activeCat, setActiveCat] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -125,14 +175,8 @@ export default function DihSmm() {
     }
   }, [activePage]);
 
-  // Orders
-  const [orders, setOrders] = useState<SMMOrder[]>([
-    {id:1,serviceId:1,serviceName:"Instagram Followers - Real & Active",category:"Instagram",link:"https://instagram.com/dihsmm",quantity:1000,amount:1.50,status:"completed",startCount:5200,remains:0,createdAt:"2026-06-14"},
-    {id:2,serviceId:3,serviceName:"Instagram Likes - Fast Delivery",category:"Instagram",link:"https://instagram.com/p/abc123",quantity:5000,amount:4.00,status:"completed",startCount:120,remains:0,createdAt:"2026-06-15"},
-    {id:3,serviceId:11,serviceName:"YouTube Views - High Retention",category:"YouTube",link:"https://youtube.com/watch?v=xyz",quantity:10000,amount:18.00,status:"processing",startCount:3400,remains:6600,createdAt:"2026-06-11"},
-    {id:4,serviceId:15,serviceName:"TikTok Followers",category:"TikTok",link:"https://tiktok.com/@dihsmm",quantity:500,amount:1.00,status:"pending",startCount:0,remains:500,createdAt:"2026-06-16"},
-    {id:5,serviceId:7,serviceName:"Facebook Page Likes",category:"Facebook",link:"https://facebook.com/dihsmm",quantity:2000,amount:2.40,status:"completed",startCount:800,remains:0,createdAt:"2026-06-13"},
-  ]);
+  // Orders default list
+  const [orders, setOrders] = useState<SMMOrder[]>([]);
   const [nextOrderId, setNextOrderId] = useState<number>(6);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -154,27 +198,28 @@ export default function DihSmm() {
   useEffect(() => {
     const defaultServices = JSON.stringify(SERVICES);
     const syncData = () => {
-      const cachedBalance = localStorage.getItem('dih_smm_balance');
-      const cachedOrders = localStorage.getItem('dih_smm_orders_v2');
+      const cachedBalance = localStorage.getItem(balanceKey);
+      const cachedOrders = localStorage.getItem(ordersKey);
       const cachedNextId = localStorage.getItem('dih_smm_next_id');
       const cachedServices = localStorage.getItem('dih_smm_services_v2');
 
       if (cachedBalance) {
         setBalance(parseFloat(cachedBalance));
       } else {
-        const initialBalance = settings.smmDefaultBalance !== undefined ? settings.smmDefaultBalance : 50.00;
+        const initialBalance = 0.00; // Always start with 0.00 balance unless a deposit is verified/approved
         setBalance(initialBalance);
-        localStorage.setItem('dih_smm_balance', initialBalance.toFixed(2));
+        localStorage.setItem(balanceKey, initialBalance.toFixed(2));
       }
 
       if (cachedOrders) {
         try {
-          // Compare JSON to avoid state mutation check loop
           const parsed = JSON.parse(cachedOrders);
           setOrders(prev => JSON.stringify(prev) !== cachedOrders ? parsed : prev);
         } catch (err) {
           console.error(err);
         }
+      } else {
+        setOrders([]);
       }
 
       if (cachedNextId) {
@@ -202,11 +247,45 @@ export default function DihSmm() {
       clearInterval(interval);
       window.removeEventListener('storage', syncData);
     };
-  }, [settings.smmDefaultBalance]);
+  }, [balanceKey, ordersKey]);
+
+  // Periodically fetch balance from server to stay 100% in sync
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    const fetchBalanceObj = async () => {
+      try {
+        const res = await fetch(`/api/smm/balance/${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBalance(data.balance);
+          localStorage.setItem(balanceKey, data.balance.toFixed(2));
+          // Keep main dih_smm_balance key synchronized too so older components don't drift
+          localStorage.setItem('dih_smm_balance', data.balance.toFixed(2));
+        }
+      } catch (err) {
+        console.error("Failed to fetch balance from server:", err);
+      }
+    };
+
+    fetchBalanceObj();
+    const interval = setInterval(fetchBalanceObj, 15000); // 15 seconds
+    return () => clearInterval(interval);
+  }, [isLoggedIn, userEmail, balanceKey]);
 
   const updateBalance = (newBal: number) => {
     setBalance(newBal);
+    localStorage.setItem(balanceKey, newBal.toFixed(2));
     localStorage.setItem('dih_smm_balance', newBal.toFixed(2));
+    
+    if (isLoggedIn) {
+      // Sync update back to server in real-time
+      fetch('/api/admin/users/update-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, balance: newBal })
+      }).catch(err => console.error("Error updating balance on server:", err));
+    }
   };
 
   const setNextId = (id: number) => {
@@ -216,7 +295,7 @@ export default function DihSmm() {
 
   const saveOrders = (updatedOrders: SMMOrder[]) => {
     setOrders(updatedOrders);
-    localStorage.setItem('dih_smm_orders_v2', JSON.stringify(updatedOrders));
+    localStorage.setItem(ordersKey, JSON.stringify(updatedOrders));
   };
 
   // Helper formats
@@ -355,7 +434,9 @@ export default function DihSmm() {
 
     const newDeposit = {
       id: nextDepId,
-      userId: 999, // Active SMM User ID matching AdminPanel
+      userId: userToUse?.id || 999,
+      userEmail: userEmail,
+      userName: userName,
       amount: amt,
       method: methodStr,
       sender: senderDetails.trim(),
@@ -376,7 +457,40 @@ export default function DihSmm() {
 
   // Filtering
   const filteredServices = activeServices.filter(s => {
-    const matchesCat = activeCat === 'All' || s.category === activeCat;
+    const activeCatLower = activeCat.toLowerCase();
+    const svcCatLower = s.category.toLowerCase();
+    
+    let matchesCat = false;
+    if (activeCat === 'All') {
+      matchesCat = true;
+    } else if (activeCatLower === 'instagram') {
+      matchesCat = svcCatLower.includes('instagram') || svcCatLower.includes('ig');
+    } else if (activeCatLower === 'facebook') {
+      matchesCat = svcCatLower.includes('facebook') || svcCatLower.includes('fb');
+    } else if (activeCatLower === 'youtube') {
+      matchesCat = svcCatLower.includes('youtube') || svcCatLower.includes('yt');
+    } else if (activeCatLower === 'tiktok') {
+      matchesCat = svcCatLower.includes('tiktok') || svcCatLower.includes('tt');
+    } else if (activeCatLower === 'telegram') {
+      matchesCat = svcCatLower.includes('telegram') || svcCatLower.includes('tg');
+    } else if (activeCatLower === 'twitter' || activeCatLower === 'twitter/x') {
+      matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x ');
+    } else if (activeCatLower === 'linkedin') {
+      matchesCat = svcCatLower.includes('linkedin');
+    } else if (activeCatLower === 'spotify') {
+      matchesCat = svcCatLower.includes('spotify');
+    } else if (activeCatLower === 'discord') {
+      matchesCat = svcCatLower.includes('discord');
+    } else if (activeCatLower === 'website traffic') {
+      matchesCat = svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web');
+    } else if (activeCatLower === 'others') {
+      // Anything that doesn't explicitly match the primary main ones
+      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcCatLower.includes(k));
+      matchesCat = !isKnown;
+    } else {
+      matchesCat = svcCatLower === activeCatLower;
+    }
+
     const matchesQuery = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          s.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesQuery;
@@ -517,6 +631,28 @@ export default function DihSmm() {
             </div>
           </div>
 
+          {/* Desktop User Status Gate */}
+          <div className="hidden md:flex items-center gap-3">
+            {isLoggedIn ? (
+              <div className="flex items-center gap-2 bg-[#141720] border border-[#1e2336] px-3.5 py-1.5 rounded-xl text-xs">
+                <div className="w-5 h-5 rounded bg-blue-500 text-white font-bold flex items-center justify-center uppercase truncate">
+                  {userName[0]}
+                </div>
+                <div className="text-left font-sans">
+                  <p className="text-white font-semibold leading-tight">{userName}</p>
+                  <p className="text-[9px] text-slate-400 font-mono select-all">{userEmail}</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={onAuthClick}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-lg transition shadow-md shadow-blue-500/10 active:scale-95 animate-pulse"
+              >
+                Log In / Register
+              </button>
+            )}
+          </div>
+
           {/* Mobile Bottom-Like Nav bar inside header */}
           <div className="flex md:hidden items-center gap-1.5">
             <button 
@@ -561,12 +697,32 @@ export default function DihSmm() {
         <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
           <div className="max-w-5xl mx-auto space-y-6">
 
+            {!isLoggedIn && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4.5 flex flex-col sm:flex-row items-center justify-between gap-4 select-none animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400 shrink-0">
+                    <AlertCircle size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Guest Mode (Actions Not Saved)</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Please log in to your account. SMM user profiles get $0.00 default balance until approved deposits are made!</p>
+                  </div>
+                </div>
+                <button
+                  onClick={onAuthClick}
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-lg transition shrink-0 select-none shadow active:scale-95"
+                >
+                  🔑 Log In / Register
+                </button>
+              </div>
+            )}
+
             {/* DASHBOARD PAGE */}
             {activePage === 'dashboard' && (
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-white tracking-tight">Welcome back</h2>
+                    <h2 className="text-2xl font-bold text-white tracking-tight">Welcome back, {userName}</h2>
                     <p className="text-sm text-slate-400">Here is your account overview.</p>
                   </div>
                   <button 
@@ -745,8 +901,13 @@ export default function DihSmm() {
                           
                           <p className="text-slate-400 text-[11.5px] leading-relaxed">{s.desc}</p>
                           
-                          <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-500">
                             <span>Min: {fmt(s.min)}</span>
+                            {s.refill && (
+                              <span className="bg-[#1c2135]/50 px-1.5 py-0.5 rounded text-[9px] text-[#38bdf8] border border-[#38bdf8]/15 font-bold">
+                                {s.refill}
+                              </span>
+                            )}
                             <span>{s.time}</span>
                           </div>
                         </div>
@@ -817,7 +978,26 @@ export default function DihSmm() {
                               </div>
                               <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                 {CATEGORIES.slice(1).map(cat => {
-                                  const filtered = activeServices.filter(s => s.category === cat && s.name.toLowerCase().includes(ddSearchQuery.toLowerCase()));
+                                  const filtered = activeServices.filter(s => {
+                                    const catLower = cat.toLowerCase();
+                                    const svcCatLower = s.category.toLowerCase();
+                                    
+                                    let matchesCat = false;
+                                    if (catLower === 'youtube') {
+                                      matchesCat = svcCatLower.includes('youtube');
+                                    } else if (catLower === 'tiktok') {
+                                      matchesCat = svcCatLower.includes('tiktok');
+                                    } else if (catLower === 'twitter' || catLower === 'twitter/x') {
+                                      matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x');
+                                    } else if (catLower === 'linkedin') {
+                                      matchesCat = svcCatLower.includes('linkedin');
+                                    } else {
+                                      matchesCat = svcCatLower === catLower;
+                                    }
+                                    
+                                    const matchesQuery = s.name.toLowerCase().includes(ddSearchQuery.toLowerCase());
+                                    return matchesCat && matchesQuery;
+                                  });
                                   if (filtered.length === 0) return null;
                                   return (
                                     <React.Fragment key={cat}>
@@ -849,7 +1029,7 @@ export default function DihSmm() {
                       </div>
 
                       {selectedService && (
-                        <div className="bg-blue-500/[0.03] border border-blue-500/10 rounded-lg p-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-400">
+                        <div className="bg-blue-500/[0.03] border border-blue-500/10 rounded-lg p-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-slate-400">
                           {selectedService.quality && (
                             <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] border font-black uppercase tracking-wider", getQualityBadgeClass(selectedService.quality))}>
                               {selectedService.quality}
@@ -858,6 +1038,7 @@ export default function DihSmm() {
                           <span>Min: <strong className="text-white font-mono">{fmt(selectedService.min)}</strong></span>
                           <span>Max: <strong className="text-white font-mono">{fmt(selectedService.max)}</strong></span>
                           <span>Delivery: <strong className="text-white">{selectedService.time}</strong></span>
+                          <span>Refill: <strong className="text-[#38bdf8]">{selectedService.refill || "No Refill"}</strong></span>
                         </div>
                       )}
                     </div>
