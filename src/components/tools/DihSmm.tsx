@@ -123,10 +123,17 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [servicesList, setServicesList] = useState<SMMService[]>([]);
 
   // Dynamically map SERVICES and scale by multiplier
-  const activeServices = servicesList.map(s => ({
-    ...s,
-    price: s.price * (settings.smmPriceMultiplier || 1.0)
-  }));
+  const activeServices = servicesList.map(s => {
+    const priceVal = (Number(s.price) || 0.0) * (settings.smmPriceMultiplier || 1.0);
+    return {
+      ...s,
+      name: s.name || `Service #${s.id}`,
+      category: s.category || s.group || 'Others',
+      price: priceVal,
+      min: Number(s.min) || 50,
+      max: Number(s.max) || 100000
+    };
+  });
 
   const orderFilteredServices = activeServices.filter(s => {
     if (orderActiveCat === 'All') return true;
@@ -251,7 +258,36 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       if (cachedServices) {
         try {
           const parsed = JSON.parse(cachedServices);
-          setServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+          if (Array.isArray(parsed)) {
+            const sanitized = parsed.map((s: any) => {
+              const idVal = Number(s.id) || 0;
+              const nameVal = (s.name || `Service #${idVal}`).toString();
+              const catVal = (s.category || s.group || 'Others').toString();
+              const priceVal = Number(s.price) || 0.0;
+              const minVal = Number(s.min) || 50;
+              const maxVal = Number(s.max) || 100000;
+              const descVal = (s.desc || '').toString();
+              const timeVal = (s.time || '').toString();
+              const qualityVal = (s.quality || 'Standard').toString();
+              const refillVal = (s.refill || 'No Refill').toString();
+              return {
+                ...s,
+                id: idVal,
+                name: nameVal,
+                category: catVal,
+                price: priceVal,
+                min: minVal,
+                max: maxVal,
+                desc: descVal,
+                time: timeVal,
+                quality: qualityVal,
+                refill: refillVal
+              };
+            });
+            setServicesList(prev => JSON.stringify(prev) !== JSON.stringify(sanitized) ? sanitized : prev);
+          } else {
+            setServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+          }
         } catch (err) {
           console.error(err);
         }

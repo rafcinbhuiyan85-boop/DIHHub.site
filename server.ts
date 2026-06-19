@@ -466,6 +466,61 @@ async function startServer() {
     }
   });
 
+  app.post("/api/admin/smm/fetch-balance", async (req, res) => {
+    const { url, key } = req.body;
+    if (!url || !key) {
+      return res.status(400).json({ error: "SMM Provider API URL and API Key are required fields." });
+    }
+
+    try {
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+        normalizedUrl = "https://" + normalizedUrl;
+      }
+
+      const params = new URLSearchParams();
+      params.append('key', key.trim());
+      params.append('action', 'balance');
+
+      let response;
+      try {
+        response = await axios.post(normalizedUrl, params.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 10000
+        });
+      } catch (postErr: any) {
+        const separator = normalizedUrl.includes('?') ? '&' : '?';
+        const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(key.trim())}&action=balance`;
+        response = await axios.get(getUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 10000
+        });
+      }
+
+      const rawData = response.data;
+      if (rawData && typeof rawData === 'object') {
+        if (rawData.error) {
+          return res.status(400).json({ error: rawData.error });
+        }
+        const balVal = parseFloat(rawData.balance || rawData.amount || rawData.funds || '0.00');
+        return res.json({ balance: balVal, currency: rawData.currency || 'USD' });
+      } else {
+        const match = String(rawData).match(/balance"\s*:\s*"([0-9.]+)/i) || String(rawData).match(/([0-9.]+)/);
+        if (match) {
+          return res.json({ balance: parseFloat(match[1]) || 0.0, currency: 'USD' });
+        }
+        return res.status(400).json({ error: "Unrecognized balance response format from SMM panel." });
+      }
+    } catch (err: any) {
+      return res.status(500).json({ error: `Could not fetch live balance: ${err.message}` });
+    }
+  });
+
   // --- APK STORE ENDPOINTS ---
   
   app.get("/api/store", (req, res) => {

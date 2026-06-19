@@ -354,7 +354,36 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       if (cachedServices) {
         try {
           const parsed = JSON.parse(cachedServices);
-          setSmmServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+          if (Array.isArray(parsed)) {
+            const sanitized = parsed.map((s: any) => {
+              const idVal = Number(s.id) || 0;
+              const nameVal = (s.name || `Service #${idVal}`).toString();
+              const catVal = (s.category || s.group || 'Others').toString();
+              const priceVal = Number(s.price) || 0.0;
+              const minVal = Number(s.min) || 100;
+              const maxVal = Number(s.max) || 1000000;
+              const descVal = (s.desc || '').toString();
+              const timeVal = (s.time || 'Instant').toString();
+              const qualityVal = (s.quality || 'Standard').toString();
+              const refillVal = (s.refill || 'No Refill').toString();
+              return {
+                ...s,
+                id: idVal,
+                name: nameVal,
+                category: catVal,
+                price: priceVal,
+                min: minVal,
+                max: maxVal,
+                desc: descVal,
+                time: timeVal,
+                quality: qualityVal,
+                refill: refillVal
+              };
+            });
+            setSmmServicesList(prev => JSON.stringify(prev) !== JSON.stringify(sanitized) ? sanitized : prev);
+          } else {
+            setSmmServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+          }
         } catch (e) {
           console.error(e);
         }
@@ -685,8 +714,36 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setIsSmmModalOpen(false);
   };
 
-  const handleSaveSmmProvider = () => {
+  const handleSaveSmmProvider = async () => {
     if (!smmFormProvName.trim() || !smmFormProvUrl.trim()) return;
+    
+    let resolvedBalance = 0.00;
+    const isRealApi = smmFormProvUrl && smmFormProvUrl.trim() !== "" && !smmFormProvUrl.toLowerCase().includes("example.com") && smmFormProvKey && smmFormProvKey.trim() !== "";
+    
+    if (isRealApi) {
+      setSmmToast({ message: "Verifying credentials... Fetching live account funds balance from SMM Panel...", type: 'info' });
+      try {
+        const response = await fetch('/api/admin/smm/fetch-balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: smmFormProvUrl, key: smmFormProvKey })
+        });
+        if (response.ok) {
+          const resData = await response.json();
+          resolvedBalance = parseFloat(resData.balance) || 0.00;
+          setSmmToast({ message: `Success! Connection verified. Live Balance retrieved: $${resolvedBalance.toFixed(4)}`, type: 'success' });
+        } else {
+          setSmmToast({ message: `API Connection warning: Key authentication failed. Setting balance to $0.00 fallback.`, type: 'error' });
+        }
+      } catch (err) {
+        console.error("Live balance fetch error:", err);
+        setSmmToast({ message: `API Connection offline. Loaded default fallback balance.`, type: 'error' });
+        resolvedBalance = 500.00; // fallback mock balance
+      }
+    } else {
+      resolvedBalance = 500.00; // default for mock provider
+    }
+
     let updated = [];
     if (smmModalType === 'add-provider') {
       const newProv = {
@@ -695,7 +752,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         apiUrl: smmFormProvUrl,
         apiKey: smmFormProvKey,
         status: smmFormProvStatus,
-        balance: parseFloat(smmFormProvBalance) || 500.00,
+        balance: resolvedBalance,
         serviceCount: 0
       };
       updated = [...smmProviders, newProv];
@@ -708,7 +765,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             apiUrl: smmFormProvUrl,
             apiKey: smmFormProvKey,
             status: smmFormProvStatus,
-            balance: parseFloat(smmFormProvBalance) || p.balance
+            balance: isRealApi ? resolvedBalance : p.balance
           };
         }
         return p;
@@ -958,6 +1015,59 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         setSmmToast({ message: `Connection established. No linked services currently configured for ${prov.name}. Import some services first!`, type: 'info' });
       }
     }, 1200);
+  };
+
+  const handleSyncSmmProviderBalance = async (prov: any) => {
+    setSmmToast({ message: `Querying live balance for ${prov.name}...`, type: 'info' });
+    
+    const hasRealApi = prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
+    
+    if (hasRealApi) {
+      try {
+        const response = await fetch('/api/admin/smm/fetch-balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: prov.apiUrl, key: prov.apiKey })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const liveBal = parseFloat(data.balance) || 0.00;
+          
+          const updatedProvs = smmProviders.map(p => {
+            if (p.id === prov.id) {
+              return { ...p, balance: liveBal };
+            }
+            return p;
+          });
+          
+          setSmmProviders(updatedProvs);
+          localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProvs));
+          
+          setSmmToast({ message: `Live SMM account balance synced! Current Funds: $${liveBal.toFixed(4)}`, type: 'success' });
+          return;
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          setSmmToast({ message: `Authentication check failed: ${errData.error || "failed fetching balance"}`, type: 'error' });
+        }
+      } catch (err: any) {
+        setSmmToast({ message: `Connection offline: ${err.message}`, type: 'error' });
+      }
+    } else {
+      // Mock sync for offline default panels
+      setTimeout(() => {
+        const liveBal = 500.00 - (Math.random() * 45);
+        const updatedProvs = smmProviders.map(p => {
+          if (p.id === prov.id) {
+            return { ...p, balance: liveBal };
+          }
+          return p;
+        });
+        setSmmProviders(updatedProvs);
+        localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProvs));
+        setSmmToast({ message: `Mock provider funds balance refreshed: $${liveBal.toFixed(4)}`, type: 'success' });
+      }, 850);
+    }
   };
 
   const handleImportSelectedApiServices = () => {
@@ -6062,7 +6172,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                     </div>
                                   ) : (
                                     <>
-                                      <div className="flex gap-1.5">
+                                      <div className="flex gap-1.5 flex-wrap">
                                         <button
                                           onClick={() => startImportWizard(prov)}
                                           className="px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600 border border-blue-500/25 hover:border-blue-500 text-blue-400 hover:text-white font-extrabold text-[10px] uppercase tracking-wide transition flex items-center gap-1 active:scale-95 transform"
@@ -6084,6 +6194,14 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                         >
                                           <RefreshCcw size={10} className={cn(linkedCount > 0 && "text-slate-400")} />
                                           Sync Rates
+                                        </button>
+                                        <button
+                                          onClick={() => handleSyncSmmProviderBalance(prov)}
+                                          className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-emerald-400 hover:text-white hover:border-emerald-500 hover:bg-emerald-600 font-extrabold text-[10px] uppercase tracking-wide transition flex items-center gap-1 active:scale-95"
+                                          title="Sync funds balance live from SMM Panel"
+                                        >
+                                          <DollarSign size={10} className="text-emerald-400 hover:text-white" />
+                                          Sync Balance
                                         </button>
                                       </div>
 
@@ -6951,28 +7069,16 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono"
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Service Status</label>
-                              <select
-                                value={smmFormProvStatus}
-                                onChange={(e) => setSmmFormProvStatus(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
-                              >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Account Balance ($)</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={smmFormProvBalance}
-                                onChange={(e) => setSmmFormProvBalance(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
-                              />
-                            </div>
+                           <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Service Status</label>
+                            <select
+                              value={smmFormProvStatus}
+                              onChange={(e) => setSmmFormProvStatus(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
                           </div>
                         </div>
                       ) : smmModalType === 'edit-gateway' ? (
