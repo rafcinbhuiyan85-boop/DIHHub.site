@@ -131,6 +131,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   
   // New Order Form States
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [orderActivePlatform, setOrderActivePlatform] = useState<string>('All');
   const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [ddSearchQuery, setDdSearchQuery] = useState<string>('');
@@ -171,23 +172,38 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       })
     : [];
 
+  const serviceCategoryBelongsToPlatform = (serviceCategory: string, platform: string) => {
+    if (!serviceCategory || !platform) return false;
+    const sCat = serviceCategory.toLowerCase();
+    const plat = platform.toLowerCase();
+    
+    if (plat === 'all' || plat.includes('every')) return true;
+    
+    if (plat === 'instagram') return sCat.includes('instagram') || sCat.includes('ig ');
+    if (plat === 'facebook') return sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage');
+    if (plat === 'youtube') return sCat.includes('youtube') || sCat.includes('yt ');
+    if (plat === 'tiktok') return sCat.includes('tiktok');
+    if (plat === 'twitter/x' || plat === 'twitter' || plat === 'x') {
+      return sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ');
+    }
+    if (plat === 'telegram') return sCat.includes('telegram') || sCat.includes('tg ');
+    if (plat === 'spotify') return sCat.includes('spotify');
+    if (plat === 'linkedin') return sCat.includes('linkedin');
+    if (plat === 'discord') return sCat.includes('discord');
+    if (plat.includes('traffic') || plat.includes('website')) {
+      return sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
+    }
+    if (plat === 'others') {
+      const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo'];
+      return !known.some(k => sCat.includes(k));
+    }
+    
+    return sCat.includes(plat);
+  };
+
   const orderFilteredServices = activeServices.filter(s => {
     if (orderActiveCat === 'All') return true;
-    
-    const catLower = orderActiveCat.toLowerCase();
-    const svcCatLower = s.category.toLowerCase();
-    
-    if (catLower === 'youtube') {
-      return svcCatLower.includes('youtube');
-    } else if (catLower === 'tiktok') {
-      return svcCatLower.includes('tiktok');
-    } else if (catLower === 'twitter/x' || catLower === 'twitter') {
-      return svcCatLower.includes('twitter') || svcCatLower.includes('x');
-    } else if (catLower === 'linkedin') {
-      return svcCatLower.includes('linkedin');
-    } else {
-      return svcCatLower === catLower;
-    }
+    return s.category === orderActiveCat;
   });
 
   const filteredServicesForDropdown = useMemo(() => {
@@ -451,6 +467,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       if (!currentSelected && uniqueOrderCategories.length > 0) {
         const defaultCat = uniqueOrderCategories[0];
         setOrderActiveCat(defaultCat);
+        
+        // Auto-detect and sync top platform shortcut highlight
+        const catLower = defaultCat.toLowerCase();
+        let matchedPlat = 'All';
+        if (catLower.includes('instagram') || catLower.includes('ig ')) matchedPlat = 'Instagram';
+        else if (catLower.includes('facebook') || catLower.includes('fb') || catLower.includes('fanpage')) matchedPlat = 'Facebook';
+        else if (catLower.includes('youtube') || catLower.includes('yt ')) matchedPlat = 'YouTube';
+        else if (catLower.includes('tiktok')) matchedPlat = 'TikTok';
+        else if (catLower.includes('twitter') || catLower.includes('x.') || catLower === 'x' || catLower.includes('rt ')) matchedPlat = 'Twitter/X';
+        else if (catLower.includes('telegram') || catLower.includes('tg ')) matchedPlat = 'Telegram';
+        else if (catLower.includes('spotify')) matchedPlat = 'Spotify';
+        else if (catLower.includes('linkedin')) matchedPlat = 'LinkedIn';
+        else if (catLower.includes('discord')) matchedPlat = 'Discord';
+        else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) matchedPlat = 'Website Traffic';
+        setOrderActivePlatform(matchedPlat);
+
         const svcsOfCat = activeServices.filter(s => s.category === defaultCat);
         if (svcsOfCat.length > 0) {
           setSelectedServiceId(svcsOfCat[0].id);
@@ -469,29 +501,29 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (!orderLink) return;
     const url = orderLink.toLowerCase();
     
-    let detectedCat: string | null = null;
+    let detectedPlat: string | null = null;
     if (url.includes('instagram.com')) {
-      detectedCat = 'Instagram';
+      detectedPlat = 'Instagram';
     } else if (url.includes('facebook.com') || url.includes('fb.com') || url.includes('fb.watch')) {
-      detectedCat = 'Facebook';
+      detectedPlat = 'Facebook';
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      detectedCat = 'YouTube';
+      detectedPlat = 'YouTube';
     } else if (url.includes('tiktok.com')) {
-      detectedCat = 'TikTok';
+      detectedPlat = 'TikTok';
     } else if (url.includes('twitter.com') || url.includes('x.com')) {
-      detectedCat = 'Twitter/X';
+      detectedPlat = 'Twitter/X';
     } else if (url.includes('t.me') || url.includes('telegram.org') || url.includes('telegram.me')) {
-      detectedCat = 'Telegram';
+      detectedPlat = 'Telegram';
     } else if (url.includes('spotify.com')) {
-      detectedCat = 'Spotify';
+      detectedPlat = 'Spotify';
     } else if (url.includes('linkedin.com')) {
-      detectedCat = 'LinkedIn';
+      detectedPlat = 'LinkedIn';
     } else if (url.includes('discord.gg') || url.includes('discord.com')) {
-      detectedCat = 'Discord';
+      detectedPlat = 'Discord';
     }
     
-    if (detectedCat && orderActiveCat !== detectedCat) {
-      handleCategoryChange(detectedCat);
+    if (detectedPlat && orderActivePlatform !== detectedPlat) {
+      handlePlatformChange(detectedPlat);
     }
   }, [orderLink]);
 
@@ -511,24 +543,73 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     return '📦 ' + cat;
   };
 
+  const handlePlatformChange = (platformName: string) => {
+    setOrderActivePlatform(platformName);
+    
+    // Find categories of services for this platform
+    const validCats = uniqueOrderCategories.filter(cat => 
+      serviceCategoryBelongsToPlatform(cat, platformName)
+    );
+    
+    if (validCats.length > 0) {
+      const targetCat = validCats[0];
+      setOrderActiveCat(targetCat);
+      
+      const svcsOfCat = activeServices.filter(s => s.category === targetCat);
+      if (svcsOfCat.length > 0) {
+        setSelectedServiceId(svcsOfCat[0].id);
+        setOrderQty(svcsOfCat[0].min.toString());
+      } else {
+        setSelectedServiceId(null);
+        setOrderQty('');
+      }
+    } else {
+      const svcsOfPlat = activeServices.filter(s => serviceCategoryBelongsToPlatform(s.category, platformName));
+      if (svcsOfPlat.length > 0) {
+        setOrderActiveCat(svcsOfPlat[0].category);
+        setSelectedServiceId(svcsOfPlat[0].id);
+        setOrderQty(svcsOfPlat[0].min.toString());
+      } else {
+        setOrderActiveCat('Others');
+        setSelectedServiceId(null);
+        setOrderQty('');
+      }
+    }
+  };
+
   const handleCategoryChange = (catName: string) => {
     setOrderActiveCat(catName);
     
-    let svcsOfCat;
-    if (catName === 'All') {
-      svcsOfCat = activeServices;
+    // Auto-detect and sync the active platform shortcut highlight based on the selected category's platform
+    const catLower = catName.toLowerCase();
+    let matchedPlat = 'All';
+    if (catLower.includes('instagram') || catLower.includes('ig ')) {
+      matchedPlat = 'Instagram';
+    } else if (catLower.includes('facebook') || catLower.includes('fb') || catLower.includes('fanpage')) {
+      matchedPlat = 'Facebook';
+    } else if (catLower.includes('youtube') || catLower.includes('yt ')) {
+      matchedPlat = 'YouTube';
+    } else if (catLower.includes('tiktok')) {
+      matchedPlat = 'TikTok';
+    } else if (catLower.includes('twitter') || catLower.includes('x.') || catLower === 'x' || catLower.includes('rt ')) {
+      matchedPlat = 'Twitter/X';
+    } else if (catLower.includes('telegram') || catLower.includes('tg ')) {
+      matchedPlat = 'Telegram';
+    } else if (catLower.includes('spotify')) {
+      matchedPlat = 'Spotify';
+    } else if (catLower.includes('linkedin')) {
+      matchedPlat = 'LinkedIn';
+    } else if (catLower.includes('discord')) {
+      matchedPlat = 'Discord';
+    } else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) {
+      matchedPlat = 'Website Traffic';
     } else {
-      const catLower = catName.toLowerCase();
-      svcsOfCat = activeServices.filter(s => {
-        const svcCatLower = s.category.toLowerCase();
-        if (catLower === 'youtube') return svcCatLower.includes('youtube');
-        if (catLower === 'tiktok') return svcCatLower.includes('tiktok');
-        if (catLower === 'twitter/x' || catLower === 'twitter') return svcCatLower.includes('twitter') || svcCatLower.includes('x');
-        if (catLower === 'linkedin') return svcCatLower.includes('linkedin');
-        return svcCatLower === catLower;
-      });
+      matchedPlat = 'Others';
     }
+    setOrderActivePlatform(matchedPlat);
 
+    // Auto-select first service belonging to this exact category
+    const svcsOfCat = activeServices.filter(s => s.category === catName);
     if (svcsOfCat.length > 0) {
       setSelectedServiceId(svcsOfCat[0].id);
       setOrderQty(svcsOfCat[0].min.toString());
@@ -1253,10 +1334,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       <Sparkles size={16} className="text-violet-400 animate-pulse" />
                       <span className="text-xs font-extrabold text-white uppercase tracking-wider">Fast SMM Platform Shortcuts</span>
                     </div>
-                    {orderActiveCat !== 'All' && (
+                    {orderActivePlatform !== 'All' && (
                       <button 
                         type="button"
-                        onClick={() => handleCategoryChange('All')}
+                        onClick={() => handlePlatformChange('All')}
                         className="text-[11px] font-bold text-violet-400 hover:text-white transition-colors cursor-pointer select-none"
                       >
                         Show All
@@ -1266,12 +1347,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                   
                   <div className="flex flex-wrap gap-2 md:gap-2.5">
                     {CATEGORIES.map((cat) => {
-                      const isSelected = orderActiveCat === cat;
+                      const isSelected = orderActivePlatform === cat;
                       return (
                         <button
                           key={cat}
                           type="button"
-                          onClick={() => handleCategoryChange(cat)}
+                          onClick={() => handlePlatformChange(cat)}
                           className={cn(
                             "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer select-none border",
                             isSelected
@@ -1435,6 +1516,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                     </div>
                                     <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
                                       {uniqueOrderCategories
+                                        .filter(cat => serviceCategoryBelongsToPlatform(cat, orderActivePlatform))
                                         .filter(cat => cat.toLowerCase().includes(catSearchQuery.toLowerCase()))
                                         .map(cat => {
                                           const isSelected = orderActiveCat === cat;
