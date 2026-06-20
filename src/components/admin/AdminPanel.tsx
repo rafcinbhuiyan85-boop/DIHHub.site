@@ -5636,7 +5636,38 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                 {smmSubTab === 'services' && (() => {
                   const visibleCatalogServices = smmServicesList.filter(s => {
                     const match = (s.name + s.category).toLowerCase().includes(smmSvcSearch.toLowerCase());
-                    const matchesCat = !smmSvcCatFilter || s.category === smmSvcCatFilter;
+                    let matchesCat = true;
+                    if (smmSvcCatFilter) {
+                      const plat = smmSvcCatFilter.toLowerCase();
+                      const sCat = (s.category || '').toLowerCase();
+                      const sName = (s.name || '').toLowerCase();
+                      if (plat === 'instagram') {
+                        matchesCat = sCat.includes('instagram') || sCat.includes('ig ') || sCat.includes('ig-') || sName.includes('instagram') || sName.includes('ig');
+                      } else if (plat === 'facebook') {
+                        matchesCat = sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage') || sCat.includes('meta') || sName.includes('facebook') || sName.includes('fb');
+                      } else if (plat === 'youtube') {
+                        matchesCat = sCat.includes('youtube') || sCat.includes('yt ') || sCat.includes('yt-') || sName.includes('youtube') || sName.includes('yt');
+                      } else if (plat === 'tiktok') {
+                        matchesCat = sCat.includes('tiktok') || sName.includes('tiktok');
+                      } else if (plat === 'twitter/x' || plat === 'twitter' || plat === 'x') {
+                        matchesCat = sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ') || sCat.includes('tweet') || sName.includes('twitter') || sName.includes('x');
+                      } else if (plat === 'telegram') {
+                        matchesCat = sCat.includes('telegram') || sCat.includes('tg ') || sCat.includes('tg-') || sName.includes('telegram') || sName.includes('tg');
+                      } else if (plat === 'spotify') {
+                        matchesCat = sCat.includes('spotify') || sName.includes('spotify');
+                      } else if (plat === 'linkedin') {
+                        matchesCat = sCat.includes('linkedin') || sName.includes('linkedin');
+                      } else if (plat === 'discord') {
+                        matchesCat = sCat.includes('discord') || sName.includes('discord');
+                      } else if (plat.includes('traffic') || plat.includes('website')) {
+                        matchesCat = sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo') || sName.includes('traffic') || sName.includes('website');
+                      } else if (plat === 'others') {
+                        const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo'];
+                        matchesCat = !known.some(k => sCat.includes(k) || sName.includes(k));
+                      } else {
+                        matchesCat = s.category === smmSvcCatFilter || sCat.includes(plat);
+                      }
+                    }
                     return match && matchesCat;
                   });
                   const isAllVisibleChecked = visibleCatalogServices.length > 0 && 
@@ -5824,10 +5855,17 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                   <td className="py-3 font-mono text-slate-500 text-[11px] text-center">#{s.id}</td>
                                   <td className="py-3 text-left">
                                     <p className="font-bold text-slate-200">{s.name}</p>
-                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
-                                      <span>{s.time || 'Instant'} delivery</span>
-                                      <span>•</span>
-                                      <span>Refill: <strong className="text-slate-400 font-medium">{s.refill || "No Refill"}</strong></span>
+                                    <div className="flex items-center gap-2 text-[10px] mt-1">
+                                      <span className={cn(
+                                        "px-2  py-0.5 rounded text-[10px] font-mono font-bold tracking-wide border inline-flex items-center gap-1 shrink-0",
+                                        (s.refill || 'No Refill').toLowerCase().includes('no')
+                                          ? "bg-red-500/10 text-red-400 border-red-500/15"
+                                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15 font-medium"
+                                      )}>
+                                        🔄 Refill: {s.refill || "No Refill"}
+                                      </span>
+                                      <span className="text-slate-600">•</span>
+                                      <span className="text-slate-500 truncate">{s.time || 'Instant'}</span>
                                     </div>
                                   </td>
                                   <td className="py-3">

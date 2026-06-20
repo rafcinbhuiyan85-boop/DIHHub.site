@@ -1340,8 +1340,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-500">
                             <span>Min: {fmt(s.min)}</span>
                             {s.refill && (
-                              <span className="bg-[#1c2135]/50 px-1.5 py-0.5 rounded text-[9px] text-[#38bdf8] border border-[#38bdf8]/15 font-bold">
-                                {s.refill}
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wide border shrink-0",
+                                s.refill.toLowerCase().includes('no')
+                                  ? "bg-red-500/10 text-red-400 border-red-500/15"
+                                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15"
+                              )}>
+                                🔄 Refill: {s.refill}
                               </span>
                             )}
                             <span>{s.time}</span>
