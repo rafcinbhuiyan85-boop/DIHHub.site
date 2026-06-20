@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, PlusCircle, List, ArrowDownToLine, 
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
@@ -122,18 +122,54 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   // Dynamically managed services list
   const [servicesList, setServicesList] = useState<SMMService[]>([]);
 
+  // States
+  const [balance, setBalance] = useState<number>(0.00);
+  const [activePage, setActivePage] = useState<'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit'>('dashboard');
+  const [activeCat, setActiveCat] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  
+  // New Order Form States
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [ddSearchQuery, setDdSearchQuery] = useState<string>('');
+  const catDropdownRef = useRef<HTMLDivElement>(null);
+  const [catDropdownOpen, setCatDropdownOpen] = useState<boolean>(false);
+  const [catSearchQuery, setCatSearchQuery] = useState<string>('');
+  const [orderSearchQuery, setOrderSearchQuery] = useState<string>('');
+  const [orderLink, setOrderLink] = useState<string>('');
+  const [orderQty, setOrderQty] = useState<string>('');
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+  const [orderTab, setOrderTab] = useState<'single' | 'mass'>('single');
+  const [massOrderText, setMassOrderText] = useState<string>('');
+
+  // Deposit Form States
+  const [selectedMethod, setSelectedMethod] = useState<'bkash' | 'nagad' | 'rocket' | 'card' | 'crypto' | 'upay' | 'binance' | 'usdt'>('bkash');
+  const [depositAmount, setDepositAmount] = useState<string>('');
+  const [senderDetails, setSenderDetails] = useState<string>('');
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [depError, setDepError] = useState<string | null>(null);
+  const [depSuccess, setDepSuccess] = useState<string | null>(null);
+
+  // Dynamic Gateway configuration sync from admin settings
+  const [manualGateways, setManualGateways] = useState<any[]>([]);
+
   // Dynamically map SERVICES and scale by multiplier
-  const activeServices = servicesList.map(s => {
-    const priceVal = (Number(s.price) || 0.0) * (settings.smmPriceMultiplier || 1.0);
-    return {
-      ...s,
-      name: s.name || `Service #${s.id}`,
-      category: s.category || s.group || 'Others',
-      price: priceVal,
-      min: Number(s.min) || 50,
-      max: Number(s.max) || 100000
-    };
-  });
+  const activeServices = Array.isArray(servicesList)
+    ? servicesList.map(s => {
+        const priceVal = (Number(s?.price) || 0.0) * (settings.smmPriceMultiplier || 1.0);
+        return {
+          ...s,
+          name: String(s?.name || `Service #${s?.id || ''}`),
+          category: String(s?.category || s?.group || 'Others'),
+          price: priceVal,
+          min: Number(s?.min) || 50,
+          max: Number(s?.max) || 100000
+        };
+      })
+    : [];
 
   const orderFilteredServices = activeServices.filter(s => {
     if (orderActiveCat === 'All') return true;
@@ -153,34 +189,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return svcCatLower === catLower;
     }
   });
-  
-  // States
-  const [balance, setBalance] = useState<number>(0.00);
-  const [activePage, setActivePage] = useState<'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit'>('dashboard');
-  const [activeCat, setActiveCat] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeFilter, setActiveFilter] = useState<string>('all');
-  
-  // New Order Form States
-  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
-  const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  const [ddSearchQuery, setDdSearchQuery] = useState<string>('');
-  const [orderLink, setOrderLink] = useState<string>('');
-  const [orderQty, setOrderQty] = useState<string>('');
-  const [orderError, setOrderError] = useState<string | null>(null);
-  const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
 
-  // Deposit Form States
-  const [selectedMethod, setSelectedMethod] = useState<'bkash' | 'nagad' | 'rocket' | 'card' | 'crypto' | 'upay' | 'binance' | 'usdt'>('bkash');
-  const [depositAmount, setDepositAmount] = useState<string>('');
-  const [senderDetails, setSenderDetails] = useState<string>('');
-  const [transactionId, setTransactionId] = useState<string>('');
-  const [depError, setDepError] = useState<string | null>(null);
-  const [depSuccess, setDepSuccess] = useState<string | null>(null);
-
-  // Dynamic Gateway configuration sync from admin settings
-  const [manualGateways, setManualGateways] = useState<any[]>([]);
+  const filteredServicesForDropdown = useMemo(() => {
+    let result = orderFilteredServices;
+    if (ddSearchQuery) {
+      const query = ddSearchQuery.toLowerCase();
+      result = result.filter(s => s.name.toLowerCase().includes(query) || s.id.toString().includes(query));
+    }
+    return result;
+  }, [orderFilteredServices, ddSearchQuery]);
 
   useEffect(() => {
     const cached = localStorage.getItem('dih_smm_manual_gateways_v2');
@@ -215,6 +232,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (catDropdownRef.current && !catDropdownRef.current.contains(event.target as Node)) {
+        setCatDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -286,7 +306,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             });
             setServicesList(prev => JSON.stringify(prev) !== JSON.stringify(sanitized) ? sanitized : prev);
           } else {
-            setServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+            setServicesList(SERVICES);
           }
         } catch (err) {
           console.error(err);
@@ -418,6 +438,77 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const currentQuantity = parseInt(orderQty) || 0;
   const currentTotal = selectedService ? (currentQuantity / 1000) * selectedService.price : 0;
 
+  // Dynamic categories list from activeServices
+  const uniqueOrderCategories = React.useMemo(() => {
+    const cats = activeServices.map(s => s.category);
+    return Array.from(new Set(cats)).filter(Boolean);
+  }, [activeServices]);
+
+  // Handle default selection when landing on new order directly or category changes
+  useEffect(() => {
+    if (activePage === 'new-order') {
+      const currentSelected = activeServices.find(s => s.id === selectedServiceId);
+      if (!currentSelected && uniqueOrderCategories.length > 0) {
+        const defaultCat = uniqueOrderCategories[0];
+        setOrderActiveCat(defaultCat);
+        const svcsOfCat = activeServices.filter(s => s.category === defaultCat);
+        if (svcsOfCat.length > 0) {
+          setSelectedServiceId(svcsOfCat[0].id);
+          setOrderQty(svcsOfCat[0].min.toString());
+        }
+      } else if (currentSelected) {
+        if (orderActiveCat !== currentSelected.category) {
+          setOrderActiveCat(currentSelected.category);
+        }
+      }
+    }
+  }, [activePage, uniqueOrderCategories, activeServices, selectedServiceId]);
+
+  // Helpers for category icons/styling
+  const getCategoryStyledName = (cat: string) => {
+    const c = cat.toLowerCase();
+    if (c.includes('instagram')) return '📷 Instagram';
+    if (c.includes('facebook')) return '👥 Facebook';
+    if (c.includes('youtube')) return '🎥 YouTube';
+    if (c.includes('tiktok')) return '🎵 TikTok';
+    if (c.includes('twitter') || c === 'x') return '🐦 Twitter/X';
+    if (c.includes('telegram')) return '📢 Telegram';
+    if (c.includes('spotify')) return '🎵 Spotify';
+    if (c.includes('linkedin')) return '💼 LinkedIn';
+    if (c.includes('discord')) return '💬 Discord';
+    if (c.includes('traffic') || c.includes('website')) return '🌐 Website Traffic';
+    return '📦 ' + cat;
+  };
+
+  const handleCategoryChange = (catName: string) => {
+    setOrderActiveCat(catName);
+    const svcsOfCat = activeServices.filter(s => s.category.toLowerCase() === catName.toLowerCase());
+    if (svcsOfCat.length > 0) {
+      setSelectedServiceId(svcsOfCat[0].id);
+      setOrderQty(svcsOfCat[0].min.toString());
+    } else {
+      setSelectedServiceId(null);
+      setOrderQty('');
+    }
+  };
+
+  const getAverageTimeText = (timeStr?: string) => {
+    if (!timeStr) return "11 minutes";
+    const t = timeStr.toLowerCase();
+    if (t.includes('minute') || t.includes('instant') || t.includes('min')) {
+      if (t.includes('0-15') || t.includes('15')) return "11 minutes";
+      if (t.includes('0-30') || t.includes('30')) return "22 minutes";
+      return "15 minutes";
+    }
+    if (t.includes('hour') || t.includes('hr')) {
+      if (t.includes('0-1') || t.includes('1')) return "48 minutes";
+      if (t.includes('0-6') || t.includes('6')) return "2.5 hours";
+      if (t.includes('0-12') || t.includes('12')) return "4 hours";
+      return "6.5 hours";
+    }
+    return timeStr;
+  };
+
   // Actions
   const handlePlaceOrder = () => {
     setOrderError(null);
@@ -467,6 +558,106 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     setOrderSuccess(`Order #${newOrder.id} placed successfully!`);
     
     setTimeout(() => setOrderSuccess(null), 4000);
+  };
+
+  const handlePlaceMassOrder = () => {
+    setOrderError(null);
+    setOrderSuccess(null);
+    
+    const lines = massOrderText.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) {
+      setOrderError('Please enter mass order text.');
+      return;
+    }
+    
+    let processedCount = 0;
+    let failedCount = 0;
+    let errors: string[] = [];
+    let nextId = nextOrderId;
+    let currentBalance = balance;
+    let newOrdersList: SMMOrder[] = [];
+    
+    for (const line of lines) {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length < 3) {
+        failedCount++;
+        errors.push(`Invalid format on line: "${line}". Expected: Service ID|Link|Qty`);
+        continue;
+      }
+      
+      const sId = parseInt(parts[0]);
+      const link = parts[1];
+      const qty = parseInt(parts[2]);
+      
+      if (isNaN(sId) || isNaN(qty)) {
+        failedCount++;
+        errors.push(`Invalid numbers on line: "${line}"`);
+        continue;
+      }
+      
+      const svc = activeServices.find(s => s.id === sId);
+      if (!svc) {
+        failedCount++;
+        errors.push(`Service ID ${sId} not found`);
+        continue;
+      }
+      
+      if (qty < svc.min || qty > svc.max) {
+        failedCount++;
+        errors.push(`Qty ${qty} for Service #${sId} is out of bounds (${svc.min}-${svc.max})`);
+        continue;
+      }
+      
+      const rate = svc.price;
+      const charge = (qty / 1000) * rate;
+      
+      if (charge > currentBalance) {
+        failedCount++;
+        errors.push(`Insufficient balance for Service #${sId} of qty ${qty} (Required: $${charge.toFixed(4)})`);
+        continue;
+      }
+      
+      currentBalance -= charge;
+      
+      const newOrder: SMMOrder = {
+        id: nextId,
+        serviceId: svc.id,
+        serviceName: svc.name,
+        category: svc.category,
+        link: link,
+        quantity: qty,
+        amount: charge,
+        status: 'pending',
+        startCount: 0,
+        remains: qty,
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+      
+      newOrdersList.push(newOrder);
+      nextId++;
+      processedCount++;
+    }
+    
+    if (newOrdersList.length > 0) {
+      updateBalance(currentBalance);
+      saveOrders([...newOrdersList, ...orders]);
+      setNextId(nextId);
+    }
+    
+    setMassOrderText('');
+    
+    if (processedCount > 0 && failedCount === 0) {
+      setOrderSuccess(`Successfully placed ${processedCount} orders!`);
+    } else if (processedCount > 0 && failedCount > 0) {
+      setOrderSuccess(`Placed ${processedCount} orders. Failed ${failedCount} orders. Check alert message.`);
+      setOrderError(errors.slice(0, 3).join('\n'));
+    } else {
+      setOrderError(`Mass Order failed:\n` + errors.slice(0, 3).join('\n'));
+    }
+    
+    setTimeout(() => {
+      setOrderSuccess(null);
+    }, 6000);
   };
 
   const handleDeposit = () => {
@@ -988,8 +1179,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         </div>
 
                         <div className="flex items-center justify-between pt-3.5 mt-4 border-t border-[#1e2336] shrink-0">
-                          <div className="text-lg font-mono font-bold text-blue-500">
-                            ${s.price.toFixed(2)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
+                          <div className="text-[15px] font-mono font-bold text-blue-500">
+                            ${s.price.toFixed(4)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
                           </div>
                           <button 
                             onClick={() => goOrder(s.id)}
@@ -1007,311 +1198,528 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
             {/* NEW ORDER PAGE */}
             {activePage === 'new-order' && (
-              <div className="max-w-2xl mx-auto space-y-5">
-                <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
-                  <div className="px-5 py-4 border-b border-[#1e2336] flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-white">Place New Order</h3>
-                    <span className="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded border border-blue-500/25 uppercase tracking-wider">
-                      Easy Selection Enabled
-                    </span>
-                  </div>
-                  <div className="p-5.5 space-y-5">
-                    
-                    {/* QUICK CATEGORY SELECTOR */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center pl-0.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select Platform</label>
-                        {orderActiveCat !== 'All' && (
-                          <button 
-                            type="button"
-                            onClick={() => setOrderActiveCat('All')} 
-                            className="text-[10px] text-blue-500 hover:underline font-semibold"
-                          >
-                            Show All
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
-                        {CATEGORIES.map(c => {
-                          const isSelected = orderActiveCat === c;
-                          const label = c === 'All' ? 'Everythings' : c;
-                          return (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => {
-                                setOrderActiveCat(c);
-                                setDdSearchQuery('');
-                              }}
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 select-none active:scale-95 justify-center cursor-pointer h-10",
-                                isSelected
-                                  ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/10 font-bold"
-                                  : "bg-[#1c2135]/40 text-slate-400 border-[#1e2336] hover:text-white hover:bg-[#1c2135]/85 hover:border-slate-700"
-                              )}
-                            >
-                              {getCategoryIcon(c)}
-                              <span className="truncate">{label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* QUICK SERVICE SELECTION GRID */}
-                    <div className="space-y-2 pb-1">
-                      <div className="flex justify-between items-center pl-0.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select Service (Tap to choose)</label>
-                        <span className="text-[10px] text-slate-500 font-medium">
-                          Found {orderFilteredServices.length} options
-                        </span>
-                      </div>
-                      
-                      <div className="bg-[#0e111a]/80 border border-[#1e2336] rounded-xl p-2.5 max-h-52 overflow-y-auto custom-scrollbar space-y-1.5">
-                        {orderFilteredServices.length === 0 ? (
-                          <div className="text-center py-6 text-slate-500 text-xs">
-                            No services available in this category.
-                          </div>
-                        ) : (
-                          orderFilteredServices.map(s => {
-                            const isSelected = s.id === selectedServiceId;
-                            return (
-                              <div
-                                key={s.id}
-                                onClick={() => {
-                                  setSelectedServiceId(s.id);
-                                  setOrderQty(s.min.toString());
-                                  setOrderError(null);
-                                }}
-                                className={cn(
-                                  "w-full px-3 py-2.5 rounded-lg border text-left flex items-start justify-between gap-3 transition-all duration-150 cursor-pointer hover:bg-blue-500/[0.04] active:scale-[0.99]",
-                                  isSelected 
-                                    ? "bg-blue-600/10 border-blue-550 shadow-md shadow-blue-550/5" 
-                                    : "bg-[#141720]/40 border-[#1e2336] hover:border-slate-700"
-                                )}
-                              >
-                                <div className="space-y-1 min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className={cn(
-                                      "w-1.5 h-1.5 rounded-full shrink-0",
-                                      isSelected ? "bg-blue-400" : "bg-slate-700"
-                                    )} />
-                                    <p className={cn(
-                                      "text-xs font-semibold truncate leading-tight",
-                                      isSelected ? "text-blue-400" : "text-slate-200"
-                                    )}>
-                                      {s.name}
-                                    </p>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-slate-500 pl-3.5">
-                                    <span>Rate: <strong className="text-slate-400">${s.price.toFixed(2)}/1k</strong></span>
-                                    <span>•</span>
-                                    <span>Min: <strong className="text-slate-400">{fmt(s.min)}</strong></span>
-                                    <span>•</span>
-                                    {s.refill && (
-                                      <>
-                                        <span className="text-[#38bdf8] font-medium">{s.refill}</span>
-                                        <span>•</span>
-                                      </>
-                                    )}
-                                    <span>{s.time}</span>
-                                  </div>
-                                </div>
-                                <div className="shrink-0 flex items-center h-full pt-1">
-                                  {isSelected ? (
-                                    <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border border-blue-500/30">
-                                      Active
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-500 bg-[#141720] hover:text-slate-300 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border border-slate-800">
-                                      Select
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* CUSTOM DROPDOWN */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Selected Service (Review/Change)</label>
-                      <div className="relative" ref={dropdownRef}>
+              <div className="max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  <div className="lg:col-span-7 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
+                    <div className="px-5 py-3 border-b border-[#1e2336] flex items-center justify-between bg-gradient-to-r from-slate-900 to-[#141720]">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => toggleDropdown()}
+                          onClick={() => {
+                            setOrderTab('single');
+                            setOrderError(null);
+                            setOrderSuccess(null);
+                          }}
                           className={cn(
-                            "w-full px-4 py-3 bg-[#141720] border text-left flex justify-between items-center text-[13px] rounded-lg focus:border-blue-500 transition-all outline-none",
-                            selectedService
-                              ? "border-[#1e2336] text-white font-semibold"
-                              : "border-[#1e2336] text-slate-400"
+                            "px-4.5 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer select-none",
+                            orderTab === 'single'
+                              ? "bg-violet-600 text-white shadow-lg shadow-violet-600/20"
+                              : "text-slate-400 hover:text-slate-200"
                           )}
                         >
-                          <span className="truncate">{selectedService ? selectedService.name : "Choose a service..."}</span>
-                          <ChevronDown size={16} className={cn("text-slate-400 transition-transform duration-150", dropdownOpen ? "rotate-180" : "")} />
+                          New Order
                         </button>
-
-                        <AnimatePresence>
-                          {dropdownOpen && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 5 }}
-                              transition={{ duration: 0.12 }}
-                              className="absolute top-full left-0 right-0 mt-1 dark:bg-[#1a1f2e] border border-[#1e2336] rounded-lg overflow-hidden shadow-2xl z-50 origin-top"
-                            >
-                              <div className="p-2 border-b border-[#1e2336]">
-                                <input 
-                                  type="text"
-                                  placeholder="Search services..."
-                                  value={ddSearchQuery}
-                                  onChange={(e) => setDdSearchQuery(e.target.value)}
-                                  className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-md outline-none focus:border-blue-500"
-                                  autoFocus
-                                />
-                              </div>
-                              <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                                {CATEGORIES.slice(1).map(cat => {
-                                  const filtered = activeServices.filter(s => {
-                                    const catLower = cat.toLowerCase();
-                                    const svcCatLower = s.category.toLowerCase();
-                                    
-                                    let matchesCat = false;
-                                    if (catLower === 'youtube') {
-                                      matchesCat = svcCatLower.includes('youtube');
-                                    } else if (catLower === 'tiktok') {
-                                      matchesCat = svcCatLower.includes('tiktok');
-                                    } else if (catLower === 'twitter' || catLower === 'twitter/x') {
-                                      matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x');
-                                    } else if (catLower === 'linkedin') {
-                                      matchesCat = svcCatLower.includes('linkedin');
-                                    } else {
-                                      matchesCat = svcCatLower === catLower;
-                                    }
-                                    
-                                    const matchesQuery = s.name.toLowerCase().includes(ddSearchQuery.toLowerCase());
-                                    return matchesCat && matchesQuery;
-                                  });
-                                  if (filtered.length === 0) return null;
-                                  return (
-                                    <React.Fragment key={cat}>
-                                      <div className="px-3.5 py-1.5 text-[9px] font-extrabold uppercase tracking-widest text-[#64748b] bg-white/[0.01] sticky top-0">{cat}</div>
-                                      {filtered.map(s => (
-                                        <div
-                                          key={s.id}
-                                          onClick={() => {
-                                            setSelectedServiceId(s.id);
-                                            setOrderQty(s.min.toString());
-                                            setDropdownOpen(false);
-                                          }}
-                                          className={cn(
-                                            "px-4 py-2.5 text-xs text-white hover:bg-blue-500/10 cursor-pointer flex justify-between items-center transition-colors border-l-2 border-transparent",
-                                            s.id === selectedServiceId ? "bg-blue-500/10 border-blue-500 font-semibold text-blue-400" : ""
-                                          )}
-                                        >
-                                          <span className="truncate pr-4">{s.name}</span>
-                                          <span className="font-mono text-blue-500 font-bold shrink-0">${s.price.toFixed(2)}/1k</span>
-                                        </div>
-                                      ))}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </div>
-                            </motion.div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOrderTab('mass');
+                            setOrderError(null);
+                            setOrderSuccess(null);
+                          }}
+                          className={cn(
+                            "px-4.5 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer select-none",
+                            orderTab === 'mass'
+                              ? "bg-violet-600 text-white shadow-lg shadow-violet-600/20"
+                              : "text-slate-400 hover:text-slate-200"
                           )}
-                        </AnimatePresence>
+                        >
+                          Mass Order
+                        </button>
                       </div>
-
-                      {selectedService && (
-                        <div className="bg-blue-500/[0.03] border border-blue-500/10 rounded-lg p-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-slate-400">
-                          {selectedService.quality && (
-                            <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] border font-black uppercase tracking-wider", getQualityBadgeClass(selectedService.quality))}>
-                              {selectedService.quality}
-                            </span>
-                          )}
-                          <span>Min: <strong className="text-white font-mono">{fmt(selectedService.min)}</strong></span>
-                          <span>Max: <strong className="text-white font-mono">{fmt(selectedService.max)}</strong></span>
-                          <span>Delivery: <strong className="text-white">{selectedService.time}</strong></span>
-                          <span>Refill: <strong className="text-[#38bdf8]">{selectedService.refill || "No Refill"}</strong></span>
+                      
+                      <div className="bg-[#0d0f17]/80 text-violet-400 border border-violet-500/15 px-2.5 py-0.8 rounded text-[9px] font-black tracking-widest uppercase font-mono">
+                        Instant Proc
+                      </div>
+                    </div>
+                    
+                    <div className="p-5.5 space-y-4">
+                      
+                      {/* Fallback to restore defaults if empty */}
+                      {activeServices.length === 0 && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4.5 text-xs text-amber-400 space-y-2.5">
+                          <p className="font-bold flex items-center gap-1.5">⚠️ SMM Catalog is currently empty!</p>
+                          <p className="text-slate-300 leading-relaxed">
+                            It looks like all SMM services were cleared or not initialized. Press the button below to instantly populate your browser storage with our high-speed default catalog of 24 SMM services.
+                          </p>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              localStorage.setItem('dih_smm_services_v2', JSON.stringify(SERVICES));
+                              setServicesList(SERVICES);
+                            }}
+                            className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black px-4 py-2 rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md inline-flex items-center gap-2"
+                          >
+                            Restore Default 24 Services
+                          </button>
                         </div>
                       )}
-                    </div>
 
-                    {/* TARGET URL LINK */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Link</label>
-                      <div className="relative">
-                        <Link2 size={15} className="absolute left-3 w-4 h-4 text-slate-400 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input 
-                          type="url" 
-                          placeholder="https://..." 
-                          value={orderLink}
-                          onChange={(e) => setOrderLink(e.target.value)}
-                          className="w-full bg-[#141720] border border-[#1e2336] pl-9.5 pr-4 py-3 text-sm text-white rounded-lg outline-none focus:border-blue-500 placeholder-[#64748b] transition-colors"
-                        />
-                      </div>
-                    </div>
+                      {orderTab === 'single' ? (
+                        <>
+                          {/* Search Bar */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Search Service</label>
+                            <div className="relative">
+                              <Search size={14} className="absolute left-3 w-4 h-4 text-slate-400 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              <input
+                                type="text"
+                                placeholder="Type to search service globally..."
+                                value={orderSearchQuery}
+                                onChange={(e) => {
+                                  const query = e.target.value;
+                                  setOrderSearchQuery(query);
+                                  
+                                  if (query) {
+                                    const match = activeServices.find(s => 
+                                      s.name.toLowerCase().includes(query.toLowerCase()) || 
+                                      s.id.toString().includes(query)
+                                    );
+                                    if (match) {
+                                      setOrderActiveCat(match.category);
+                                      setSelectedServiceId(match.id);
+                                      setOrderQty(match.min.toString());
+                                    }
+                                  }
+                                }}
+                                className="w-full bg-[#0d0f17] border border-[#1e2336] pl-[#2.4rem] pr-8 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 placeholder-[#64748b] transition-colors h-11"
+                              />
+                              {orderSearchQuery && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOrderSearchQuery('');
+                                  }}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
 
-                    {/* QUANTITY */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center px-0.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Quantity</label>
-                        {selectedService && (
-                          <span className="text-[11px] text-slate-500 font-mono font-medium">
-                            {fmt(selectedService.min)} – {fmt(selectedService.max)}
-                          </span>
-                        )}
-                      </div>
-                      <input 
-                        type="number" 
-                        placeholder="Enter quantity" 
-                        value={orderQty}
-                        onChange={(e) => setOrderQty(e.target.value)}
-                        className="w-full bg-[#141720] border border-[#1e2336] px-4 py-3 text-sm text-white rounded-lg outline-none focus:border-blue-500 transition-colors font-mono"
-                      />
-                    </div>
+                          {/* Category Selector */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Category</label>
+                            <div className="relative" ref={catDropdownRef}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCatDropdownOpen(!catDropdownOpen);
+                                  setDropdownOpen(false);
+                                }}
+                                className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-violet-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
+                              >
+                                <span className="flex items-center gap-2">
+                                  {getCategoryStyledName(orderActiveCat)}
+                                </span>
+                                <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-150", catDropdownOpen ? "rotate-180" : "")} />
+                              </button>
+                              
+                              <AnimatePresence>
+                                {catDropdownOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 5 }}
+                                    transition={{ duration: 0.12 }}
+                                    className="absolute top-full left-0 right-0 mt-1 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-2xl z-50 origin-top"
+                                  >
+                                    <div className="p-2 border-b border-[#1e2336] bg-[#0d0f17]">
+                                      <input
+                                        type="text"
+                                        placeholder="Search category..."
+                                        value={catSearchQuery}
+                                        onChange={(e) => setCatSearchQuery(e.target.value)}
+                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-violet-500"
+                                        autoFocus
+                                      />
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+                                      {uniqueOrderCategories
+                                        .filter(cat => cat.toLowerCase().includes(catSearchQuery.toLowerCase()))
+                                        .map(cat => {
+                                          const isSelected = orderActiveCat === cat;
+                                          return (
+                                            <div
+                                              key={cat}
+                                              onClick={() => {
+                                                handleCategoryChange(cat);
+                                                setCatDropdownOpen(false);
+                                                setCatSearchQuery('');
+                                              }}
+                                              className={cn(
+                                                "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/[0.03] cursor-pointer rounded-lg flex items-center justify-between transition-colors",
+                                                isSelected ? "bg-violet-600/10 text-violet-400 font-extrabold border-l-2 border-violet-500" : ""
+                                              )}
+                                            >
+                                              <span>{getCategoryStyledName(cat)}</span>
+                                              {isSelected && <span className="text-[10px] bg-violet-500/20 px-2 py-0.5 rounded text-violet-400 uppercase tracking-widest font-black">Active</span>}
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
 
-                    {/* ESTIMATE CHARGE & BALLANCE PILL */}
-                    <div className="bg-[#3b82f6]/[0.02] border border-blue-500/10 rounded-xl px-5 py-4.5 flex justify-between items-center">
-                      <div>
-                        <div className="text-[10px] text-slate-500 uppercase font-medium">Order Total</div>
-                        <div className="text-3xl font-bold font-mono text-white leading-tight mt-0.5">
-                          <span className="text-blue-500">$</span>{currentTotal.toFixed(4)}
+                          {/* Service Selector */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Service</label>
+                            <div className="relative" ref={dropdownRef}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDropdownOpen(!dropdownOpen);
+                                  setCatDropdownOpen(false);
+                                }}
+                                className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-violet-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
+                              >
+                                <span className="truncate pr-4 flex items-center gap-1.5">
+                                  {selectedService && (
+                                    <span className="bg-violet-500/15 text-violet-400 text-[10px] font-black px-1.5 py-0.5 rounded border border-violet-500/25 font-mono">
+                                      {selectedService.id}
+                                    </span>
+                                  )}
+                                  <span>{selectedService ? selectedService.name : "Choose a service..."}</span>
+                                </span>
+                                <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-150", dropdownOpen ? "rotate-180" : "")} />
+                              </button>
+                              
+                              <AnimatePresence>
+                                {dropdownOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 5 }}
+                                    transition={{ duration: 0.12 }}
+                                    className="absolute top-full left-0 right-0 mt-1 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-2xl z-50 origin-top"
+                                  >
+                                    <div className="p-2 border-b border-[#1e2336] bg-[#0d0f17]">
+                                      <input
+                                        type="text"
+                                        placeholder="Search service by name or ID..."
+                                        value={ddSearchQuery}
+                                        onChange={(e) => setDdSearchQuery(e.target.value)}
+                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-violet-500"
+                                        autoFocus
+                                      />
+                                    </div>
+                                    <div className="max-h-64 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
+                                      {filteredServicesForDropdown.length === 0 ? (
+                                        <div className="text-center py-5 text-xs text-slate-500">No services match your search</div>
+                                      ) : (
+                                        filteredServicesForDropdown.map(s => {
+                                          const isSelected = s.id === selectedServiceId;
+                                          return (
+                                            <div
+                                              key={s.id}
+                                              onClick={() => {
+                                                setSelectedServiceId(s.id);
+                                                setOrderQty(s.min.toString());
+                                                setDropdownOpen(false);
+                                                setDdSearchQuery('');
+                                              }}
+                                              className={cn(
+                                                "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-[#0d0f17] cursor-pointer rounded-lg flex flex-col gap-1 transition-colors",
+                                                isSelected ? "bg-violet-600/10 text-violet-400 font-bold border-l-2 border-violet-500 bg-[#0d0f17]/30" : ""
+                                              )}
+                                            >
+                                              <div className="flex items-center justify-between gap-1.5">
+                                                <span className="font-semibold truncate">
+                                                  <span className="text-violet-400 font-mono font-black border border-violet-500/20 bg-violet-500/10 px-1 py-0.2 rounded text-[10px] mr-1.5">{s.id}</span>
+                                                  {s.name}
+                                                </span>
+                                                <span className="font-mono text-emerald-400 font-extrabold shrink-0">
+                                                  ${s.price.toFixed(4)}/1k
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-2 text-[10px] text-slate-500 pl-8 font-mono">
+                                                <span>Min: {fmt(s.min)}</span>
+                                                <span>•</span>
+                                                <span>Max: {fmt(s.max)}</span>
+                                                <span>•</span>
+                                                <span>{s.time}</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+
+                          {/* Link Input */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Link</label>
+                            <div className="relative border border-[#1e2336] rounded-lg">
+                              <Link2 size={14} className="absolute left-3 w-4 h-4 text-slate-500 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              <input 
+                                type="url" 
+                                placeholder="Enter destination link (URL)" 
+                                value={orderLink}
+                                onChange={(e) => setOrderLink(e.target.value)}
+                                className="w-full bg-[#0d0f17] border border-[#1e2336] pl-9.5 pr-4 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 placeholder-[#64748b] transition-colors h-11"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Quantity Input with help text UNDERNEATH */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Quantity</label>
+                            <input 
+                              type="number" 
+                              placeholder="Enter desired amount" 
+                              value={orderQty}
+                              onChange={(e) => setOrderQty(e.target.value)}
+                              className="w-full bg-[#0d0f17] border border-[#1e2336] px-4 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 transition-colors font-mono h-11"
+                            />
+                            {selectedService && (
+                              <div className="text-[10px] text-slate-500 pl-1 font-mono">
+                                Min: {fmt(selectedService.min)} – Max: {fmt(selectedService.max)}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Average Time (Readonly input) */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1 pl-0.5">
+                              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Average time</label>
+                              <HelpCircle size={12} className="text-slate-500 cursor-help" title="Dynamic real-time SMM provider speed estimation" />
+                            </div>
+                            <input 
+                              type="text" 
+                              readOnly 
+                              disabled
+                              value={selectedService ? getAverageTimeText(selectedService.time) : "Choose a service first"}
+                              className="w-full bg-[#0d0f17]/40 border border-[#1e2336] px-4 py-3 text-xs text-slate-400 rounded-lg outline-none select-none h-11"
+                            />
+                          </div>
+
+                          {/* Charge (Readonly input showing total price) */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Charge</label>
+                            <div className="relative">
+                              <input 
+                                type="text" 
+                                readOnly 
+                                disabled
+                                value={`$${currentTotal.toFixed(4)}`}
+                                className="w-full bg-[#0d0f17]/40 border border-[#1e2336] px-4 py-3 text-xs text-emerald-400 font-extrabold rounded-lg outline-none font-mono tracking-wide h-11"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Balance & Success/Error Details */}
+                          <div className="bg-[#1c2132]/45 border border-[#1e2336] rounded-lg px-4.5 py-3.5 flex justify-between items-center text-xs shrink-0 font-mono">
+                            <div className="text-slate-400">Your Current Balance:</div>
+                            <div className="text-emerald-400 font-extrabold text-sm">${fmtAmt(balance)}</div>
+                          </div>
+
+                          {/* Alerts */}
+                          {orderError && (
+                            <div className="flex items-center gap-2.5 px-4 py-3.5 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
+                              <AlertCircle size={15} className="shrink-0" />
+                              {orderError}
+                            </div>
+                          )}
+
+                          {orderSuccess && (
+                            <div className="flex items-center gap-2.5 px-4 py-3.5 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed">
+                              <CheckCircle2 size={15} className="shrink-0" />
+                              {orderSuccess}
+                            </div>
+                          )}
+
+                          {/* Submit Button */}
+                          <button 
+                            type="button"
+                            onClick={() => handlePlaceOrder()}
+                            className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.985] text-white font-extrabold text-xs uppercase tracking-widest rounded-lg hover:shadow-lg hover:shadow-violet-600/10 transition-all duration-150 h-12 cursor-pointer mt-2 shadow-md border border-violet-500/10"
+                          >
+                            Submit
+                          </button>
+                        </>
+                      ) : (
+                        /* MASS ORDER VIEW */
+                        <div className="space-y-4 animate-fadeIn">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5 flex justify-between items-center">
+                              <span>Mass Order Details</span>
+                              <span className="font-mono text-[9px] text-slate-500">Service_ID | Link | Quantity</span>
+                            </label>
+                            <textarea
+                              rows={7}
+                              placeholder="1|https://instagram.com/username|1000&#10;3|https://instagram.com/p/abc|5000"
+                              value={massOrderText}
+                              onChange={(e) => setMassOrderText(e.target.value)}
+                              className="w-full bg-[#0d0f17] border border-[#1e2336] px-4 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 placeholder-[#475569] font-mono leading-relaxed"
+                            />
+                          </div>
+
+                          <div className="p-3 bg-violet-950/15 border border-violet-800/15 rounded-lg text-[11px] text-slate-400 leading-relaxed font-mono">
+                            <span className="font-extrabold text-violet-400">Instructions:</span> Enter one order per line in layout format: <span className="text-white">service_id | link | quantity</span>. Ensure values are split by a vertical bar <span className="text-white font-bold">|</span>.
+                          </div>
+
+                          {/* Balance Display */}
+                          <div className="bg-[#1c2132]/45 border border-[#1e2336] rounded-lg px-4.5 py-3.5 flex justify-between items-center text-xs shrink-0 font-mono">
+                            <div className="text-slate-400">Your Current Balance:</div>
+                            <div className="text-emerald-400 font-extrabold text-sm">${fmtAmt(balance)}</div>
+                          </div>
+
+                          {/* Alerts */}
+                          {orderError && (
+                            <div className="flex items-start gap-2.5 px-4 py-3.5 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed font-mono whitespace-pre-wrap">
+                              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                              <div className="flex-1">{orderError}</div>
+                            </div>
+                          )}
+
+                          {orderSuccess && (
+                            <div className="flex items-center gap-2.5 px-4 py-3.5 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed font-mono">
+                              <CheckCircle2 size={15} className="shrink-0" />
+                              <div className="flex-1">{orderSuccess}</div>
+                            </div>
+                          )}
+
+                          {/* Submit Mass Orders */}
+                          <button 
+                            type="button"
+                            onClick={() => handlePlaceMassOrder()}
+                            className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.985] text-white font-extrabold text-xs uppercase tracking-widest rounded-lg hover:shadow-lg hover:shadow-violet-600/10 transition-all duration-150 h-12 cursor-pointer shadow-md border border-violet-500/10 font-mono"
+                          >
+                            Submit Mass Order
+                          </button>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[10px] text-slate-500 uppercase font-medium">Your Balance</div>
-                        <div className="text-sm font-bold font-mono text-emerald-500 mt-1">
-                          ${fmtAmt(balance)}
-                        </div>
-                      </div>
+                      )}
+
                     </div>
-
-                    {/* ALERTS */}
-                    {orderError && (
-                      <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
-                        <AlertCircle size={15} className="shrink-0" />
-                        {orderError}
-                      </div>
-                    )}
-
-                    {orderSuccess && (
-                      <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed">
-                        <CheckCircle2 size={15} className="shrink-0" />
-                        {orderSuccess}
-                      </div>
-                    )}
-
-                    <button 
-                      onClick={() => handlePlaceOrder()}
-                      className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 active:scale-[0.982]"
-                    >
-                      Place Order
-                    </button>
-
                   </div>
+
+                  {/* RIGHT: SERVICE DESCRIPTION / BULLET PREVIEW CARD */}
+                  <div className="lg:col-span-5 space-y-5">
+                    {selectedService ? (
+                      <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
+                        
+                        {/* ID Badge Gradient Header */}
+                        <div className="p-5.5 bg-gradient-to-r from-violet-900 via-indigo-950 to-[#141720] border-b border-[#1e2336]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500 text-white shadow-md font-mono">
+                              # {selectedService.id}
+                            </span>
+                            <span className="text-[10px] text-violet-300 font-bold uppercase tracking-widest bg-violet-500/15 border border-violet-500/25 px-2 py-0.5 rounded">
+                              Active Service
+                            </span>
+                          </div>
+                          <h4 className="text-[13px] font-black text-white leading-normal tracking-wide">
+                            {selectedService.id} - {selectedService.name}
+                          </h4>
+                          <p className="text-[11px] text-emerald-400 font-extrabold mt-1.5 font-mono">
+                            ${selectedService.price.toFixed(4)} per 1000
+                          </p>
+                        </div>
+
+                        {/* Detailed Specification and warnings */}
+                        <div className="p-5.5 space-y-5">
+                          
+                          {/* Parameter list */}
+                          <div className="space-y-3.5">
+                            <h5 className="text-[11px] font-black uppercase tracking-wider text-white border-b border-[#1e2336] pb-1.5">Description</h5>
+                            
+                            <div className="text-xs">
+                              {selectedService.desc ? (
+                                <div className="whitespace-pre-wrap text-slate-300 leading-relaxed font-sans bg-[#0d0f17]/30 border border-[#1e2336]/30 p-3 rounded-lg">
+                                  {selectedService.desc}
+                                </div>
+                              ) : (
+                                <div className="space-y-2.5">
+                                  <div className="flex justify-between items-center text-slate-400">
+                                    <span className="font-semibold text-slate-500">Link Type:</span>
+                                    <span className="text-white font-medium bg-[#1e2336]/40 px-2 py-0.5 rounded">
+                                      {orderActiveCat.toLowerCase().includes('followers') ? 'Profile Link' : 'Video/Post link URL'}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex justify-between items-center text-slate-400">
+                                    <span className="font-semibold text-slate-500">Start Time:</span>
+                                    <span className="text-white font-medium bg-[#1e2336]/40 px-2 py-0.5 rounded">
+                                      Instant (Within {selectedService.time})
+                                    </span>
+                                  </div>
+
+                                  <div className="flex justify-between items-center text-slate-400">
+                                    <span className="font-semibold text-slate-500">Speed:</span>
+                                    <span className="text-white font-medium bg-[#1e2336]/40 px-2 py-0.5 rounded">
+                                      100k+ per Day (High Speed)
+                                    </span>
+                                  </div>
+
+                                  <div className="flex justify-between items-center text-slate-400">
+                                    <span className="font-semibold text-slate-500">Refill Status:</span>
+                                    <span className="text-sky-400 font-black uppercase tracking-wider bg-[#38bdf8]/10 border border-[#38bdf8]/20 px-2.5 py-0.5 rounded text-[10px]">
+                                      {selectedService.refill || 'No Refill'}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Important notes / Alerts list */}
+                          <div className="space-y-3 border-t border-[#1e2336] pt-4.5">
+                            <h5 className="text-[11px] font-black uppercase tracking-wider text-white">Important Notes:</h5>
+                            <div className="border-l-2 border-violet-500 pl-3.5 py-1.5 bg-violet-550/[0.02] rounded-r-lg">
+                              <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed list-none">
+                                <li className="relative pl-3.5">
+                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  When the service is experiencing high demand, the starting speed may vary.
+                                </li>
+                                <li className="relative pl-3.5">
+                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  Please avoid placing a second order on the same link until the current order is fully completed.
+                                </li>
+                                <li className="relative pl-3.5">
+                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  If you encounter any issues with the service, kindly reach out to our support team for assistance.
+                                </li>
+                                <li className="relative pl-3.5">
+                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  <strong className="text-red-400 font-semibold">Do not place orders for private accounts or private links.</strong> Orders for private content won't be processed and may not be refunded.
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-[#141720]/50 border border-[#1e2336] border-dashed rounded-xl p-8 text-center space-y-3">
+                        <HelpCircle size={32} className="text-slate-600 mx-auto opacity-40 animate-pulse" />
+                        <div>
+                          <p className="text-sm font-bold text-slate-400">No Service Selected</p>
+                          <p className="text-xs text-slate-500 leading-relaxed mt-1">
+                            Choose a platform and service from the order panel to load dynamic specifications, details, and guidelines.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
             )}

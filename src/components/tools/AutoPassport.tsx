@@ -31,6 +31,10 @@ export default function AutoPassport() {
   const [singleImage, setSingleImage] = useState<string | null>(null); // Transparent BG result of Single
   const [singleOriginalImage, setSingleOriginalImage] = useState<string | null>(null); // Original with background
   const [singleResult, setSingleResult] = useState<string | null>(null); // Final AI result
+  const [singleResultIsAi, setSingleResultIsAi] = useState<boolean>(false);
+  const [faceBoxSingle, setFaceBoxSingle] = useState<{ ymin: number, xmin: number, ymax: number, xmax: number }>({ ymin: 160, xmin: 300, ymax: 540, xmax: 700 });
+  const [faceBoxA, setFaceBoxA] = useState<{ ymin: number, xmin: number, ymax: number, xmax: number }>({ ymin: 160, xmin: 300, ymax: 540, xmax: 700 });
+  const [faceBoxB, setFaceBoxB] = useState<{ ymin: number, xmin: number, ymax: number, xmax: number }>({ ymin: 160, xmin: 300, ymax: 540, xmax: 700 });
   const [isSingleLoading, setIsSingleLoading] = useState(false);
 
   // Manual Adjustments for Single
@@ -51,6 +55,7 @@ export default function AutoPassport() {
   const [isSingleGroupMode, setIsSingleGroupMode] = useState<boolean>(false);
   const [isJointGenerating, setIsJointGenerating] = useState<boolean>(false);
   const [jointResult, setJointResult] = useState<string | null>(null); // Final AI Joint output
+  const [jointResultIsAi, setJointResultIsAi] = useState<boolean>(false);
   const [progressStatus, setProgressStatus] = useState<string>('');
 
   // Active Editing Subject in Joint Studio Adjuster
@@ -101,7 +106,7 @@ export default function AutoPassport() {
   ];
 
   // Downscale helpers to keep tokens low & transfer fast
-  const downscaleImage = (dataUrl: string, maxDim = 800): Promise<string> => {
+  const downscaleImage = (dataUrl: string, maxDim = 1600): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -122,7 +127,7 @@ export default function AutoPassport() {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
         } else {
           resolve(dataUrl);
         }
@@ -189,18 +194,21 @@ export default function AutoPassport() {
             setSingleOriginalImage(downscaledUrl);
             setSingleImage(null);
             setSingleResult(null);
+            setSingleResultIsAi(false);
             resetSingleSliders();
           }
           if (target === 'A') {
             setJointOriginalA(downscaledUrl);
             setJointImageA(null);
             setJointResult(null);
+            setJointResultIsAi(false);
             resetJointSliders('A');
           }
           if (target === 'B') {
             setJointOriginalB(downscaledUrl);
             setJointImageB(null);
             setJointResult(null);
+            setJointResultIsAi(false);
             resetJointSliders('B');
           }
           if (target === 'jointSingle') {
@@ -208,24 +216,28 @@ export default function AutoPassport() {
             setJointImageA(null);
             setJointImageB(null);
             setJointResult(null);
+            setJointResultIsAi(false);
           }
         } catch (err) {
           if (target === 'single') {
             setSingleOriginalImage(resultUrl);
             setSingleImage(null);
             setSingleResult(null);
+            setSingleResultIsAi(false);
             resetSingleSliders();
           }
           if (target === 'A') {
             setJointOriginalA(resultUrl);
             setJointImageA(null);
             setJointResult(null);
+            setJointResultIsAi(false);
             resetJointSliders('A');
           }
           if (target === 'B') {
             setJointOriginalB(resultUrl);
             setJointImageB(null);
             setJointResult(null);
+            setJointResultIsAi(false);
             resetJointSliders('B');
           }
           if (target === 'jointSingle') {
@@ -233,6 +245,7 @@ export default function AutoPassport() {
             setJointImageA(null);
             setJointImageB(null);
             setJointResult(null);
+            setJointResultIsAi(false);
           }
         }
       };
@@ -412,29 +425,25 @@ export default function AutoPassport() {
         console.warn("[Auto-Passport] Local face detection fallback activated:", gem_err);
       }
 
+      // Update face location state for consistent fine-tuning
+      setFaceBoxSingle(faceBox);
+
       // Automatically construct high-quality crop starting coefficients
-      // Face scale coefficient
-      const idealFaceH = 210; // Ideal height of face inside canvas
-      const cropW = 413;
-      const cropH = 531;
+      // Face scale coefficient - 170px height (out of 531) is ideal head-to-chest framing (approx. 32% of total height)
+      const idealFaceH = 170;
 
       // Update manual sliders dynamically based on detected biometric landmarks to give a gorgeous default!
       const img = new Image();
       img.onload = () => {
         const detectedFaceH = ((faceBox.ymax - faceBox.ymin) / 1000) * img.height;
-        const faceCenterYRatio = (faceBox.ymin + (faceBox.ymax - faceBox.ymin) / 2) / 1000;
-        const faceCenterXRatio = (faceBox.xmin + (faceBox.xmax - faceBox.xmin) / 2) / 1000;
 
         // Perfect scale
         const calculatedScale = Math.max(0.2, Math.min(2.5, idealFaceH / (detectedFaceH || 200)));
         setScaleSingle(Number(calculatedScale.toFixed(2)));
 
-        // Offset to align center
-        const calculatedOffsetY = Math.round((cropH * 0.40) - (img.height * faceCenterYRatio * calculatedScale));
-        const calculatedOffsetX = Math.round((cropW * 0.50) - (img.width * faceCenterXRatio * calculatedScale));
-
-        setOffsetXSingle(calculatedOffsetX);
-        setOffsetYSingle(calculatedOffsetY);
+        // Offset single standard coordinates to 0, since manual rendering centers the face automatically!
+        setOffsetXSingle(0);
+        setOffsetYSingle(0);
       };
       img.src = transparentResultUrl;
 
@@ -471,7 +480,8 @@ export default function AutoPassport() {
       const faceCenterX = fXMin + faceWidth / 2;
       const faceCenterY = fYMin + faceHeight / 2;
 
-      const calculatedScale = Math.max(0.2, Math.min(2.8, 245 / faceHeight));
+      // target Face H = 170 out of 531 to guarantee elegant head-to-chest sizing
+      const calculatedScale = Math.max(0.2, Math.min(2.8, 170 / faceHeight));
 
       const expCanvas = document.createElement('canvas');
       expCanvas.width = targetW;
@@ -481,10 +491,12 @@ export default function AutoPassport() {
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, targetW, targetH);
         ctx.save();
-        ctx.translate(targetW * 0.5, targetH * 0.45);
+        // Translate to 44% of canvas height - gives 28% headspace clearance and 40% chest space at bottom
+        ctx.translate(targetW * 0.5, targetH * 0.44);
         ctx.drawImage(img, -faceCenterX * calculatedScale, -faceCenterY * calculatedScale, img.width * calculatedScale, img.height * calculatedScale);
         ctx.restore();
         setSingleResult(expCanvas.toDataURL('image/jpeg', 0.98));
+        setSingleResultIsAi(false);
       }
     };
     img.src = transparentUrl;
@@ -567,6 +579,10 @@ export default function AutoPassport() {
         console.warn("[Auto-Joint] Gemini duo alignment lookup skipped:", gem_err);
       }
 
+      // Save dynamic face boxes for live fine-tuning studio alignment
+      setFaceBoxA(faceBoxA);
+      setFaceBoxB(faceBoxB);
+
       setProgressStatus("Symmetrically aligning profiles & composing Duo frame...");
 
       // Update manual slider starting parameters based on biometric face detections
@@ -583,7 +599,7 @@ export default function AutoPassport() {
         })
       ]);
 
-      const idealDuoFaceH = 175; // Slower profile density to accommodate side-by-side
+      const idealDuoFaceH = 140; // Proportional face size for side-by-side head-to-chest framing
       const targetW = 413;
       const targetH = 531;
 
@@ -592,20 +608,20 @@ export default function AutoPassport() {
       const faceCenterYRatioA = (faceBoxA.ymin + (faceBoxA.ymax - faceBoxA.ymin) / 2) / 1000;
       const faceCenterXRatioA = (faceBoxA.xmin + (faceBoxA.xmax - faceBoxA.xmin) / 2) / 1000;
 
-      const scale_A = idealDuoFaceH / (detectedFaceHA || 220);
+      const scale_A = idealDuoFaceH / (detectedFaceHA || 200);
       setScaleA(Number(scale_A.toFixed(2)));
-      setOffsetY_A(Math.round((targetH * 0.45) - (imgA.height * faceCenterYRatioA * scale_A)));
-      setOffsetX_A(Math.round((targetW * 0.28) - (imgA.width * faceCenterXRatioA * scale_A)));
+      setOffsetX_A(0);
+      setOffsetY_A(0);
 
       // Subject B
       const detectedFaceHB = ((faceBoxB.ymax - faceBoxB.ymin) / 1000) * imgB.height;
       const faceCenterYRatioB = (faceBoxB.ymin + (faceBoxB.ymax - faceBoxB.ymin) / 2) / 1000;
       const faceCenterXRatioB = (faceBoxB.xmin + (faceBoxB.xmax - faceBoxB.xmin) / 2) / 1000;
 
-      const scale_B = idealDuoFaceH / (detectedFaceHB || 220);
+      const scale_B = idealDuoFaceH / (detectedFaceHB || 200);
       setScaleB(Number(scale_B.toFixed(2)));
-      setOffsetY_B(Math.round((targetH * 0.45) - (imgB.height * faceCenterYRatioB * scale_B)));
-      setOffsetX_B(Math.round((targetW * 0.72) - (imgB.width * faceCenterXRatioB * scale_B)));
+      setOffsetX_B(0);
+      setOffsetY_B(0);
 
       // Render the AI result preview
       const exportCanvas = document.createElement('canvas');
@@ -616,17 +632,17 @@ export default function AutoPassport() {
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, targetW, targetH);
 
-        // Subject A Left half
+        // Subject A Left half centered at w * 0.28 and h * 0.44
         ctx.save();
-        ctx.translate(targetW * 0.28, targetH * 0.45);
+        ctx.translate(targetW * 0.28, targetH * 0.44);
         const faceCenterX_A = (faceCenterXRatioA * imgA.width);
         const faceCenterY_A = (faceCenterYRatioA * imgA.height);
         ctx.drawImage(imgA, -faceCenterX_A * scale_A, -faceCenterY_A * scale_A, imgA.width * scale_A, imgA.height * scale_A);
         ctx.restore();
 
-        // Subject B Right half
+        // Subject B Right half centered at w * 0.72 and h * 0.44
         ctx.save();
-        ctx.translate(targetW * 0.72, targetH * 0.45);
+        ctx.translate(targetW * 0.72, targetH * 0.44);
         const faceCenterX_B = (faceCenterXRatioB * imgB.width);
         const faceCenterY_B = (faceCenterYRatioB * imgB.height);
         ctx.drawImage(imgB, -faceCenterX_B * scale_B, -faceCenterY_B * scale_B, imgB.width * scale_B, imgB.height * scale_B);
@@ -657,16 +673,21 @@ export default function AutoPassport() {
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Clear canvas with custom translations
+    // 2. Centered biometric positioning based on Face Landmarks
     ctx.save();
     
-    // Apply center transform anchor so scaling & rotating behaves symmetrically
-    ctx.translate(w * 0.5 + offsetXSingle, h * 0.45 + offsetYSingle);
+    const faceCenterXRatio = (faceBoxSingle.xmin + (faceBoxSingle.xmax - faceBoxSingle.xmin) / 2) / 1000;
+    const faceCenterYRatio = (faceBoxSingle.ymin + (faceBoxSingle.ymax - faceBoxSingle.ymin) / 2) / 1000;
+    const faceCenterX = faceCenterXRatio * imgObjSingle.width;
+    const faceCenterY = faceCenterYRatio * imgObjSingle.height;
+
+    // Apply center transform anchor so scaling & rotating behaves symmetrically around the face center
+    ctx.translate(w * 0.5 + offsetXSingle, h * 0.44 + offsetYSingle);
     ctx.scale(mirroredSingle ? -scaleSingle : scaleSingle, scaleSingle);
     ctx.rotate((rotationSingle * Math.PI) / 180);
 
-    // Draw the transparent portrait centered on anchor
-    ctx.drawImage(imgObjSingle, -imgObjSingle.width / 2, -imgObjSingle.height / 2);
+    // Draw centering the face center at context 0,0
+    ctx.drawImage(imgObjSingle, -faceCenterX, -faceCenterY);
     ctx.restore();
 
     // 3. Draw Biometric guideline overlays to help center heads exactly
@@ -691,22 +712,32 @@ export default function AutoPassport() {
     // 2. Draw Person A if uploaded
     if (imgObjA) {
       ctx.save();
+      const faceCenterXRatioA = (faceBoxA.xmin + (faceBoxA.xmax - faceBoxA.xmin) / 2) / 1000;
+      const faceCenterYRatioA = (faceBoxA.ymin + (faceBoxA.ymax - faceBoxA.ymin) / 2) / 1000;
+      const faceCenterX_A = faceCenterXRatioA * imgObjA.width;
+      const faceCenterY_A = faceCenterYRatioA * imgObjA.height;
+
       // Translate to Subject A absolute X & Y center
-      ctx.translate(w * 0.28 + offsetX_A, h * 0.45 + offsetY_A);
+      ctx.translate(w * 0.28 + offsetX_A, h * 0.44 + offsetY_A);
       ctx.scale(mirroredA ? -scaleA : scaleA, scaleA);
       ctx.rotate((rotationA * Math.PI) / 180);
-      ctx.drawImage(imgObjA, -imgObjA.width / 2, -imgObjA.height / 2);
+      ctx.drawImage(imgObjA, -faceCenterX_A, -faceCenterY_A);
       ctx.restore();
     }
 
     // 3. Draw Person B if uploaded
     if (imgObjB) {
       ctx.save();
+      const faceCenterXRatioB = (faceBoxB.xmin + (faceBoxB.xmax - faceBoxB.xmin) / 2) / 1000;
+      const faceCenterYRatioB = (faceBoxB.ymin + (faceBoxB.ymax - faceBoxB.ymin) / 2) / 1000;
+      const faceCenterX_B = faceCenterXRatioB * imgObjB.width;
+      const faceCenterY_B = faceCenterYRatioB * imgObjB.height;
+
       // Translate to Subject B absolute X & Y center
-      ctx.translate(w * 0.72 + offsetX_B, h * 0.45 + offsetY_B);
+      ctx.translate(w * 0.72 + offsetX_B, h * 0.44 + offsetY_B);
       ctx.scale(mirroredB ? -scaleB : scaleB, scaleB);
       ctx.rotate((rotationB * Math.PI) / 180);
-      ctx.drawImage(imgObjB, -imgObjB.width / 2, -imgObjB.height / 2);
+      ctx.drawImage(imgObjB, -faceCenterX_B, -faceCenterY_B);
       ctx.restore();
     }
 
@@ -899,6 +930,7 @@ export default function AutoPassport() {
         const data = await gemRes.json();
         if (data.success && data.imageUrl) {
           setSingleResult(data.imageUrl);
+          setSingleResultIsAi(true);
           setProgressStatus("");
           return;
         }
@@ -906,6 +938,7 @@ export default function AutoPassport() {
       throw new Error("AI Synthesis models are busy. Running free instant Auto-Passport instead...");
     } catch (err: any) {
       console.warn("[AI Synthesis Fallback] Active:", err);
+      setSingleResultIsAi(false);
       await runAutoStudioSetupSingle();
     } finally {
       setIsSingleLoading(false);
@@ -937,6 +970,7 @@ export default function AutoPassport() {
         const data = await gemRes.json();
         if (data.success && data.imageUrl) {
           setJointResult(data.imageUrl);
+          setJointResultIsAi(true);
           setProgressStatus("");
           return;
         }
@@ -944,6 +978,7 @@ export default function AutoPassport() {
       throw new Error("AI Synthesis Duo models are busy. Running free instant Auto-Joint instead...");
     } catch (err: any) {
       console.warn("[AI Joint Synthesis Fallback] Active:", err);
+      setJointResultIsAi(false);
       await runAutoStudioSetupJoint();
     } finally {
       setIsJointGenerating(false);
@@ -1175,6 +1210,15 @@ export default function AutoPassport() {
                 <div 
                   id="drop-zone-single"
                   onClick={() => triggerFileInput(fileInputRefSingle)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      const fakeEvent = { target: { files: [file] } } as any;
+                      processFileToUrl(fakeEvent, 'single');
+                    }
+                  }}
                   className={cn(
                     "aspect-[4/5] border border-dashed rounded-lg flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all hover:bg-white/[0.02]",
                     singleOriginalImage ? "border-sky-400/30 bg-sky-400/[0.01]" : "border-white/10"
@@ -1240,6 +1284,15 @@ export default function AutoPassport() {
                     <div 
                       id="drop-zone-joint-single"
                       onClick={() => triggerFileInput(fileInputJointSingleRef)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          const fakeEvent = { target: { files: [file] } } as any;
+                          processFileToUrl(fakeEvent, 'jointSingle');
+                        }
+                      }}
                       className={cn(
                         "border border-dashed rounded-lg p-6 text-center cursor-pointer transition-all hover:bg-white/[0.02]",
                         jointSingleImage ? "border-sky-400/30 bg-sky-400/[0.01]" : "border-white/10"
@@ -1280,6 +1333,15 @@ export default function AutoPassport() {
                       <div 
                         id="drop-zone-person-a"
                         onClick={() => triggerFileInput(fileInputARef)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const fakeEvent = { target: { files: [file] } } as any;
+                            processFileToUrl(fakeEvent, 'A');
+                          }
+                        }}
                         className={cn(
                           "aspect-[3/4] border border-dashed rounded-lg flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-all hover:bg-white/[0.02]",
                           jointOriginalA ? "border-sky-400/30 bg-sky-400/[0.01] overflow-hidden" : "border-white/10"
@@ -1311,6 +1373,15 @@ export default function AutoPassport() {
                       <div 
                         id="drop-zone-person-b"
                         onClick={() => triggerFileInput(fileInputBRef)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const fakeEvent = { target: { files: [file] } } as any;
+                            processFileToUrl(fakeEvent, 'B');
+                          }
+                        }}
                         className={cn(
                           "aspect-[3/4] border border-dashed rounded-lg flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-all hover:bg-white/[0.02]",
                           jointOriginalB ? "border-sky-400/30 bg-sky-400/[0.01] overflow-hidden" : "border-white/10"
@@ -1540,6 +1611,34 @@ export default function AutoPassport() {
                             className="w-full h-full object-cover"
                           />
                         </div>
+
+                        {/* AI Posture Alignment Option inside Result Panel */}
+                        {!singleResultIsAi ? (
+                          <div id="ai-straighten-banner" className="bg-amber-500/10 border border-amber-500/20 text-amber-300 p-4 rounded-lg text-left max-w-[340px] flex flex-col gap-2.5 shadow-xl">
+                            <div className="flex items-start gap-2 text-[10px] font-bold uppercase tracking-wider">
+                              <Sparkles className="w-4 h-4 text-orange-400 shrink-0 mt-0.5 animate-pulse" />
+                              <span>AI Face Angle Straightener</span>
+                            </div>
+                            <p className="text-[10px] font-mono text-slate-300 leading-normal">
+                              Your current picture is a standard cutout. If you are turned sideways or looking left/right, click below to let Gemini automatically rotate, realign, and reconstruct a perfect straight frontal passport photo!
+                            </p>
+                            <button
+                              id="btn-inner-single-ai-retouch"
+                              type="button"
+                              onClick={runAiNeuralSynthesisSingle}
+                              disabled={isSingleLoading}
+                              className="w-full py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-black font-black uppercase text-[9px] tracking-widest rounded transition-all flex items-center justify-center gap-1.5 shadow disabled:opacity-30 disabled:pointer-events-none"
+                            >
+                              <Sparkles size={11} /> Correct Face Direction & Straighten (AI Neural)
+                            </button>
+                          </div>
+                        ) : (
+                          <div id="ai-corrected-badge" className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3.5 py-2.5 rounded-lg text-[10px] font-mono flex items-center gap-2 max-w-[340px] w-full justify-center shadow">
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Gemini Frontal Posture Corrected!</span>
+                          </div>
+                        )}
+
                         <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-[340px] justify-center">
                           <button
                             id="btn-download-single"
@@ -1614,6 +1713,34 @@ export default function AutoPassport() {
                             className="w-full h-full object-cover"
                           />
                         </div>
+
+                        {/* AI Posture Alignment Option inside Result Panel for Joint */}
+                        {!jointResultIsAi ? (
+                          <div id="ai-straighten-banner-joint" className="bg-amber-500/10 border border-amber-500/20 text-amber-300 p-4 rounded-lg text-left max-w-[340px] flex flex-col gap-2.5 shadow-xl">
+                            <div className="flex items-start gap-2 text-[10px] font-bold uppercase tracking-wider">
+                              <Sparkles className="w-4 h-4 text-orange-400 shrink-0 mt-0.5 animate-pulse" />
+                              <span>AI Duo Posture Correction</span>
+                            </div>
+                            <p className="text-[10px] font-mono text-slate-300 leading-normal">
+                              Your current picture is a static cutout. Let Gemini automatically align both subjects symmetrically, straighten neck/sholder lines, and correct off-angle profiles!
+                            </p>
+                            <button
+                              id="btn-inner-joint-ai-retouch"
+                              type="button"
+                              onClick={runAiNeuralSynthesisJoint}
+                              disabled={isJointGenerating}
+                              className="w-full py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-black font-black uppercase text-[9px] tracking-widest rounded transition-all flex items-center justify-center gap-1.5 shadow disabled:opacity-30 disabled:pointer-events-none"
+                            >
+                              <Sparkles size={11} /> Correct Face Direction & Style (AI Joint)
+                            </button>
+                          </div>
+                        ) : (
+                          <div id="ai-corrected-badge-joint" className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3.5 py-2.5 rounded-lg text-[10px] font-mono flex items-center gap-2 max-w-[340px] w-full justify-center shadow">
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Gemini Joint Posture Corrected!</span>
+                          </div>
+                        )}
+
                         <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-[340px] justify-center">
                           <button
                             id="btn-download-joint"

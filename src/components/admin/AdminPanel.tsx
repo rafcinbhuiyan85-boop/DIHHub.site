@@ -382,7 +382,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             });
             setSmmServicesList(prev => JSON.stringify(prev) !== JSON.stringify(sanitized) ? sanitized : prev);
           } else {
-            setSmmServicesList(prev => JSON.stringify(prev) !== cachedServices ? parsed : prev);
+            setSmmServicesList([]);
           }
         } catch (e) {
           console.error(e);
