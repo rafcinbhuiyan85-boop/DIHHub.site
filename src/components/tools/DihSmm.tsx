@@ -215,25 +215,27 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     
     if (plat === 'all' || plat.includes('every')) return true;
 
-    // Dynamically test if any active service inside this category belongs to target platform
-    const hasMatchingSvc = activeServices.some(s => s.category === serviceCategory && serviceMatchesPlatform(s, platform));
-    if (hasMatchingSvc) return true;
-    
     const sCat = serviceCategory.toLowerCase();
-    if (plat === 'instagram') return sCat.includes('instagram') || sCat.includes('ig ');
-    if (plat === 'facebook') return sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage');
-    if (plat === 'youtube') return sCat.includes('youtube') || sCat.includes('yt ');
+    
+    if (plat === 'instagram') return sCat.includes('instagram') || sCat.includes('ig ') || sCat.includes('ig-');
+    if (plat === 'facebook') return sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage') || sCat.includes('meta');
+    if (plat === 'youtube') return sCat.includes('youtube') || sCat.includes('yt ') || sCat.includes('yt-');
     if (plat === 'tiktok') return sCat.includes('tiktok');
     if (plat === 'twitter/x' || plat === 'twitter' || plat === 'x') {
-      return sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ');
+      return sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ') || sCat.includes('tweet');
     }
-    if (plat === 'telegram') return sCat.includes('telegram') || sCat.includes('tg ');
+    if (plat === 'telegram') return sCat.includes('telegram') || sCat.includes('tg ') || sCat.includes('tg-');
     if (plat === 'spotify') return sCat.includes('spotify');
     if (plat === 'linkedin') return sCat.includes('linkedin');
     if (plat === 'discord') return sCat.includes('discord');
     if (plat.includes('traffic') || plat.includes('website')) {
       return sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
     }
+    
+    // Fallback: Dynamically test if any active service inside this category belongs to target platform
+    const hasMatchingSvc = activeServices.some(s => s.category === serviceCategory && serviceMatchesPlatform(s, platform));
+    if (hasMatchingSvc) return true;
+
     if (plat === 'others') {
       const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo'];
       return !known.some(k => sCat.includes(k));
@@ -1598,13 +1600,27 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 }}
                                 className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-violet-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
                               >
-                                <span className="truncate pr-4 flex items-center gap-1.5">
-                                  {selectedService && (
-                                    <span className="bg-violet-500/15 text-violet-400 text-[10px] font-black px-1.5 py-0.5 rounded border border-violet-500/25 font-mono">
-                                      {selectedService.id}
-                                    </span>
+                                <span className="truncate pr-4 flex items-center gap-1.5 w-full">
+                                  {selectedService ? (
+                                    <>
+                                      <span className="bg-violet-500/15 text-violet-400 text-[10px] font-black px-1.5 py-0.5 rounded border border-violet-500/25 font-mono">
+                                        {selectedService.id}
+                                      </span>
+                                      <span className="truncate font-semibold">{selectedService.name}</span>
+                                      {selectedService.refill && (
+                                        <span className={cn(
+                                          "px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 font-mono tracking-wider border",
+                                          selectedService.refill.toLowerCase().includes('no') 
+                                            ? "bg-red-500/10 text-red-400 border-red-500/10" 
+                                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/10"
+                                        )}>
+                                          🔄 {selectedService.refill}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <span>Choose a service...</span>
                                   )}
-                                  <span>{selectedService ? selectedService.name : "Choose a service..."}</span>
                                 </span>
                                 <ChevronDown size={14} className={cn("text-slate-400 transition-transform duration-150", dropdownOpen ? "rotate-180" : "")} />
                               </button>
@@ -1857,54 +1873,66 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           <h4 className="text-[13px] font-black text-white leading-normal tracking-wide">
                             {selectedService.id} - {selectedService.name}
                           </h4>
-                          <p className="text-[11px] text-emerald-400 font-extrabold mt-1.5 font-mono">
+                           <p className="text-[11px] text-emerald-400 font-extrabold mt-1.5 font-mono">
                             ${selectedService.price.toFixed(4)} per 1000
                           </p>
                         </div>
 
                         {/* Detailed Specification and warnings */}
                         <div className="p-5.5 space-y-5">
-                          
-                          {/* Parameter list */}
-                          <div className="space-y-3.5">
-                            <h5 className="text-[11px] font-black uppercase tracking-wider text-white border-b border-[#1e2336] pb-1.5">Description</h5>
-                            
-                            <div className="text-xs">
-                              {selectedService.desc ? (
-                                <div className="whitespace-pre-wrap text-slate-300 leading-relaxed font-sans bg-[#0d0f17]/30 border border-[#1e2336]/30 p-3 rounded-lg">
+                          {/* Parameter & Specification list */}
+                          <div className="space-y-4">
+                            {selectedService.desc && (
+                              <div className="space-y-1.5">
+                                <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Service Guidelines</h5>
+                                <div className="whitespace-pre-wrap text-slate-300 text-xs leading-relaxed font-sans bg-[#0d0f17]/30 border border-[#1e2336]/30 p-3.5 rounded-lg">
                                   {selectedService.desc}
                                 </div>
-                              ) : (
-                                <div className="space-y-2.5">
-                                  <div className="flex justify-between items-center text-slate-400">
-                                    <span className="font-semibold text-slate-500">Link Type:</span>
-                                    <span className="text-white font-medium bg-[#1e2336]/40 px-2 py-0.5 rounded">
-                                      {orderActiveCat.toLowerCase().includes('followers') ? 'Profile Link' : 'Video/Post link URL'}
-                                    </span>
-                                  </div>
-                                  
-                                  <div className="flex justify-between items-center text-slate-400">
-                                    <span className="font-semibold text-slate-500">Start Time:</span>
-                                    <span className="text-white font-medium bg-[#1e2336]/40 px-2 py-0.5 rounded">
-                                      Instant (Within {selectedService.time})
-                                    </span>
-                                  </div>
+                              </div>
+                            )}
 
-                                  <div className="flex justify-between items-center text-slate-400">
-                                    <span className="font-semibold text-slate-500">Speed:</span>
-                                    <span className="text-white font-medium bg-[#1e2336]/40 px-2 py-0.5 rounded">
-                                      100k+ per Day (High Speed)
-                                    </span>
-                                  </div>
-
-                                  <div className="flex justify-between items-center text-slate-400">
-                                    <span className="font-semibold text-slate-500">Refill Status:</span>
-                                    <span className="text-sky-400 font-black uppercase tracking-wider bg-[#38bdf8]/10 border border-[#38bdf8]/20 px-2.5 py-0.5 rounded text-[10px]">
-                                      {selectedService.refill || 'No Refill'}
-                                    </span>
-                                  </div>
+                            <div className="space-y-2">
+                              <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-[#1e2336] pb-1.5">Specifications</h5>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                                {/* Refill Status Prominent Card */}
+                                <div className={cn(
+                                  "p-3 rounded-lg border flex flex-col gap-1 transition-colors duration-200",
+                                  (selectedService.refill || 'No Refill').toLowerCase().includes('no')
+                                    ? "bg-red-500/5 border-red-500/10 text-red-400"
+                                    : "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
+                                )}>
+                                  <span className="text-[9px] font-black uppercase tracking-wider opacity-60">Refill Guarantee</span>
+                                  <span className="text-xs font-black flex items-center gap-1.5">
+                                    {(selectedService.refill || 'No Refill').toLowerCase().includes('no') ? '❌' : '🔄'}
+                                    {selectedService.refill || 'No Refill'}
+                                  </span>
                                 </div>
-                              )}
+
+                                {/* Target Link Type Card */}
+                                <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Destination URL</span>
+                                  <span className="text-xs font-bold leading-none truncate mt-0.5">
+                                    {orderActiveCat.toLowerCase().includes('followers') ? '🔗 Profile / Channel Link' : '🔗 Video / Post / Photo link'}
+                                  </span>
+                                </div>
+
+                                {/* Start speed & delivery time */}
+                                <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Delivery Speed</span>
+                                  <span className="text-xs font-bold leading-none mt-0.5 flex items-center gap-1">
+                                    ⚡ {selectedService.time || '1-12 Hours (High Speed)'}
+                                  </span>
+                                </div>
+
+                                {/* Min / Max Range */}
+                                <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Min / Max Bounds</span>
+                                  <span className="text-xs font-mono font-bold leading-none mt-0.5">
+                                    {fmt(selectedService.min)} to {fmt(selectedService.max)}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
