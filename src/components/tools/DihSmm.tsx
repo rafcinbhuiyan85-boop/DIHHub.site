@@ -402,18 +402,18 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   const getCategoryIcon = (cat: string) => {
     const c = cat.toLowerCase();
-    if (c === 'all') return <Layers size={13} />;
-    if (c === 'instagram') return <Instagram size={13} />;
-    if (c === 'facebook') return <Facebook size={13} />;
-    if (c === 'youtube') return <Youtube size={13} />;
-    if (c === 'tiktok') return <Video size={13} />;
-    if (c === 'twitter/x' || c === 'twitter') return <Twitter size={13} />;
-    if (c === 'telegram') return <Send size={13} />;
-    if (c === 'spotify') return <Music size={13} />;
-    if (c === 'linkedin') return <Linkedin size={13} />;
-    if (c === 'discord') return <MessageSquare size={13} />;
-    if (c === 'website traffic') return <Globe size={13} />;
-    return <Sparkles size={13} />;
+    if (c === 'all' || c.includes('every')) return <Layers size={13} className="text-violet-400" />;
+    if (c.includes('instagram')) return <Instagram size={13} className="text-pink-500" />;
+    if (c.includes('facebook')) return <Facebook size={13} className="text-blue-500" />;
+    if (c.includes('youtube')) return <Youtube size={13} className="text-red-500" />;
+    if (c.includes('tiktok')) return <Video size={13} className="text-teal-400" />;
+    if (c.includes('twitter') || c === 'x') return <Twitter size={13} className="text-sky-400" />;
+    if (c.includes('telegram')) return <Send size={13} className="text-[#229ED9]" />;
+    if (c.includes('spotify')) return <Music size={13} className="text-emerald-500" />;
+    if (c.includes('linkedin')) return <Linkedin size={13} className="text-blue-600" />;
+    if (c.includes('discord')) return <MessageSquare size={13} className="text-indigo-400" />;
+    if (c.includes('traffic') || c.includes('website')) return <Globe size={13} className="text-emerald-400" />;
+    return <Layers size={13} className="text-slate-400" />;
   };
 
   const navigate = (page: 'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit', serviceId?: number) => {
@@ -464,6 +464,37 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
   }, [activePage, uniqueOrderCategories, activeServices, selectedServiceId]);
 
+  // Auto-detect SMM platform from pasted Link URL
+  useEffect(() => {
+    if (!orderLink) return;
+    const url = orderLink.toLowerCase();
+    
+    let detectedCat: string | null = null;
+    if (url.includes('instagram.com')) {
+      detectedCat = 'Instagram';
+    } else if (url.includes('facebook.com') || url.includes('fb.com') || url.includes('fb.watch')) {
+      detectedCat = 'Facebook';
+    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      detectedCat = 'YouTube';
+    } else if (url.includes('tiktok.com')) {
+      detectedCat = 'TikTok';
+    } else if (url.includes('twitter.com') || url.includes('x.com')) {
+      detectedCat = 'Twitter/X';
+    } else if (url.includes('t.me') || url.includes('telegram.org') || url.includes('telegram.me')) {
+      detectedCat = 'Telegram';
+    } else if (url.includes('spotify.com')) {
+      detectedCat = 'Spotify';
+    } else if (url.includes('linkedin.com')) {
+      detectedCat = 'LinkedIn';
+    } else if (url.includes('discord.gg') || url.includes('discord.com')) {
+      detectedCat = 'Discord';
+    }
+    
+    if (detectedCat && orderActiveCat !== detectedCat) {
+      handleCategoryChange(detectedCat);
+    }
+  }, [orderLink]);
+
   // Helpers for category icons/styling
   const getCategoryStyledName = (cat: string) => {
     const c = cat.toLowerCase();
@@ -482,7 +513,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   const handleCategoryChange = (catName: string) => {
     setOrderActiveCat(catName);
-    const svcsOfCat = activeServices.filter(s => s.category.toLowerCase() === catName.toLowerCase());
+    
+    let svcsOfCat;
+    if (catName === 'All') {
+      svcsOfCat = activeServices;
+    } else {
+      const catLower = catName.toLowerCase();
+      svcsOfCat = activeServices.filter(s => {
+        const svcCatLower = s.category.toLowerCase();
+        if (catLower === 'youtube') return svcCatLower.includes('youtube');
+        if (catLower === 'tiktok') return svcCatLower.includes('tiktok');
+        if (catLower === 'twitter/x' || catLower === 'twitter') return svcCatLower.includes('twitter') || svcCatLower.includes('x');
+        if (catLower === 'linkedin') return svcCatLower.includes('linkedin');
+        return svcCatLower === catLower;
+      });
+    }
+
     if (svcsOfCat.length > 0) {
       setSelectedServiceId(svcsOfCat[0].id);
       setOrderQty(svcsOfCat[0].min.toString());
@@ -1198,7 +1244,49 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
             {/* NEW ORDER PAGE */}
             {activePage === 'new-order' && (
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-5xl mx-auto space-y-6">
+                
+                {/* Visual Category Platforms Selector */}
+                <div className="bg-[#141720] border border-[#1e2336] rounded-xl p-5 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between pb-1">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} className="text-violet-400 animate-pulse" />
+                      <span className="text-xs font-extrabold text-white uppercase tracking-wider">Fast SMM Platform Shortcuts</span>
+                    </div>
+                    {orderActiveCat !== 'All' && (
+                      <button 
+                        type="button"
+                        onClick={() => handleCategoryChange('All')}
+                        className="text-[11px] font-bold text-violet-400 hover:text-white transition-colors cursor-pointer select-none"
+                      >
+                        Show All
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 md:gap-2.5">
+                    {CATEGORIES.map((cat) => {
+                      const isSelected = orderActiveCat === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => handleCategoryChange(cat)}
+                          className={cn(
+                            "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer select-none border",
+                            isSelected
+                              ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-transparent shadow-lg shadow-violet-500/15"
+                              : "bg-[#0d0f17]/60 text-slate-300 border-[#1e2336] hover:bg-white/[0.03] hover:text-white"
+                          )}
+                        >
+                          {getCategoryIcon(cat)}
+                          <span>{cat}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   
                   <div className="lg:col-span-7 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
