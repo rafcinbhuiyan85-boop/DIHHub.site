@@ -172,13 +172,54 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       })
     : [];
 
+  const serviceMatchesPlatform = (s: any, platform: string) => {
+    if (!platform || !s) return false;
+    const plat = platform.toLowerCase();
+    if (plat === 'all' || plat.includes('every')) return true;
+
+    const sName = (s.name || '').toLowerCase();
+    const sCat = (s.category || '').toLowerCase();
+
+    const isInstagram = sName.includes('instagram') || sName.includes('ig ') || sName.includes('ig-') || sCat.includes('instagram') || sCat.includes('ig ');
+    const isFacebook = sName.includes('facebook') || sName.includes('fb') || sName.includes('fanpage') || sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage');
+    const isYoutube = sName.includes('youtube') || sName.includes('yt ') || sName.includes('yt-') || sCat.includes('youtube') || sCat.includes('yt ');
+    const isTiktok = sName.includes('tiktok') || sCat.includes('tiktok');
+    const isTwitter = sName.includes('twitter') || sName.includes('x.') || sName === 'x' || sName.includes('rt ') || sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ');
+    const isTelegram = sName.includes('telegram') || sName.includes('tg ') || sName.includes('tg-') || sCat.includes('telegram') || sCat.includes('tg ');
+    const isSpotify = sName.includes('spotify') || sCat.includes('spotify');
+    const isLinkedin = sName.includes('linkedin') || sCat.includes('linkedin');
+    const isDiscord = sName.includes('discord') || sCat.includes('discord');
+    const isTraffic = sName.includes('traffic') || sName.includes('website') || sName.includes('visitor') || sName.includes('seo') || sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
+
+    if (plat === 'instagram') return isInstagram;
+    if (plat === 'facebook') return isFacebook;
+    if (plat === 'youtube') return isYoutube;
+    if (plat === 'tiktok') return isTiktok;
+    if (plat === 'twitter/x' || plat === 'twitter' || plat === 'x') return isTwitter;
+    if (plat === 'telegram') return isTelegram;
+    if (plat === 'spotify') return isSpotify;
+    if (plat === 'linkedin') return isLinkedin;
+    if (plat === 'discord') return isDiscord;
+    if (plat.includes('traffic') || plat.includes('website')) return isTraffic;
+
+    if (plat === 'others') {
+      return !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord && !isTraffic;
+    }
+
+    return sName.includes(plat) || sCat.includes(plat);
+  };
+
   const serviceCategoryBelongsToPlatform = (serviceCategory: string, platform: string) => {
     if (!serviceCategory || !platform) return false;
-    const sCat = serviceCategory.toLowerCase();
     const plat = platform.toLowerCase();
     
     if (plat === 'all' || plat.includes('every')) return true;
+
+    // Dynamically test if any active service inside this category belongs to target platform
+    const hasMatchingSvc = activeServices.some(s => s.category === serviceCategory && serviceMatchesPlatform(s, platform));
+    if (hasMatchingSvc) return true;
     
+    const sCat = serviceCategory.toLowerCase();
     if (plat === 'instagram') return sCat.includes('instagram') || sCat.includes('ig ');
     if (plat === 'facebook') return sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage');
     if (plat === 'youtube') return sCat.includes('youtube') || sCat.includes('yt ');
@@ -1616,12 +1657,29 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                                   ${s.price.toFixed(4)}/1k
                                                 </span>
                                               </div>
-                                              <div className="flex items-center gap-2 text-[10px] text-slate-500 pl-8 font-mono">
+                                              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 pl-8 font-mono">
                                                 <span>Min: {fmt(s.min)}</span>
                                                 <span>•</span>
                                                 <span>Max: {fmt(s.max)}</span>
-                                                <span>•</span>
-                                                <span>{s.time}</span>
+                                                {s.refill && (
+                                                  <>
+                                                    <span>•</span>
+                                                    <span className={cn(
+                                                      "px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 transition-colors duration-150",
+                                                      s.refill.toLowerCase().includes('no') 
+                                                        ? "bg-red-500/10 text-red-400 border border-red-500/10" 
+                                                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/10"
+                                                    )}>
+                                                      🔄 {s.refill}
+                                                    </span>
+                                                  </>
+                                                )}
+                                                {s.time && (
+                                                  <>
+                                                    <span>•</span>
+                                                    <span>⚡ {s.time}</span>
+                                                  </>
+                                                )}
                                               </div>
                                             </div>
                                           );

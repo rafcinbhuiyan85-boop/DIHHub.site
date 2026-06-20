@@ -320,6 +320,9 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormLink, setSmmFormLink] = useState('');
   const [smmFormQty, setSmmFormQty] = useState('1000');
   const [smmFormAmount, setSmmFormAmount] = useState('1.50');
+  const [smmFormApiOrderId, setSmmFormApiOrderId] = useState('');
+  const [smmFormApiProviderId, setSmmFormApiProviderId] = useState('');
+  const [isApiPlacingOrder, setIsApiPlacingOrder] = useState(false);
 
   const [smmFormUserEmail, setSmmFormUserEmail] = useState('');
   const [smmFormUserName, setSmmFormUserName] = useState('');
@@ -1175,7 +1178,9 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           status: smmFormStatus,
           link: smmFormLink,
           quantity: parseInt(smmFormQty) || o.quantity,
-          amount: parseFloat(smmFormAmount) || o.amount
+          amount: parseFloat(smmFormAmount) || o.amount,
+          apiOrderId: smmFormApiOrderId,
+          apiProviderId: smmFormApiProviderId
         };
       }
       return o;
@@ -1183,6 +1188,122 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setSmmOrders(updated);
     localStorage.setItem('dih_smm_orders_v2', JSON.stringify(updated));
     setIsSmmModalOpen(false);
+  };
+
+  const handlePlaceOrderToProvider = async () => {
+    if (!selectedSmmItem) return;
+    const orderSvc = smmServicesList.find(s => s.id === selectedSmmItem?.serviceId || s.name === selectedSmmItem?.serviceName);
+    const provId = orderSvc?.providerId || smmFormApiProviderId;
+    if (!provId || provId === 'manual') {
+      setSmmToast({ message: "No active SMM API provider linked to this catalog package.", type: 'error' });
+      return;
+    }
+    const prov = smmProviders.find(p => p.id?.toString() === provId?.toString());
+    if (!prov) {
+      setSmmToast({ message: "Linked SMM provider details not found in active configurations.", type: 'error' });
+      return;
+    }
+    const targetSvcId = orderSvc?.providerServiceId;
+    if (!targetSvcId) {
+      setSmmToast({ message: "SMM Provider Service ID is missing in catalog metadata.", type: 'error' });
+      return;
+    }
+
+    setIsApiPlacingOrder(true);
+    try {
+      const response = await fetch('/api/admin/smm/place-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: prov.url,
+          key: prov.key,
+          service: targetSvcId,
+          link: smmFormLink,
+          quantity: parseInt(smmFormQty) || 100
+        })
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Server error when placing SMM order');
+      }
+
+      const pOrderId = resData.order || resData.order_id || resData.orderId;
+      if (pOrderId) {
+        setSmmFormApiOrderId(pOrderId.toString());
+        setSmmFormApiProviderId(provId.toString());
+        setSmmFormStatus('processing');
+        setSmmToast({ 
+          message: `Successfully placed order on provider panel! Provider SMM Order ID: ${pOrderId}`, 
+          type: 'success' 
+        });
+      } else {
+        setSmmToast({ 
+          message: `Order submitted but no Order ID returned. Response: ${JSON.stringify(resData)}`, 
+          type: 'error' 
+        });
+      }
+    } catch (err: any) {
+      setSmmToast({ message: `API Submission failed: ${err.message}`, type: 'error' });
+    } finally {
+      setIsApiPlacingOrder(false);
+    }
+  };
+
+  const handleCheckProviderStatus = async () => {
+    if (!smmFormApiOrderId) {
+      setSmmToast({ message: "No API Order ID is actively configured for this order.", type: 'error' });
+      return;
+    }
+    const provId = smmFormApiProviderId || (smmServicesList.find(s => s.id === selectedSmmItem?.serviceId || s.name === selectedSmmItem?.serviceName)?.providerId);
+    if (!provId || provId === 'manual') {
+      setSmmToast({ message: "No active SMM provider API linked to this order.", type: 'error' });
+      return;
+    }
+    const prov = smmProviders.find(p => p.id?.toString() === provId?.toString());
+    if (!prov) {
+      setSmmToast({ message: "SMM provider credentials were not found in settings.", type: 'error' });
+      return;
+    }
+
+    setIsApiPlacingOrder(true);
+    try {
+      const response = await fetch('/api/admin/smm/order-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: prov.url,
+          key: prov.key,
+          orderId: smmFormApiOrderId
+        })
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Server error when retrieving order status');
+      }
+
+      const provStatus = String(resData.status || '').toLowerCase().trim();
+      let nextStatus = 'processing';
+      if (provStatus.includes('complete')) nextStatus = 'completed';
+      else if (provStatus.includes('fail') || provStatus.includes('cancel')) nextStatus = 'cancelled';
+      else if (provStatus.includes('pend')) nextStatus = 'pending';
+      else if (provStatus.includes('part')) nextStatus = 'partial';
+
+      setSmmFormStatus(nextStatus);
+      setSmmToast({
+        message: `Status Sync Successful! Provider Status: ${resData.status || 'Active'}. Start count: ${resData.start_count || 0}. Remains: ${resData.remains || 0}.`,
+        type: 'success'
+      });
+    } catch (err: any) {
+      setSmmToast({ message: `Status fetch failed: ${err.message}`, type: 'error' });
+    } finally {
+      setIsApiPlacingOrder(false);
+    }
   };
 
   const handleSaveSmmUser = () => {
@@ -5481,6 +5602,8 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               setSmmFormLink(o.link);
                                               setSmmFormQty(o.quantity.toString());
                                               setSmmFormAmount(o.amount.toString());
+                                              setSmmFormApiOrderId(o.apiOrderId || '');
+                                              setSmmFormApiProviderId(o.apiProviderId || '');
                                               setSmmModalTitle(`Edit Order #${o.id}`);
                                               setSmmModalType('edit-order');
                                               setIsSmmModalOpen(true);
@@ -7005,6 +7128,70 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
                             />
                           </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Provider API Order ID</label>
+                            <input
+                              type="text"
+                              value={smmFormApiOrderId}
+                              onChange={(e) => setSmmFormApiOrderId(e.target.value)}
+                              placeholder="e.g. 5240321 (Empty if pending)"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                          </div>
+
+                          {(() => {
+                            const orderSvc = smmServicesList.find(s => s.id === selectedSmmItem?.serviceId || s.name === selectedSmmItem?.serviceName);
+                            const provId = orderSvc?.providerId || smmFormApiProviderId;
+                            const hasProvider = provId && provId !== 'manual';
+                            const prov = smmProviders.find(p => p.id?.toString() === provId?.toString());
+                            
+                            if (hasProvider && prov) {
+                              return (
+                                <div className="sm:col-span-2 mt-2 bg-slate-950/80 border border-slate-850 p-4 rounded-xl space-y-3.5">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <h4 className="text-[10px] font-black uppercase tracking-wider text-violet-400">Live API Provider Integrated</h4>
+                                      <p className="text-xs font-bold text-slate-100 mt-0.5">{prov.name}</p>
+                                    </div>
+                                    <span className="text-[9px] font-mono font-semibold px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-full">
+                                      Match Svc Ref: #{orderSvc?.providerServiceId || 'None'}
+                                    </span>
+                                  </div>
+
+                                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                                    This catalog service is connected to a live SMM provider. You can securely place this order on their portal via core API or retrieve its live completion status.
+                                  </p>
+
+                                  <div className="flex flex-wrap gap-2.5 pt-1">
+                                    <button
+                                      type="button"
+                                      disabled={isApiPlacingOrder || !orderSvc?.providerServiceId}
+                                      onClick={handlePlaceOrderToProvider}
+                                      className="px-3.5 py-1.5 rounded-lg bg-violet-650 hover:bg-violet-600 text-white text-[11px] font-bold uppercase tracking-tight duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-violet-950/20 active:scale-95 flex items-center gap-1.5"
+                                    >
+                                      {isApiPlacingOrder ? (
+                                        <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                      ) : "🚀"}
+                                      Place to Provider SMM
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={isApiPlacingOrder || !smmFormApiOrderId}
+                                      onClick={handleCheckProviderStatus}
+                                      className="px-3.5 py-1.5 rounded-lg bg-[#0e1017] border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-[11px] font-bold uppercase tracking-tight duration-150 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 flex items-center gap-1.5"
+                                    >
+                                      {isApiPlacingOrder ? (
+                                        <span className="w-3 h-3 border-2 border-slate-400/30 border-t-slate-300 rounded-full animate-spin"></span>
+                                      ) : "🔄"}
+                                      Retrieve Live Status
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       ) : smmModalType === 'edit-user' ? (
                         <div className="space-y-4">

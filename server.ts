@@ -521,6 +521,86 @@ async function startServer() {
     }
   });
 
+  app.post("/api/admin/smm/place-order", async (req, res) => {
+    const { url, key, service, link, quantity } = req.body;
+    if (!url || !key || !service || !link || !quantity) {
+      return res.status(400).json({ error: "Provider url, key, service, link and quantity are required-fields." });
+    }
+
+    try {
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+        normalizedUrl = "https://" + normalizedUrl;
+      }
+
+      const params = new URLSearchParams();
+      params.append('key', key.trim());
+      params.append('action', 'add');
+      params.append('service', String(service).trim());
+      params.append('link', String(link).trim());
+      params.append('quantity', String(quantity).trim());
+
+      console.log(`[SMM Order Proxy] Forwarding order to SMM provider: ${normalizedUrl} with service: ${service}`);
+      const response = await axios.post(normalizedUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+        },
+        timeout: 15000
+      });
+
+      const rawData = response.data;
+      if (rawData && typeof rawData === 'object') {
+        if (rawData.error) {
+          return res.status(400).json({ error: rawData.error });
+        }
+        return res.json(rawData);
+      }
+      return res.json({ response: rawData });
+    } catch (err: any) {
+      console.error("[SMM Order Proxy] Error sending order to SMM provider:", err.message);
+      return res.status(500).json({ error: `Could not place order on provider panel: ${err.message}` });
+    }
+  });
+
+  app.post("/api/admin/smm/order-status", async (req, res) => {
+    const { url, key, orderId } = req.body;
+    if (!url || !key || !orderId) {
+      return res.status(400).json({ error: "Provider url, key and orderId are required fields." });
+    }
+
+    try {
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+        normalizedUrl = "https://" + normalizedUrl;
+      }
+
+      const params = new URLSearchParams();
+      params.append('key', key.trim());
+      params.append('action', 'status');
+      params.append('order', String(orderId).trim());
+
+      const response = await axios.post(normalizedUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+        },
+        timeout: 10000
+      });
+
+      const rawData = response.data;
+      if (rawData && typeof rawData === 'object') {
+        if (rawData.error) {
+          return res.status(400).json({ error: rawData.error });
+        }
+        return res.json(rawData);
+      }
+      return res.json({ response: rawData });
+    } catch (err: any) {
+      return res.status(500).json({ error: `Could not fetch order status from provider: ${err.message}` });
+    }
+  });
+
   // --- APK STORE ENDPOINTS ---
   
   app.get("/api/store", (req, res) => {
