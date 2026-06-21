@@ -435,6 +435,174 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     localStorage.setItem(ordersKey, JSON.stringify(updatedOrders));
   };
 
+  const getGatewayBrandInfo = (gateId: string, defaultName: string) => {
+    const id = (gateId || '').trim().toLowerCase();
+    const title = (defaultName || '').trim().toLowerCase();
+
+    const isBkash = id.includes('bkash') || title.includes('bkash');
+    const isNagad = id.includes('nagad') || title.includes('nagad');
+    const isUpay = id.includes('upay') || title.includes('upay');
+    const isRocket = id.includes('rocket') || title.includes('rocket');
+    const isCard = id.includes('card') || title.includes('card') || title.includes('visa') || title.includes('master');
+    const isBinance = id.includes('binance') || id.includes('binace') || title.includes('binance') || title.includes('binace');
+    const isUsdt = id.includes('usdt') || id.includes('tether') || title.includes('usdt') || title.includes('tether');
+
+    if (isBkash) {
+      return {
+        label: 'bKash',
+        logo: (
+          <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="#E2125A"/>
+            {/* Back Wing */}
+            <path d="M65 52 L55 68 L45 20 Z" fill="#FFFFFF" fillOpacity="0.75"/>
+            {/* Head */}
+            <path d="M72 42 L80 40 L74 46 Z" fill="#FFFFFF" fillOpacity="1"/>
+            {/* Neck */}
+            <path d="M72 42 L74 46 L65 52 Z" fill="#FFFFFF" fillOpacity="0.95"/>
+            {/* Chest */}
+            <path d="M65 52 L74 46 L68 62 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+            {/* Front Wing */}
+            <path d="M65 52 L58 25 L68 62 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+            {/* Center Body */}
+            <path d="M65 52 L68 62 L55 68 Z" fill="#FFFFFF" fillOpacity="0.95"/>
+            {/* Lower Belly */}
+            <path d="M55 68 L68 62 L52 75 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+            {/* Tail */}
+            <path d="M55 68 L52 75 L20 75 Z" fill="#FFFFFF" fillOpacity="0.8"/>
+            {/* Tail Fold */}
+            <path d="M35 38 L55 68 L20 75 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+          </svg>
+        ),
+        colorClass: selectedMethod === 'bkash'
+          ? 'bg-pink-600/10 text-pink-400 border-pink-500 shadow-lg shadow-pink-600/15'
+          : 'border-[#1e2336] bg-pink-500/5 text-pink-400 hover:text-white hover:bg-pink-550/10 hover:border-pink-500/30'
+      };
+    }
+    if (isNagad) {
+      return {
+        label: 'Nagad',
+        logo: (
+          <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="nagadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#F2351E" />
+                <stop offset="60%" stopColor="#FA5A1E" />
+                <stop offset="100%" stopColor="#FF8B24" />
+              </linearGradient>
+            </defs>
+            <rect width="100" height="100" rx="22" fill="url(#nagadGrad)"/>
+            <circle cx="50" cy="50" r="28" fill="#FFFFFF" fillOpacity="0.15"/>
+            <circle cx="52" cy="33" r="4.5" fill="#FFFFFF"/>
+            <path d="M48 38 L54 44 L50 56 L55 68 L50 71 L45 58 L41 48 L47 38 Z" fill="#FFFFFF"/>
+            <path d="M54 36 C59 36 62 42 59 47 C56 50 51 50 49 45 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+            <path d="M44 52 L36 51 L39 48 L46 49 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+            <path d="M25 52 L75 52" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M71 52 L73 47 L75 52 L73 57 L71 52 Z" fill="#FFFFFF"/>
+            <rect x="34" y="52" width="4.5" height="6.5" rx="1" fill="#FFFFFF"/>
+          </svg>
+        ),
+        colorClass: selectedMethod === 'nagad'
+          ? 'bg-orange-500/10 text-orange-400 border-orange-500 shadow-lg shadow-orange-500/15'
+          : 'border-[#1e2336] bg-orange-500/5 text-orange-400 hover:text-white hover:bg-orange-500/10 hover:border-orange-500/30'
+      };
+    }
+    if (isUpay) {
+      return {
+        label: 'Upay',
+        logo: (
+          <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1"/>
+            <circle cx="34" cy="34" r="8" fill="#FFC300"/>
+            <circle cx="66" cy="34" r="8" fill="#0A79DF"/>
+            <path d="M24 46 C24 64 35 73 50 73" stroke="#FFC300" strokeWidth="10" strokeLinecap="round" fill="none"/>
+            <path d="M50 73 C65 73 76 64 76 46" stroke="#0A79DF" strokeWidth="10" strokeLinecap="round" fill="none"/>
+          </svg>
+        ),
+        colorClass: selectedMethod === 'upay'
+          ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500 shadow-lg shadow-yellow-500/15'
+          : 'border-[#1e2336] bg-yellow-500/5 text-yellow-500 hover:text-white hover:bg-yellow-500/10 hover:border-yellow-500/30'
+      };
+    }
+    if (isRocket) {
+      return {
+        label: 'Rocket',
+        logo: (
+          <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="#8C288E"/>
+            <path d="M78 22 L22 52 L48 58 L78 22 Z" fill="#FFFFFF"/>
+            <path d="M78 22 L48 58 L54 78 L78 22 Z" fill="#E1BEE7" fillOpacity="0.95"/>
+            <path d="M48 58 L38 68 L42 59 L48 58 Z" fill="#D1C4E9" fillOpacity="0.9"/>
+            <path d="M15 78 C25 76 35 68 42 61" stroke="#E1BEE7" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d="M22 84 C30 82 38 76 44 70" stroke="#D1C4E9" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        ),
+        colorClass: selectedMethod === 'rocket'
+          ? 'bg-purple-600/10 text-purple-400 border-purple-500 shadow-lg shadow-purple-600/15'
+          : 'border-[#1e2336] bg-purple-500/5 text-purple-400 hover:text-white hover:bg-purple-500/10 hover:border-purple-500/30'
+      };
+    }
+    if (isCard) {
+      return {
+        label: 'Card',
+        logo: (
+          <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="#1C1F2A" stroke="#2A2E3D" strokeWidth="1.5"/>
+            <rect x="18" y="32" width="64" height="40" rx="6" fill="#12141D" stroke="#3A4055" strokeWidth="1"/>
+            <rect x="26" y="44" width="11" height="9" rx="1.5" fill="#ECC94B"/>
+            <circle cx="59" cy="52" r="10" fill="#EB001B"/>
+            <circle cx="67" cy="52" r="10" fill="#F79E1B" fillOpacity="0.85"/>
+            <line x1="18" y1="38" x2="82" y2="38" stroke="#3A4055" strokeWidth="1" />
+          </svg>
+        ),
+        colorClass: selectedMethod === 'card'
+          ? 'bg-blue-600/10 text-blue-400 border-blue-500 shadow-lg shadow-blue-600/15'
+          : 'border-[#1e2336] bg-blue-500/5 text-blue-400 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30'
+      };
+    }
+    if (isBinance) {
+      return {
+        label: 'Binance',
+        logo: (
+          <svg viewBox="0 0 24 24" className="w-full h-full pointer-events-none rounded-2xl" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="24" height="24" rx="5.5" fill="#12161A" stroke="#252930" strokeWidth="0.25"/>
+            <g transform="translate(3.6, 3.6) scale(0.7)">
+              <path d="M16.624 13.9202l2.7175 2.7154-7.353 7.353-7.353-7.352 2.7175-2.7164 4.6355 4.6595 4.6356-4.6595zm4.6366-4.6366L24 12l-2.7154 2.7164L18.5682 12l2.6924-2.7164zm-9.272.001l2.7163 2.6914-2.7164 2.7174v-.001L9.2721 12l2.7164-2.7154zm-9.2722-.001L5.4088 12l-2.6914 2.6924L0 12l2.7164-2.7164zM11.9885.0115l7.353 7.329-2.7174 2.7154-4.6356-4.6356-4.6355 4.6595-2.7174-2.7154 7.353-7.353z" fill="#F0B90B"/>
+            </g>
+          </svg>
+        ),
+        colorClass: selectedMethod === 'binance'
+          ? 'bg-amber-500/10 text-amber-450 border-amber-500 shadow-lg shadow-amber-500/15'
+          : 'border-[#1e2336] bg-amber-500/5 text-amber-505 hover:text-white hover:bg-amber-500/10 hover:border-amber-500/30'
+      };
+    }
+    if (isUsdt) {
+      return {
+        label: 'USDT',
+        logo: (
+          <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="22" fill="#26A17B"/>
+            <circle cx="50" cy="50" r="40" stroke="#FFFFFF" strokeWidth="2" strokeDasharray="3, 3" fill="none" fillOpacity="0.1"/>
+            <ellipse cx="50" cy="53" rx="25" ry="9" stroke="#FFFFFF" strokeWidth="4.5" fill="none"/>
+            <rect x="44.5" y="32" width="11" height="34" fill="#FFFFFF"/>
+            <rect x="29.5" y="27" width="41" height="8.5" rx="1.5" fill="#FFFFFF"/>
+          </svg>
+        ),
+        colorClass: selectedMethod === 'usdt'
+          ? 'bg-emerald-600/10 text-emerald-400 border-emerald-500 shadow-lg shadow-emerald-600/15'
+          : 'border-[#1e2336] bg-emerald-500/5 text-emerald-400 hover:text-white hover:bg-emerald-500/10 hover:border-emerald-500/30'
+      };
+    }
+    return {
+      label: defaultName || gateId,
+      logo: (
+        <span className="text-xl">🏦</span>
+      ),
+      colorClass: selectedMethod === gateId
+        ? 'bg-slate-700/20 text-white border-slate-600 shadow-md'
+        : 'border-[#1e2336] bg-[#141720]/50 text-slate-400 hover:text-white hover:border-[#2d3748]'
+    };
+  };
+
   // Helper formats
   const fmt = (n: number) => n.toLocaleString();
   const fmtAmt = (n: number) => n.toFixed(2);
@@ -2111,26 +2279,30 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           Deposits are currently disabled by the administrator. Please try again later.
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 font-sans">
-                          {manualGateways.filter(gate => gate.enabled !== false).map(gate => (
-                            <button
-                              key={gate.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedMethod(gate.id);
-                                setDepError(null);
-                                setDepSuccess(null);
-                              }}
-                              className={cn(
-                                "py-2 px-1 rounded-lg border text-[11px] font-black uppercase text-center transition-all duration-150 scale-100 outline-none select-none",
-                                selectedMethod === gate.id
-                                  ? "bg-blue-500 text-white border-blue-500 font-extrabold shadow-lg shadow-blue-550/10"
-                                  : "border-[#1e2336] bg-white/5 text-slate-400 hover:text-white"
-                              )}
-                            >
-                              {gate.id === 'bkash' ? 'bKash' : gate.id === 'nagad' ? 'Nagad' : gate.id === 'upay' ? 'Upay' : gate.id === 'rocket' ? 'Rocket' : gate.id === 'card' ? 'Card' : gate.id === 'binance' ? 'Binance' : gate.id === 'usdt' ? 'USDT' : gate.title.split(' ')[0]}
-                            </button>
-                          ))}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-sans">
+                          {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
+                            const brand = getGatewayBrandInfo(gate.id, gate.title);
+                            return (
+                              <button
+                                key={gate.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMethod(gate.id);
+                                  setDepError(null);
+                                  setDepSuccess(null);
+                                }}
+                                className={cn(
+                                  "py-3.5 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 scale-100 outline-none select-none flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[84px] hover:scale-[1.03] active:scale-[0.97]",
+                                  brand.colorClass
+                                )}
+                              >
+                                <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200 hover:scale-110">
+                                  {brand.logo}
+                                </div>
+                                <span className="tracking-wider text-[10px] font-bold mt-0.5">{brand.label}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

@@ -482,9 +482,72 @@ export default function ApkStore() {
                         {paymentStep === 'method' && (
                           <div className="grid grid-cols-1 gap-4">
                             {[
-                              { id: 'binance', label: 'Binance Pay', color: 'bg-[#F3BA2F]', icon: Wallet, tag: 'Official' },
-                              { id: 'bkash', label: 'bKash Checkout', color: 'bg-[#D12053]', icon: Smartphone, tag: 'Official' },
-                              { id: 'nagad', label: 'Nagad Checkout', color: 'bg-[#F7941D]', icon: Smartphone, tag: 'Official' }
+                              { 
+                                id: 'binance', 
+                                label: 'Binance Pay', 
+                                tag: 'Official',
+                                logo: (
+                                  <svg viewBox="0 0 24 24" className="w-14 h-14 pointer-events-none rounded-3xl shadow-lg" xmlns="http://www.w3.org/2000/svg">
+                                    <rect width="24" height="24" rx="5.5" fill="#12161A" stroke="#252930" strokeWidth="0.25"/>
+                                    <g transform="translate(3.6, 3.6) scale(0.7)">
+                                      <path d="M16.624 13.9202l2.7175 2.7154-7.353 7.353-7.353-7.352 2.7175-2.7164 4.6355 4.6595 4.6356-4.6595zm4.6366-4.6366L24 12l-2.7154 2.7164L18.5682 12l2.6924-2.7164zm-9.272.001l2.7163 2.6914-2.7164 2.7174v-.001L9.2721 12l2.7164-2.7154zm-9.2722-.001L5.4088 12l-2.6914 2.6924L0 12l2.7164-2.7164zM11.9885.0115l7.353 7.329-2.7174 2.7154-4.6356-4.6356-4.6355 4.6595-2.7174-2.7154 7.353-7.353z" fill="#F0B90B"/>
+                                    </g>
+                                  </svg>
+                                )
+                              },
+                              { 
+                                id: 'bkash', 
+                                label: 'bKash Checkout', 
+                                tag: 'Official',
+                                logo: (
+                                  <svg viewBox="0 0 100 100" className="w-14 h-14 pointer-events-none rounded-3xl shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect width="100" height="100" rx="22" fill="#E2125A"/>
+                                    {/* Back Wing */}
+                                    <path d="M65 52 L55 68 L45 20 Z" fill="#FFFFFF" fillOpacity="0.75"/>
+                                    {/* Head */}
+                                    <path d="M72 42 L80 40 L74 46 Z" fill="#FFFFFF" fillOpacity="1"/>
+                                    {/* Neck */}
+                                    <path d="M72 42 L74 46 L65 52 Z" fill="#FFFFFF" fillOpacity="0.95"/>
+                                    {/* Chest */}
+                                    <path d="M65 52 L74 46 L68 62 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+                                    {/* Front Wing */}
+                                    <path d="M65 52 L58 25 L68 62 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                    {/* Center Body */}
+                                    <path d="M65 52 L68 62 L55 68 Z" fill="#FFFFFF" fillOpacity="0.95"/>
+                                    {/* Lower Belly */}
+                                    <path d="M55 68 L68 62 L52 75 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+                                    {/* Tail */}
+                                    <path d="M55 68 L52 75 L20 75 Z" fill="#FFFFFF" fillOpacity="0.8"/>
+                                    {/* Tail Fold */}
+                                    <path d="M35 38 L55 68 L20 75 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                  </svg>
+                                )
+                              },
+                              { 
+                                id: 'nagad', 
+                                label: 'Nagad Checkout', 
+                                tag: 'Official',
+                                logo: (
+                                  <svg viewBox="0 0 100 100" className="w-14 h-14 pointer-events-none rounded-3xl shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                      <linearGradient id="nagadGradApk" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#F2351E" />
+                                        <stop offset="60%" stopColor="#FA5A1E" />
+                                        <stop offset="100%" stopColor="#FF8B24" />
+                                      </linearGradient>
+                                    </defs>
+                                    <rect width="100" height="100" rx="22" fill="url(#nagadGradApk)"/>
+                                    <circle cx="50" cy="50" r="28" fill="#FFFFFF" fillOpacity="0.15"/>
+                                    <circle cx="52" cy="33" r="4.5" fill="#FFFFFF"/>
+                                    <path d="M48 38 L54 44 L50 56 L55 68 L50 71 L45 58 L41 48 L47 38 Z" fill="#FFFFFF"/>
+                                    <path d="M54 36 C59 36 62 42 59 47 C56 50 51 50 49 45 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                    <path d="M44 52 L36 51 L39 48 L46 49 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+                                    <path d="M25 52 L75 52" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
+                                    <path d="M71 52 L73 47 L75 52 L73 57 L71 52 Z" fill="#FFFFFF"/>
+                                    <rect x="34" y="52" width="4.5" height="6.5" rx="1" fill="#FFFFFF"/>
+                                  </svg>
+                                )
+                              }
                             ].map(method => (
                               <button
                                 key={method.id}
@@ -501,8 +564,8 @@ export default function ApkStore() {
                                   "hover:scale-[1.02] active:scale-95"
                                 )}
                               >
-                                <div className={cn("w-14 h-14 rounded-3xl flex items-center justify-center text-white shadow-xl", method.color)}>
-                                  <method.icon size={28} />
+                                <div className="flex-shrink-0">
+                                  {method.logo}
                                 </div>
                                 <div className="flex-1 text-left">
                                   <p className="font-black text-base">{method.label}</p>

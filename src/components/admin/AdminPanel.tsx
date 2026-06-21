@@ -5725,9 +5725,14 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
                           >
                             <option value="">All Social Networks</option>
-                            {['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others'].map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
+                            {(() => {
+                              const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others'];
+                              const currentCats = smmServicesList.map(s => s.category).filter(Boolean);
+                              const merged = Array.from(new Set([...defaults, ...currentCats]));
+                              return merged.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ));
+                            })()}
                           </select>
                         </div>
                       </div>
@@ -6761,20 +6766,15 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             <select
                               value={apiCatFilter}
                               onChange={(e) => setApiCatFilter(e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-slate-300 outline-none cursor-pointer"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-slate-300 outline-none cursor-pointer pb-1"
                             >
-                              <option value="All">All Categories</option>
-                              <option value="Instagram">Instagram</option>
-                              <option value="Facebook">Facebook</option>
-                              <option value="YouTube">YouTube</option>
-                              <option value="TikTok">TikTok</option>
-                              <option value="Twitter/X">Twitter/X</option>
-                              <option value="Telegram">Telegram</option>
-                              <option value="Spotify">Spotify</option>
-                              <option value="LinkedIn">LinkedIn</option>
-                              <option value="Discord">Discord</option>
-                              <option value="Website Traffic">Website Traffic</option>
-                              <option value="Others">Others</option>
+                              <option value="All">All Categories ({apiServices.length})</option>
+                              {Array.from(new Set(apiServices?.map(s => s?.category))).filter(Boolean).map(c => {
+                                const count = apiServices.filter(s => s.category === c).length;
+                                return (
+                                  <option key={c} value={c}>{c} ({count})</option>
+                                );
+                              })}
                             </select>
                           </div>
                         </div>
@@ -7009,15 +7009,22 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Category</label>
-                            <select
+                            <input
+                              type="text"
+                              list="admin-smm-categories"
                               value={smmFormCategory}
                               onChange={(e) => setSmmFormCategory(e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
-                            >
-                              {['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram'].map(c => (
+                              placeholder="e.g. Spotify, Discord, Instagram"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 font-medium"
+                            />
+                            <datalist id="admin-smm-categories">
+                              {Array.from(new Set([
+                                'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others',
+                                ...smmServicesList.map(s => s.category)
+                              ])).filter(Boolean).map(c => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
-                            </select>
+                            </datalist>
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Quality Class</label>
