@@ -135,6 +135,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [ddSearchQuery, setDdSearchQuery] = useState<string>('');
+  const [ddRefillFilter, setDdRefillFilter] = useState<'all' | 'refill' | 'non-refill'>('all');
   const catDropdownRef = useRef<HTMLDivElement>(null);
   const [catDropdownOpen, setCatDropdownOpen] = useState<boolean>(false);
   const [catSearchQuery, setCatSearchQuery] = useState<string>('');
@@ -158,19 +159,21 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [manualGateways, setManualGateways] = useState<any[]>([]);
 
   // Dynamically map SERVICES and scale by multiplier
-  const activeServices = Array.isArray(servicesList)
-    ? servicesList.map(s => {
-        const priceVal = (Number(s?.price) || 0.0) * (settings.smmPriceMultiplier || 1.0);
-        return {
-          ...s,
-          name: String(s?.name || `Service #${s?.id || ''}`),
-          category: String(s?.category || s?.group || 'Others'),
-          price: priceVal,
-          min: Number(s?.min) || 50,
-          max: Number(s?.max) || 100000
-        };
-      })
-    : [];
+  const activeServices = useMemo(() => {
+    return Array.isArray(servicesList)
+      ? servicesList.map(s => {
+          const priceVal = (Number(s?.price) || 0.0) * (settings.smmPriceMultiplier || 1.0);
+          return {
+            ...s,
+            name: String(s?.name || `Service #${s?.id || ''}`),
+            category: String(s?.category || s?.group || 'Others'),
+            price: priceVal,
+            min: Number(s?.min) || 50,
+            max: Number(s?.max) || 100000
+          };
+        })
+      : [];
+  }, [servicesList, settings.smmPriceMultiplier]);
 
   const serviceMatchesPlatform = (s: any, platform: string) => {
     if (!platform || !s) return false;
@@ -244,10 +247,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     return sCat.includes(plat);
   };
 
-  const orderFilteredServices = activeServices.filter(s => {
-    if (orderActiveCat === 'All') return true;
-    return s.category === orderActiveCat;
-  });
+  const orderFilteredServices = useMemo(() => {
+    return activeServices.filter(s => {
+      if (orderActiveCat === 'All') return true;
+      return s.category === orderActiveCat;
+    });
+  }, [activeServices, orderActiveCat]);
 
   const filteredServicesForDropdown = useMemo(() => {
     let result = orderFilteredServices;
@@ -255,8 +260,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       const query = ddSearchQuery.toLowerCase();
       result = result.filter(s => s.name.toLowerCase().includes(query) || s.id.toString().includes(query));
     }
+    if (ddRefillFilter === 'refill') {
+      result = result.filter(s => s.refill && !s.refill.toLowerCase().includes('no') && !s.refill.toLowerCase().includes('non'));
+    } else if (ddRefillFilter === 'non-refill') {
+      result = result.filter(s => !s.refill || s.refill.toLowerCase().includes('no') || s.refill.toLowerCase().includes('non'));
+    }
     return result;
-  }, [orderFilteredServices, ddSearchQuery]);
+  }, [orderFilteredServices, ddSearchQuery, ddRefillFilter]);
 
   useEffect(() => {
     const cached = localStorage.getItem('dih_smm_manual_gateways_v2');
@@ -740,18 +750,40 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   // Helpers for category icons/styling
   const getCategoryStyledName = (cat: string) => {
+    if (!cat) return '';
     const c = cat.toLowerCase();
-    if (c.includes('instagram')) return '📷 Instagram';
-    if (c.includes('facebook')) return '👥 Facebook';
-    if (c.includes('youtube')) return '🎥 YouTube';
-    if (c.includes('tiktok')) return '🎵 TikTok';
-    if (c.includes('twitter') || c === 'x') return '🐦 Twitter/X';
-    if (c.includes('telegram')) return '📢 Telegram';
-    if (c.includes('spotify')) return '🎵 Spotify';
-    if (c.includes('linkedin')) return '💼 LinkedIn';
-    if (c.includes('discord')) return '💬 Discord';
-    if (c.includes('traffic') || c.includes('website')) return '🌐 Website Traffic';
-    return '📦 ' + cat;
+    
+    let icon = '📦';
+    let basePlatformName = '';
+    
+    if (c.includes('instagram')) { icon = '📷'; basePlatformName = 'Instagram'; }
+    else if (c.includes('facebook')) { icon = '👥'; basePlatformName = 'Facebook'; }
+    else if (c.includes('youtube')) { icon = '🎥'; basePlatformName = 'YouTube'; }
+    else if (c.includes('tiktok')) { icon = '🎵'; basePlatformName = 'TikTok'; }
+    else if (c.includes('twitter') || c === 'x') { icon = '🐦'; basePlatformName = 'Twitter/X'; }
+    else if (c.includes('telegram')) { icon = '📢'; basePlatformName = 'Telegram'; }
+    else if (c.includes('spotify')) { icon = '🎵'; basePlatformName = 'Spotify'; }
+    else if (c.includes('linkedin')) { icon = '💼'; basePlatformName = 'LinkedIn'; }
+    else if (c.includes('discord')) { icon = '💬'; basePlatformName = 'Discord'; }
+    else if (c.includes('traffic') || c.includes('website')) { icon = '🌐'; basePlatformName = 'Website Traffic'; }
+    
+    if (basePlatformName) {
+      if (cat.trim().toLowerCase() === basePlatformName.toLowerCase()) {
+        return `${icon} ${basePlatformName}`;
+      }
+      
+      let displaySuffix = cat;
+      const regex = new RegExp(`^${basePlatformName}\\s*[-|:|\\s]*\\s*`, 'i');
+      displaySuffix = displaySuffix.replace(regex, '').trim();
+      
+      if (displaySuffix) {
+        return `${icon} ${basePlatformName} - ${displaySuffix}`;
+      } else {
+        return `${icon} ${basePlatformName}`;
+      }
+    }
+    
+    return `${icon} ${cat}`;
   };
 
   const handlePlatformChange = (platformName: string) => {
@@ -1060,55 +1092,59 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   };
 
   // Filtering
-  const filteredServices = activeServices.filter(s => {
-    const activeCatLower = activeCat.toLowerCase();
-    const svcCatLower = s.category.toLowerCase();
-    
-    let matchesCat = false;
-    if (activeCat === 'All') {
-      matchesCat = true;
-    } else if (activeCatLower === 'instagram') {
-      matchesCat = svcCatLower.includes('instagram') || svcCatLower.includes('ig');
-    } else if (activeCatLower === 'facebook') {
-      matchesCat = svcCatLower.includes('facebook') || svcCatLower.includes('fb');
-    } else if (activeCatLower === 'youtube') {
-      matchesCat = svcCatLower.includes('youtube') || svcCatLower.includes('yt');
-    } else if (activeCatLower === 'tiktok') {
-      matchesCat = svcCatLower.includes('tiktok') || svcCatLower.includes('tt');
-    } else if (activeCatLower === 'telegram') {
-      matchesCat = svcCatLower.includes('telegram') || svcCatLower.includes('tg');
-    } else if (activeCatLower === 'twitter' || activeCatLower === 'twitter/x') {
-      matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x ');
-    } else if (activeCatLower === 'linkedin') {
-      matchesCat = svcCatLower.includes('linkedin');
-    } else if (activeCatLower === 'spotify') {
-      matchesCat = svcCatLower.includes('spotify');
-    } else if (activeCatLower === 'discord') {
-      matchesCat = svcCatLower.includes('discord');
-    } else if (activeCatLower === 'website traffic') {
-      matchesCat = svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web');
-    } else if (activeCatLower === 'others') {
-      // Anything that doesn't explicitly match the primary main ones
-      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcCatLower.includes(k));
-      matchesCat = !isKnown;
-    } else {
-      matchesCat = svcCatLower === activeCatLower;
-    }
+  const filteredServices = useMemo(() => {
+    return activeServices.filter(s => {
+      const activeCatLower = activeCat.toLowerCase();
+      const svcCatLower = s.category.toLowerCase();
+      
+      let matchesCat = false;
+      if (activeCat === 'All') {
+        matchesCat = true;
+      } else if (activeCatLower === 'instagram') {
+        matchesCat = svcCatLower.includes('instagram') || svcCatLower.includes('ig');
+      } else if (activeCatLower === 'facebook') {
+        matchesCat = svcCatLower.includes('facebook') || svcCatLower.includes('fb');
+      } else if (activeCatLower === 'youtube') {
+        matchesCat = svcCatLower.includes('youtube') || svcCatLower.includes('yt');
+      } else if (activeCatLower === 'tiktok') {
+        matchesCat = svcCatLower.includes('tiktok') || svcCatLower.includes('tt');
+      } else if (activeCatLower === 'telegram') {
+        matchesCat = svcCatLower.includes('telegram') || svcCatLower.includes('tg');
+      } else if (activeCatLower === 'twitter' || activeCatLower === 'twitter/x') {
+        matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x ');
+      } else if (activeCatLower === 'linkedin') {
+        matchesCat = svcCatLower.includes('linkedin');
+      } else if (activeCatLower === 'spotify') {
+        matchesCat = svcCatLower.includes('spotify');
+      } else if (activeCatLower === 'discord') {
+        matchesCat = svcCatLower.includes('discord');
+      } else if (activeCatLower === 'website traffic') {
+        matchesCat = svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web');
+      } else if (activeCatLower === 'others') {
+        // Anything that doesn't explicitly match the primary main ones
+        const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcCatLower.includes(k));
+        matchesCat = !isKnown;
+      } else {
+        matchesCat = svcCatLower === activeCatLower;
+      }
 
-    const matchesQuery = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         s.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesQuery;
-  });
+      const matchesQuery = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           s.category.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCat && matchesQuery;
+    });
+  }, [activeServices, activeCat, searchQuery]);
 
-  const filteredOrders = orders.filter(o => {
-    if (activeFilter === 'all') return true;
-    return o.status === activeFilter;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      if (activeFilter === 'all') return true;
+      return o.status === activeFilter;
+    });
+  }, [orders, activeFilter]);
 
-  const completedCount = orders.filter(o => o.status === 'completed').length;
-  const pendingCount = orders.filter(o => o.status === 'pending').length;
-  const processingCount = orders.filter(o => o.status === 'processing').length;
-  const totalSpent = orders.reduce((sum, o) => sum + o.amount, 0);
+  const completedCount = useMemo(() => orders.filter(o => o.status === 'completed').length, [orders]);
+  const pendingCount = useMemo(() => orders.filter(o => o.status === 'pending').length, [orders]);
+  const processingCount = useMemo(() => orders.filter(o => o.status === 'processing').length, [orders]);
+  const totalSpent = useMemo(() => orders.reduce((sum, o) => sum + o.amount, 0), [orders]);
 
   // Method Classes helper
   const getMethodClass = (method: string) => {
@@ -1807,7 +1843,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                     transition={{ duration: 0.12 }}
                                     className="absolute top-full left-0 right-0 mt-1 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-2xl z-50 origin-top"
                                   >
-                                    <div className="p-2 border-b border-[#1e2336] bg-[#0d0f17]">
+                                    <div className="p-2 border-b border-[#1e2336] bg-[#0d0f17] flex flex-col gap-2">
                                       <input
                                         type="text"
                                         placeholder="Search service by name or ID..."
@@ -1816,6 +1852,54 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                         className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-violet-500"
                                         autoFocus
                                       />
+                                      {/* Quick Refill & Non-Refill Tabs */}
+                                      <div className="flex gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDdRefillFilter('all');
+                                          }}
+                                          className={cn(
+                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center",
+                                            ddRefillFilter === 'all'
+                                              ? "bg-violet-500/15 text-violet-400 border-violet-500/35"
+                                              : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
+                                          )}
+                                        >
+                                          All
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDdRefillFilter('refill');
+                                          }}
+                                          className={cn(
+                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5",
+                                            ddRefillFilter === 'refill'
+                                              ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/35"
+                                              : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
+                                          )}
+                                        >
+                                          🔄 Refill
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDdRefillFilter('non-refill');
+                                          }}
+                                          className={cn(
+                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5",
+                                            ddRefillFilter === 'non-refill'
+                                              ? "bg-red-500/15 text-red-400 border-red-500/35"
+                                              : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
+                                          )}
+                                        >
+                                          ⚠️ No Refill
+                                        </button>
+                                      </div>
                                     </div>
                                     <div className="max-h-64 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
                                       {filteredServicesForDropdown.length === 0 ? (

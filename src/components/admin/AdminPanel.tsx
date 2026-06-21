@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Settings, Key, Layers, Eye, EyeOff, Plus, 
   Trash2, Save, LogOut, ChevronRight, Activity, Menu,
@@ -296,6 +296,77 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmSvcCatFilter, setSmmSvcCatFilter] = useState('');
   const [smmUserSearch, setSmmUserSearch] = useState('');
   const [smmDepStatusFilter, setSmmDepStatusFilter] = useState('');
+
+  // Performance optimizations (useMemo cache)
+  const userStatsMap = useMemo(() => {
+    const stats: Record<number, { count: number; spent: number }> = {};
+    for (const o of smmOrders) {
+      const uId = o.userId;
+      if (!stats[uId]) {
+        stats[uId] = { count: 0, spent: 0 };
+      }
+      stats[uId].count += 1;
+      stats[uId].spent += o.amount;
+    }
+    return stats;
+  }, [smmOrders]);
+
+  const filteredAdminOrdersBySearch = useMemo(() => {
+    return smmOrders
+      .slice()
+      .reverse()
+      .filter(o => {
+        const matchTerm = (o.id.toString() + o.serviceName + o.link).toLowerCase();
+        const matchesSearch = matchTerm.includes(smmOrderSearch.toLowerCase());
+        const matchesStatus = !smmOrderStatusFilter || o.status === smmOrderStatusFilter;
+        return matchesSearch && matchesStatus;
+      });
+  }, [smmOrders, smmOrderSearch, smmOrderStatusFilter]);
+
+  const visibleCatalogServices = useMemo(() => {
+    return smmServicesList.filter(s => {
+      const match = (s.name + s.category).toLowerCase().includes(smmSvcSearch.toLowerCase());
+      let matchesCat = true;
+      if (smmSvcCatFilter) {
+        const plat = smmSvcCatFilter.toLowerCase();
+        const sCat = (s.category || '').toLowerCase();
+        const sName = (s.name || '').toLowerCase();
+        if (plat === 'instagram') {
+          matchesCat = sCat.includes('instagram') || sCat.includes('ig ') || sCat.includes('ig-') || sName.includes('instagram') || sName.includes('ig');
+        } else if (plat === 'facebook') {
+          matchesCat = sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage') || sCat.includes('meta') || sName.includes('facebook') || sName.includes('fb');
+        } else if (plat === 'youtube') {
+          matchesCat = sCat.includes('youtube') || sCat.includes('yt ') || sCat.includes('yt-') || sName.includes('youtube') || sName.includes('yt');
+        } else if (plat === 'tiktok') {
+          matchesCat = sCat.includes('tiktok') || sName.includes('tiktok');
+        } else if (plat === 'twitter/x' || plat === 'twitter' || plat === 'x') {
+          matchesCat = sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ') || sCat.includes('tweet') || sName.includes('twitter') || sName.includes('x');
+        } else if (plat === 'telegram') {
+          matchesCat = sCat.includes('telegram') || sCat.includes('tg ') || sCat.includes('tg-') || sName.includes('telegram') || sName.includes('tg');
+        } else if (plat === 'spotify') {
+          matchesCat = sCat.includes('spotify') || sName.includes('spotify');
+        } else if (plat === 'linkedin') {
+          matchesCat = sCat.includes('linkedin') || sName.includes('linkedin');
+        } else if (plat === 'discord') {
+          matchesCat = sCat.includes('discord') || sName.includes('discord');
+        } else if (plat.includes('traffic') || plat.includes('website')) {
+          matchesCat = sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo') || sName.includes('traffic') || sName.includes('website');
+        } else if (plat === 'others') {
+          const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo'];
+          matchesCat = !known.some(k => sCat.includes(k) || sName.includes(k));
+        } else {
+          matchesCat = s.category === smmSvcCatFilter || sCat.includes(plat);
+        }
+      }
+      return match && matchesCat;
+    });
+  }, [smmServicesList, smmSvcSearch, smmSvcCatFilter]);
+
+  const adminUniqueSmmCategoriesOptions = useMemo(() => {
+    const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others'];
+    const currentCats = smmServicesList.map(s => s.category).filter(Boolean);
+    return Array.from(new Set([...defaults, ...currentCats]));
+  }, [smmServicesList]);
 
   // Modals / Forms States
   const [isSmmModalOpen, setIsSmmModalOpen] = useState(false);
@@ -5533,15 +5604,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/40">
-                          {smmOrders
-                            .slice()
-                            .reverse()
-                            .filter(o => {
-                              const matchTerm = (o.id.toString() + o.serviceName + o.link).toLowerCase();
-                              const matchesSearch = matchTerm.includes(smmOrderSearch.toLowerCase());
-                              const matchesStatus = !smmOrderStatusFilter || o.status === smmOrderStatusFilter;
-                              return matchesSearch && matchesStatus;
-                            })
+                          {filteredAdminOrdersBySearch
                             .map((o) => {
                               const usr = smmUsers.find(u => u.id === o.userId) || { name: 'Guest Client', email: 'guest@smm.com' };
                               return (
@@ -5634,42 +5697,6 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
                 {/* SUBTAB 3: SERVICES CATALOG */}
                 {smmSubTab === 'services' && (() => {
-                  const visibleCatalogServices = smmServicesList.filter(s => {
-                    const match = (s.name + s.category).toLowerCase().includes(smmSvcSearch.toLowerCase());
-                    let matchesCat = true;
-                    if (smmSvcCatFilter) {
-                      const plat = smmSvcCatFilter.toLowerCase();
-                      const sCat = (s.category || '').toLowerCase();
-                      const sName = (s.name || '').toLowerCase();
-                      if (plat === 'instagram') {
-                        matchesCat = sCat.includes('instagram') || sCat.includes('ig ') || sCat.includes('ig-') || sName.includes('instagram') || sName.includes('ig');
-                      } else if (plat === 'facebook') {
-                        matchesCat = sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage') || sCat.includes('meta') || sName.includes('facebook') || sName.includes('fb');
-                      } else if (plat === 'youtube') {
-                        matchesCat = sCat.includes('youtube') || sCat.includes('yt ') || sCat.includes('yt-') || sName.includes('youtube') || sName.includes('yt');
-                      } else if (plat === 'tiktok') {
-                        matchesCat = sCat.includes('tiktok') || sName.includes('tiktok');
-                      } else if (plat === 'twitter/x' || plat === 'twitter' || plat === 'x') {
-                        matchesCat = sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ') || sCat.includes('tweet') || sName.includes('twitter') || sName.includes('x');
-                      } else if (plat === 'telegram') {
-                        matchesCat = sCat.includes('telegram') || sCat.includes('tg ') || sCat.includes('tg-') || sName.includes('telegram') || sName.includes('tg');
-                      } else if (plat === 'spotify') {
-                        matchesCat = sCat.includes('spotify') || sName.includes('spotify');
-                      } else if (plat === 'linkedin') {
-                        matchesCat = sCat.includes('linkedin') || sName.includes('linkedin');
-                      } else if (plat === 'discord') {
-                        matchesCat = sCat.includes('discord') || sName.includes('discord');
-                      } else if (plat.includes('traffic') || plat.includes('website')) {
-                        matchesCat = sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo') || sName.includes('traffic') || sName.includes('website');
-                      } else if (plat === 'others') {
-                        const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo'];
-                        matchesCat = !known.some(k => sCat.includes(k) || sName.includes(k));
-                      } else {
-                        matchesCat = s.category === smmSvcCatFilter || sCat.includes(plat);
-                      }
-                    }
-                    return match && matchesCat;
-                  });
                   const isAllVisibleChecked = visibleCatalogServices.length > 0 && 
                     visibleCatalogServices.every(s => selectedCatalogSvcIds.includes(s.id));
 
@@ -5725,14 +5752,9 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             className="bg-[#08090d] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 outline-none focus:border-blue-500 cursor-pointer"
                           >
                             <option value="">All Social Networks</option>
-                            {(() => {
-                              const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others'];
-                              const currentCats = smmServicesList.map(s => s.category).filter(Boolean);
-                              const merged = Array.from(new Set([...defaults, ...currentCats]));
-                              return merged.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                              ));
-                            })()}
+                            {adminUniqueSmmCategoriesOptions.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -5997,8 +6019,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                               return term.includes(smmUserSearch.toLowerCase());
                             })
                             .map((u) => {
-                              const placed = smmOrders.filter(o => o.userId === u.id);
-                              const spent = placed.reduce((sum, o) => sum + o.amount, 0);
+                              const stats = userStatsMap[u.id] || { count: 0, spent: 0 };
                               return (
                                 <tr key={u.id} className="hover:bg-slate-900/10 transition">
                                   <td className="py-3 text-left">
@@ -6016,8 +6037,8 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                   </td>
                                   <td className="py-3 text-slate-400 text-[11px] font-mono select-all">{u.email}</td>
                                   <td className="py-3 text-right font-mono text-emerald-400 font-black text-sm">${u.balance.toFixed(2)}</td>
-                                  <td className="py-3 text-right font-mono text-slate-400">{placed.length}</td>
-                                  <td className="py-3 text-right font-mono text-slate-400">${spent.toFixed(2)}</td>
+                                  <td className="py-3 text-right font-mono text-slate-400">{stats.count}</td>
+                                  <td className="py-3 text-right font-mono text-slate-400">${stats.spent.toFixed(2)}</td>
                                   <td className="py-3 text-right text-slate-500">{u.joined}</td>
                                   <td className="py-3 text-right font-medium">
                                     <div className="flex gap-1.5 justify-end items-center">
