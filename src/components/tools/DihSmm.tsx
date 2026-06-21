@@ -862,21 +862,90 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
   };
 
-  const getAverageTimeText = (timeStr?: string) => {
-    if (!timeStr) return "11 minutes";
-    const t = timeStr.toLowerCase();
-    if (t.includes('minute') || t.includes('instant') || t.includes('min')) {
-      if (t.includes('0-15') || t.includes('15')) return "11 minutes";
-      if (t.includes('0-30') || t.includes('30')) return "22 minutes";
-      return "15 minutes";
+  const getAverageTimeText = (timeStr?: string, svcId?: number, categoryName?: string) => {
+    const fallbackId = svcId || 7;
+    const cat = (categoryName || '').toLowerCase();
+    
+    // Fallback categories speed pattern
+    const getFallbackTime = () => {
+      const seedVal = (fallbackId % 10) + 1; // 1 to 10
+      if (cat.includes('like') || cat.includes('reaction')) {
+        return `${seedVal * 3 + 2} minutes`; // 5 to 32 minutes
+      }
+      if (cat.includes('view') || cat.includes('play') || cat.includes('traffic')) {
+        return `${seedVal * 2 + 1} minutes`; // 3 to 21 minutes
+      }
+      if (cat.includes('comment')) {
+        const hrs = (seedVal * 0.4 + 1.2).toFixed(1);
+        return `${hrs.endsWith('.0') ? parseInt(hrs) : hrs} hours`; // 1.6 to 5.2 hours
+      }
+      if (cat.includes('follower') || cat.includes('subscriber') || cat.includes('member')) {
+        const hrs = (seedVal * 1.5 + 2).toFixed(1);
+        return `${hrs.endsWith('.0') ? parseInt(hrs) : hrs} hours`; // 3.5 to 17 hours
+      }
+      const hrs = (seedVal * 2 + 3).toFixed(1);
+      return `${hrs.endsWith('.0') ? parseInt(hrs) : hrs} hours`; // 5 to 23 hours
+    };
+
+    if (!timeStr) return getFallbackTime();
+
+    const t = timeStr.trim().toLowerCase();
+    
+    // Check if it's already a well-formatted string with a precise value (like "2.5 hours" or "10 minutes") rather than a general range
+    const isRange = t.includes('-') || t.includes('/') || t.includes('to');
+    
+    if (!isRange) {
+      if (t === 'instant') {
+        const seedVal = (fallbackId % 4) + 1; // 1 to 4
+        return `${seedVal} minutes`;
+      }
+      // Return custom non-range string as is
+      return timeStr;
     }
-    if (t.includes('hour') || t.includes('hr')) {
-      if (t.includes('0-1') || t.includes('1')) return "48 minutes";
-      if (t.includes('0-6') || t.includes('6')) return "2.5 hours";
-      if (t.includes('0-12') || t.includes('12')) return "4 hours";
-      return "6.5 hours";
+
+    // Is a range. Let's parse numbers from it!
+    const numbers = t.match(/\d+/g);
+    if (!numbers || numbers.length === 0) {
+      return getFallbackTime();
     }
-    return timeStr;
+
+    const firstNum = parseFloat(numbers[0]);
+    const secondNum = numbers[1] ? parseFloat(numbers[1]) : firstNum;
+    
+    // For range starting with 0, adjust starting low bound to be non-zero
+    const low = firstNum === 0 ? secondNum * 0.1 : firstNum;
+    const high = secondNum;
+    
+    // Seed-based deterministic interpolation
+    const seedMultiplier = ((fallbackId * 17) % 100) / 100; // 0.0 to 0.99
+    const calculatedValue = low + (high - low) * (0.3 + seedMultiplier * 0.6); // interp between 30% and 90% of range
+
+    // Detect unit
+    let unit = 'minutes';
+    if (t.includes('day') || t.includes('dy')) {
+      unit = 'days';
+    } else if (t.includes('hour') || t.includes('hr') || t.includes('h')) {
+      unit = 'hours';
+    } else if (t.includes('minute') || t.includes('min') || t.includes('m')) {
+      unit = 'minutes';
+    } else {
+      if (high <= 5) unit = 'days';
+      else if (high <= 24) unit = 'hours';
+    }
+
+    if (unit === 'days') {
+      const val = calculatedValue.toFixed(1);
+      return `${val.endsWith('.0') ? parseInt(val) : val} days`;
+    }
+    if (unit === 'hours') {
+      if (calculatedValue < 1.0) {
+        return `${Math.round(calculatedValue * 60)} minutes`;
+      }
+      const val = calculatedValue.toFixed(1);
+      return `${val.endsWith('.0') ? parseInt(val) : val} hours`;
+    }
+    
+    return `${Math.max(1, Math.round(calculatedValue))} minutes`;
   };
 
   // Actions
@@ -2007,7 +2076,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               type="text" 
                               readOnly 
                               disabled
-                              value={selectedService ? getAverageTimeText(selectedService.time) : "Choose a service first"}
+                              value={selectedService ? getAverageTimeText(selectedService.time, selectedService.id, selectedService.category) : "Choose a service first"}
                               className="w-full bg-[#0d0f17]/40 border border-[#1e2336] px-4 py-3 text-xs text-slate-400 rounded-lg outline-none select-none h-11"
                             />
                           </div>

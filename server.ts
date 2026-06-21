@@ -441,6 +441,19 @@ async function startServer() {
           }
         }
 
+        let avgTimeVal = "";
+        if (svc.average_time !== undefined && svc.average_time !== null && svc.average_time !== "0" && svc.average_time !== 0 && String(svc.average_time).trim() !== "") {
+          const avgMinutes = parseInt(String(svc.average_time).trim());
+          if (!isNaN(avgMinutes) && avgMinutes > 0) {
+            if (avgMinutes < 60) {
+              avgTimeVal = `${avgMinutes} minutes`;
+            } else {
+              const hrs = (avgMinutes / 60).toFixed(1);
+              avgTimeVal = `${hrs.endsWith('.0') ? parseInt(hrs) : hrs} hours`;
+            }
+          }
+        }
+
         return {
           id: idVal,
           name: nameVal,
@@ -449,7 +462,7 @@ async function startServer() {
           min: minVal,
           max: maxVal,
           desc: descVal,
-          time: svc.time || svc.speed || svc.delivery || "0-24 hours",
+          time: avgTimeVal || svc.time || svc.speed || svc.delivery || "0-24 hours",
           quality: svc.quality || svc.class || svc.tier || svc.type || "Standard",
           refill: refillStatus
         };
