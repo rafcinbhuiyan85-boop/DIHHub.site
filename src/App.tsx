@@ -193,6 +193,17 @@ function MainApp() {
     if (activeTool !== 'admin-login' && activeTool !== 'admin-panel') {
       const toolName = settings.toolLabels?.[activeTool] || activeTool;
       const customNotice = settings.toolNotices?.[activeTool];
+
+      if (settings.visibleTools && !settings.visibleTools.includes(activeTool) && activeTool !== 'dashboard') {
+        return (
+          <UnderMaintenance 
+            toolName={toolName} 
+            customNotice={customNotice || "This tool has been temporarily hidden by the administrator."} 
+            statusType="offline"
+            onBack={() => setActiveToolWithNavigation('dashboard')} 
+          />
+        );
+      }
       
       if (settings.disabledTools?.includes(activeTool)) {
         return (

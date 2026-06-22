@@ -64,23 +64,8 @@ export default function HostedTemplate() {
   }, [template]);
 
   if (loading) return (
-    <div className="min-h-screen bg-[#030303] flex flex-col items-center justify-center p-8 text-center space-y-8 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(59,130,246,0.1),transparent_60%)]" />
-      <div className="relative">
-         <div className="w-24 h-24 bg-blue-600/10 rounded-[2.5rem] border border-blue-500/20 flex items-center justify-center text-blue-500 shadow-[0_0_50px_rgba(59,130,246,0.1)] relative z-10 animate-pulse">
-            <Loader2 className="animate-spin" size={40} strokeWidth={1.5} />
-         </div>
-         <div className="absolute inset-0 bg-blue-500/40 blur-[40px] rounded-full animate-pulse opacity-50" />
-      </div>
-      <div className="space-y-3 relative z-10">
-         <div className="flex items-center justify-center gap-3 text-blue-500 font-black uppercase tracking-[0.4em] text-[9px]">
-            <span className="w-6 h-[1px] bg-blue-500/50" />
-            SYNCHRONIZING
-            <span className="w-6 h-[1px] bg-blue-500/50" />
-         </div>
-         <h2 className="text-4xl font-black italic tracking-tighter uppercase text-white">Connecting <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Node</span></h2>
-         <p className="text-slate-600 font-medium text-xs tracking-wider uppercase">Fetching architecture from edge server...</p>
-      </div>
+    <div className="min-h-screen bg-[#030303] flex flex-col items-center justify-center p-8">
+      <Loader2 className="animate-spin text-blue-500" size={32} />
     </div>
   );
 
@@ -106,39 +91,7 @@ export default function HostedTemplate() {
   );
 
   const getCleanHtml = (html: string) => {
-    if (!html) return '';
-    let clean = html;
-    
-    // Perform dynamic filtering if running in the browser
-    if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
-      try {
-        const parser = new DOMParser();
-        const docObj = parser.parseFromString(clean, 'text/html');
-        
-        // Find elements with specific classes or content matching unwanted flags
-        const elements = docObj.querySelectorAll('*');
-        elements.forEach((el: any) => {
-          const text = (el.textContent || '').trim();
-          
-          const isCreativeHq = text.toUpperCase().includes('CREATIVE HQ') || text.toUpperCase().includes('SHOWROOM');
-          const isPremiumVerified = text.toUpperCase().includes('PREMIUM VERIFIED');
-          const isCentralServer = text.toUpperCase().includes('CENTRAL SERVER');
-          const isCategoryStatus = text.toUpperCase().includes('CATEGORY:') && text.toUpperCase().includes('STATUS:');
-          const isThemeId = text.toUpperCase().includes('THEME_ID_');
-          const isIdDot = text.toUpperCase().startsWith('ID:') && text.length < 50;
-          
-          if (isCreativeHq || isPremiumVerified || isCentralServer || isCategoryStatus || isThemeId || isIdDot) {
-            el.remove();
-          }
-        });
-        
-        return docObj.body.innerHTML;
-      } catch (err) {
-        console.error("HTML cleaning error:", err);
-      }
-    }
-    
-    return clean;
+    return html || '';
   };
 
   return (

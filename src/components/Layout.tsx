@@ -247,6 +247,7 @@ export default function Layout({
               const isDisabled = settings.disabledTools?.includes(item.id);
               const isDihMovies = item.id === 'dih-movies';
               const isBachelorPoint = item.id === 'bachelor-point';
+              const isDihSmm = item.id === 'dih-smm';
               const isStreamingTool = isDihMovies || isBachelorPoint;
 
               return (
@@ -269,6 +270,25 @@ export default function Layout({
                     </div>
                   )}
 
+                  {isDihSmm && (
+                    <div className="px-3 pt-4 pb-1 mt-2">
+                      <p className={cn(
+                        "text-[9px] font-black tracking-[0.2em] uppercase flex items-center gap-1.5 select-none",
+                        settings.smmEnableColorTheme !== false
+                          ? "text-violet-500 dark:text-violet-400"
+                          : "text-slate-500 dark:text-slate-400"
+                      )}>
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full animate-pulse",
+                          settings.smmEnableColorTheme !== false
+                            ? "bg-[#7c3aed] shadow-[0_0_8px_rgba(124,58,237,0.6)]"
+                            : "bg-slate-500/80 shadow-none"
+                        )} />
+                        {settings.smmEnableColorTheme !== false ? "PREMIUM PANEL" : "SMM PANEL"}
+                      </p>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => {
                       setActiveTool(item.id);
@@ -287,9 +307,17 @@ export default function Layout({
                           ? isActive
                             ? "bg-[#e5173f] text-white font-black shadow-lg shadow-[#e5173f]/40 scale-[1.01]"
                             : "text-rose-700 dark:text-rose-300 hover:text-rose-650 dark:hover:text-rose-200 bg-rose-500/5 hover:bg-rose-500/10 dark:bg-rose-500/5 dark:hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 font-extrabold hover:translate-x-1"
-                          : isActive 
-                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
-                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
+                          : isDihSmm
+                            ? isActive
+                              ? settings.smmEnableColorTheme !== false
+                                ? "bg-gradient-to-r from-[#7c3aed] via-[#8b5cf6] to-[#0ea5e9] text-white font-black shadow-lg shadow-purple-500/35 scale-[1.01]"
+                                : "bg-slate-100 dark:bg-white text-slate-900 dark:text-slate-900 font-extrabold scale-[1.01]"
+                              : settings.smmEnableColorTheme !== false
+                                ? "text-[#7c3aed] dark:text-violet-350 hover:text-white dark:hover:text-white bg-violet-500/5 hover:bg-gradient-to-r hover:from-white/[0.02] hover:to-white/[0.04] border border-[#7c3aed]/15 hover:border-[#8b5cf6]/40 font-extrabold hover:translate-x-1"
+                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1"
+                            : isActive 
+                              ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
                       isDisabled && !isActive && "opacity-75 hover:opacity-100 text-rose-600/80 dark:text-rose-500/80 hover:text-rose-600 dark:hover:text-rose-500 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10"
                     )}
                   >
@@ -297,16 +325,27 @@ export default function Layout({
                       <item.icon size={14} className={cn(
                         "transition-transform", 
                         isActive ? "scale-110" : "group-hover/item:scale-110", 
-                        isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse"
+                        isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse",
+                        isDihSmm && !isActive && (settings.smmEnableColorTheme !== false ? "text-violet-500 dark:text-violet-400 animate-pulse" : "text-slate-400")
                       )} />
                     )}
-                    <span className={cn("flex-1 text-left truncate uppercase", isStreamingTool && "tracking-wide")}>{label}</span>
+                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm) && "tracking-wide")}>{label}</span>
                     {isDisabled ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.6)]" title="Under Management / Offline" />
                     ) : isDihMovies ? (
                       <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
                         STREAM
                       </span>
+                    ) : isDihSmm ? (
+                      settings.smmEnableColorTheme !== false ? (
+                        <span className="bg-gradient-to-r from-[#7c3aed] to-[#0ea5e9] text-white text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse font-sans">
+                          BOOST
+                        </span>
+                      ) : (
+                        <span className="bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[8px] px-1.5 py-0 rounded font-mono font-black tracking-widest uppercase">
+                          SMM
+                        </span>
+                      )
                     ) : null}
                     {isActive && !isStreamingTool && (
                       <motion.div 

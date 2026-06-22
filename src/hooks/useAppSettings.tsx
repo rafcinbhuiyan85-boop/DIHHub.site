@@ -116,6 +116,7 @@ export interface AppSettings {
   smmPriceMultiplier: number;
   smmSystemNotice: string;
   smmPaymentMethods: string[];
+  smmEnableColorTheme?: boolean;
   disabledTools?: string[];
   toolNotices?: Record<string, string>;
   upcomingTools?: string[];
@@ -306,6 +307,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   smmPriceMultiplier: 1.0,
   smmSystemNotice: 'Welcome to DIH SMM Panel! Enjoy safe, fast SMM panel services at the best rates in Bangladesh.',
   smmPaymentMethods: ['bkash', 'nagad', 'rocket', 'card', 'crypto'],
+  smmEnableColorTheme: true,
   disabledTools: ['mobile-bypass'],
   toolNotices: {},
   upcomingTools: [],
@@ -330,8 +332,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(saved);
       if (!parsed) return DEFAULT_SETTINGS;
       
-      const parsedVisibleTools = Array.isArray(parsed.visibleTools) ? parsed.visibleTools : [];
-      const healedVisibleTools = [...new Set([...parsedVisibleTools, ...DEFAULT_SETTINGS.visibleTools])];
+      const parsedVisibleTools = Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools;
+      const healedVisibleTools = parsedVisibleTools;
       
       // Ensure all default templates are present
       const existingIds = new Set(parsed.templates?.map((t: any) => t.id) || []);
@@ -371,14 +373,14 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const globalSettings = await res.json();
           if (globalSettings) {
-             const serverVisibleTools = Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : [];
-             const healedVisibleTools = [...new Set([...serverVisibleTools, ...DEFAULT_SETTINGS.visibleTools])];
+             const serverVisibleTools = Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools;
+             const healedVisibleTools = serverVisibleTools;
 
              setSettings(prev => ({
                ...prev,
                ...globalSettings,
                visibleTools: healedVisibleTools,
-               newTools: [...new Set([...(globalSettings.newTools || Array.isArray(globalSettings.visibleTools) ? globalSettings.newTools : []), ...DEFAULT_SETTINGS.newTools])],
+               newTools: Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools,
                // Merge templates to avoid losing local ones if needed, 
                // but typically admin wants total control
                templates: globalSettings.templates || prev.templates

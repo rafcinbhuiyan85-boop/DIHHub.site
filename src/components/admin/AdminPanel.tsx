@@ -6584,6 +6584,82 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
                     </div>
 
+                    {/* SMM Platform Shortcuts Settings Card */}
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                      <div>
+                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Interface Configuration</span>
+                        <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Fast SMM Platform Shortcuts</h3>
+                        <p className="text-xs text-slate-500 font-medium mt-1">Customize the platform name shortcuts that appear on the main DihSMM dashboard under the "Fast SMM Platform Shortcuts" row.</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[11px] font-bold text-slate-400">Shortcut Names (comma-separated list)</label>
+                        <input
+                          type="text"
+                          value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others"}
+                          onChange={(e) => updateSettings({ smmShortcuts: e.target.value })}
+                          placeholder="Instagram, Facebook, YouTube, TikTok..."
+                          className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium font-mono"
+                        />
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Telegram" })}
+                            className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
+                          >
+                            Set Basic (5 platforms)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others" })}
+                            className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
+                          >
+                            Restore All Standard
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-slate-500 font-mono mt-1">💡 Enter platform names exactly as specified in SMM Services categories list so the quick filter buttons can match them properly.</p>
+                      </div>
+                    </div>
+
+                    {/* SMM Design Themes Configuration */}
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Premium Color Theme</h3>
+                          <p className="text-xs text-slate-500 font-medium mt-1">
+                            Toggle between the customized high-fidelity premium color/neon style or a clean, classic normal/slate layout.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => updateSettings({ smmEnableColorTheme: settings.smmEnableColorTheme === false ? true : false })}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 select-none",
+                            settings.smmEnableColorTheme !== false ? "bg-blue-600" : "bg-slate-800"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              settings.smmEnableColorTheme !== false ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
+                          Current Style Mode:
+                        </span>
+                        <span className={cn(
+                          "font-black font-mono text-[10px] uppercase tracking-wide",
+                          settings.smmEnableColorTheme !== false ? "text-indigo-400" : "text-slate-400"
+                        )}>
+                          {settings.smmEnableColorTheme !== false ? "✨ Premium Color Design (Neon / Multi-Glow)" : "📦 Clean Slate Normal Design"}
+                        </span>
+                      </div>
+                    </div>
+
                     {/* Supported Payment Options Card */}
                     <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5">
                       <div className="mb-4 text-left">

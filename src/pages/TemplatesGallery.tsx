@@ -17,7 +17,8 @@ import {
   MousePointer,
   Compass,
   Layout,
-  Crown
+  Crown,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -43,12 +44,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
   const navigate = useNavigate();
 
   const categories = [
-    { id: 'ALL_SECTORS', label: 'All Designs', icon: Compass },
-    { id: 'BIRTHDAY', label: 'Birthday wishes', icon: Cake },
-    { id: 'WISH', label: 'Celebrations', icon: Heart },
-    { id: 'LANDING', label: 'Landing pages', icon: Layout },
-    { id: 'GIFTS', label: 'Event portals', icon: Gift },
-    { id: 'OTHERS', label: 'Branded links', icon: Sparkles }
+    { id: 'ALL_SECTORS', label: 'All Designs', icon: Compass }
   ];
 
   useEffect(() => {
@@ -137,18 +133,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07090c] flex flex-col items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-amber-500 animate-spin" />
-            <div className="absolute inset-2 rounded-full border-b-2 border-l-2 border-amber-500/30 animate-spin duration-1000" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Crown size={18} className="text-amber-500 animate-pulse" />
-            </div>
-          </div>
-          <span className="text-[10px] font-black tracking-[0.3em] text-amber-500 uppercase animate-pulse">
-            LOADING PREMIUM WORKSPACE...
-          </span>
-        </div>
+        <Loader2 className="animate-spin text-blue-500" size={32} />
       </div>
     );
   }
@@ -157,7 +142,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
     <div className="min-h-screen bg-[#06080b] text-slate-350 relative overflow-x-hidden font-sans">
       
       {/* Premium Decorative Lighting Effects */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-purple-600/[0.04] rounded-full blur-[140px] pointer-events-none" />
       
       {/* Background Grid Accent */}
@@ -193,17 +178,19 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
         <header className="mb-14 text-left space-y-6">
           <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
             <div className="space-y-4 max-w-3xl">
-              <h1 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                DIH <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-205">Templates</span>
+              <h1 className="text-3xl sm:text-4xl lg:text-4xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-400 to-indigo-100">DIH</span>
+                <span className="font-light text-slate-400">Templates</span>
+                <span className="text-[9px] bg-blue-500/10 text-blue-405 border border-blue-500/25 px-2 py-0.5 rounded font-mono tracking-normal font-black uppercase ml-1">PORTAL</span>
               </h1>
               <p className="text-sm text-slate-400 font-normal leading-relaxed max-w-xl">
-                Deploy, customize, and share elegant, responsive single-page web experiences designed for celebratory greetings, landing pages, and digital gifts.
+                Deploy, manage, and share elegant, isolated single-page web experiences and high-fidelity custom micro-portals.
               </p>
             </div>
             
             <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/50 px-6 py-4 rounded-2xl flex flex-col items-center md:items-start gap-1 shadow-sm self-stretch md:self-auto justify-center min-w-[160px]">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TOTAL DESIGNS</span>
-              <span className="text-2xl font-bold text-white font-mono">{templates.length} <span className="text-[10px] text-amber-400 uppercase font-bold tracking-wider ml-1">Live</span></span>
+              <span className="text-2xl font-bold text-white font-mono">{templates.length} <span className="text-[10px] text-blue-400 uppercase font-bold tracking-wider ml-1">Live</span></span>
             </div>
           </div>
         </header>
@@ -212,37 +199,39 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center mb-12">
           
           {/* Categories Horizontal Navigation */}
-          <div className="lg:col-span-8 flex items-center gap-2 overflow-x-auto pb-3 pl-1 scrollbar-thin scrollbar-thumb-slate-800 no-scrollbar">
-            {categories.map(cat => {
-              const Icon = cat.icon;
-              const isActive = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={cn(
-                    "flex items-center gap-2 px-5 py-2.5 h-10 rounded-full font-black text-[10px] tracking-wider uppercase transition-all duration-300 relative shrink-0",
-                    isActive 
-                      ? "text-slate-950 bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/20" 
-                      : "text-slate-400 bg-slate-900/40 border border-slate-800/60 hover:text-white hover:bg-slate-900/80"
-                  )}
-                >
-                  <Icon size={12} />
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
+          {categories.length > 1 && (
+            <div className="lg:col-span-8 flex items-center gap-2 overflow-x-auto pb-3 pl-1 scrollbar-thin scrollbar-thumb-slate-800 no-scrollbar">
+              {categories.map(cat => {
+                const Icon = cat.icon;
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-2.5 h-10 rounded-full font-black text-[10px] tracking-wider uppercase transition-all duration-300 relative shrink-0",
+                      isActive 
+                        ? "text-slate-950 bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-amber-500/20" 
+                        : "text-slate-400 bg-slate-900/40 border border-slate-800/60 hover:text-white hover:bg-slate-900/80"
+                    )}
+                  >
+                    <Icon size={12} />
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Elegant Search bar */}
-          <div className="lg:col-span-4 relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-amber-500" size={15} />
+          <div className={cn("relative group", categories.length > 1 ? "lg:col-span-4" : "lg:col-span-12")}>
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-indigo-400" size={15} />
             <input 
               type="text" 
               placeholder="Search template registry..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-slate-900/30 border border-slate-800/80 rounded-full py-3.5 pl-11 pr-5 font-semibold text-xs text-white focus:border-amber-500/50 focus:bg-slate-900/60 focus:ring-1 focus:ring-amber-500/20 outline-none transition-all placeholder:text-slate-600"
+              className="w-full bg-slate-900/30 border border-slate-800/80 rounded-full py-3.5 pl-11 pr-5 font-semibold text-xs text-white focus:border-indigo-500/50 focus:bg-slate-900/60 focus:ring-1 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-slate-600"
             />
           </div>
         </div>
@@ -261,10 +250,10 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                 className="group relative"
               >
                 {/* Subtle soft gradient glow */}
-                <div className="absolute inset-0 bg-amber-500/[0.02] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <div className="absolute inset-0 bg-indigo-500/[0.02] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 
                 {/* Modern Card */}
-                <div className="relative bg-[#0b0e14] border border-slate-800/80 hover:border-amber-500/20 p-5 rounded-2xl h-full flex flex-col justify-between transition-all duration-350 shadow-sm hover:shadow-md hover:-translate-y-1">
+                <div className="relative bg-[#0b0e14] border border-slate-800/80 hover:border-indigo-500/20 p-5 rounded-2xl h-full flex flex-col justify-between transition-all duration-350 shadow-sm hover:shadow-md hover:-translate-y-1">
                   
                   {/* Decorative Header */}
                   <div className="flex items-center justify-between mb-4">
@@ -285,7 +274,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                   {/* Content Area */}
                   <div className="space-y-4 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors duration-250 leading-snug">
+                      <h3 className="text-lg font-bold text-slate-100 group-hover:text-indigo-400 transition-colors duration-250 leading-snug">
                         {t.name}
                       </h3>
                     </div>
@@ -295,7 +284,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                       <div className="flex gap-2">
                         <button 
                           onClick={() => window.open(`/rb/${t.id}`, '_blank')}
-                          className="flex-1 bg-slate-900 hover:bg-amber-500 text-slate-300 hover:text-slate-950 py-3 rounded-xl font-bold text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 border border-slate-800 hover:border-amber-500/25 active:scale-95"
+                          className="flex-1 bg-slate-900 hover:bg-indigo-650 text-slate-300 hover:text-white py-3 rounded-xl font-bold text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-1.5 border border-slate-800 hover:border-indigo-550/25 active:scale-95"
                         >
                           <ExternalLink size={13} />
                           Launch Live
@@ -330,7 +319,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                className="col-span-full py-24 text-center border-2 border-dashed border-slate-900 rounded-3xl bg-slate-950/20"
             >
               <div className="max-w-md mx-auto space-y-6 px-4">
-                <Globe size={48} strokeWidth={1} className="mx-auto text-amber-500/20 rotate-6" />
+                <Globe size={48} strokeWidth={1} className="mx-auto text-indigo-500/20 rotate-6" />
                 <div className="space-y-2">
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">No Templates Found</h3>
                   <p className="text-slate-500 text-xs font-semibold">

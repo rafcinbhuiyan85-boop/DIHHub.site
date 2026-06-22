@@ -175,6 +175,37 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       : [];
   }, [servicesList, settings.smmPriceMultiplier]);
 
+  // Dynamic categories configured from admin dashboard
+  const mappedCategories = useMemo(() => {
+    if (settings.smmShortcuts && typeof settings.smmShortcuts === 'string') {
+      try {
+        const custom = settings.smmShortcuts.split(',').map(s => s.trim()).filter(Boolean);
+        if (custom.length > 0) {
+          if (!custom.includes('All')) {
+            custom.unshift('All');
+          }
+          return custom;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return [
+      'All', 
+      'Instagram', 
+      'Facebook', 
+      'YouTube', 
+      'TikTok', 
+      'Twitter/X', 
+      'Telegram', 
+      'Spotify', 
+      'LinkedIn', 
+      'Discord', 
+      'Website Traffic', 
+      'Others'
+    ];
+  }, [settings?.smmShortcuts]);
+
   const serviceMatchesPlatform = (s: any, platform: string) => {
     if (!platform || !s) return false;
     const plat = platform.toLowerCase();
@@ -529,8 +560,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           </svg>
         ),
         colorClass: selectedMethod === 'upay'
-          ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500 shadow-lg shadow-yellow-500/15'
-          : 'border-[#1e2336] bg-yellow-500/5 text-yellow-500 hover:text-white hover:bg-yellow-500/10 hover:border-yellow-500/30'
+          ? 'bg-blue-500/10 text-blue-400 border-blue-500 shadow-lg shadow-blue-500/15'
+          : 'border-[#1e2336] bg-[#141720] text-slate-400 hover:text-white hover:border-blue-500/30'
       };
     }
     if (isRocket) {
@@ -548,7 +579,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         ),
         colorClass: selectedMethod === 'rocket'
           ? 'bg-purple-600/10 text-purple-400 border-purple-500 shadow-lg shadow-purple-600/15'
-          : 'border-[#1e2336] bg-purple-500/5 text-purple-400 hover:text-white hover:bg-purple-500/10 hover:border-purple-500/30'
+          : 'border-[#1e2336] bg-[#141720] text-slate-400 hover:text-white hover:border-purple-500/30'
       };
     }
     if (isCard) {
@@ -566,7 +597,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         ),
         colorClass: selectedMethod === 'card'
           ? 'bg-blue-600/10 text-blue-400 border-blue-500 shadow-lg shadow-blue-600/15'
-          : 'border-[#1e2336] bg-blue-500/5 text-blue-400 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/30'
+          : 'border-[#1e2336] bg-[#141720] text-slate-400 hover:text-white hover:border-blue-500/30'
       };
     }
     if (isBinance) {
@@ -581,8 +612,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           </svg>
         ),
         colorClass: selectedMethod === 'binance'
-          ? 'bg-amber-500/10 text-amber-450 border-amber-500 shadow-lg shadow-amber-500/15'
-          : 'border-[#1e2336] bg-amber-500/5 text-amber-505 hover:text-white hover:bg-amber-500/10 hover:border-amber-500/30'
+          ? 'bg-blue-500/10 text-blue-400 border-blue-500 shadow-lg shadow-blue-500/15'
+          : 'border-[#1e2336] bg-[#141720] text-slate-400 hover:text-white hover:border-blue-500/30'
       };
     }
     if (isUsdt) {
@@ -632,14 +663,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     switch(quality) {
       case 'Standard': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'Premium': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-      case 'VIP': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'VIP': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
       default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
     }
   };
 
   const getCategoryIcon = (cat: string) => {
     const c = cat.toLowerCase();
-    if (c === 'all' || c.includes('every')) return <Layers size={13} className="text-violet-400" />;
+    if (c === 'all' || c.includes('every')) return <Layers size={13} className="text-blue-500" />;
     if (c.includes('instagram')) return <Instagram size={13} className="text-pink-500" />;
     if (c.includes('facebook')) return <Facebook size={13} className="text-blue-500" />;
     if (c.includes('youtube')) return <Youtube size={13} className="text-red-500" />;
@@ -686,28 +717,31 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (activePage === 'new-order') {
       const currentSelected = activeServices.find(s => s.id === selectedServiceId);
       if (!currentSelected && uniqueOrderCategories.length > 0) {
-        const defaultCat = uniqueOrderCategories[0];
-        setOrderActiveCat(defaultCat);
-        
-        // Auto-detect and sync top platform shortcut highlight
-        const catLower = defaultCat.toLowerCase();
-        let matchedPlat = 'All';
-        if (catLower.includes('instagram') || catLower.includes('ig ')) matchedPlat = 'Instagram';
-        else if (catLower.includes('facebook') || catLower.includes('fb') || catLower.includes('fanpage')) matchedPlat = 'Facebook';
-        else if (catLower.includes('youtube') || catLower.includes('yt ')) matchedPlat = 'YouTube';
-        else if (catLower.includes('tiktok')) matchedPlat = 'TikTok';
-        else if (catLower.includes('twitter') || catLower.includes('x.') || catLower === 'x' || catLower.includes('rt ')) matchedPlat = 'Twitter/X';
-        else if (catLower.includes('telegram') || catLower.includes('tg ')) matchedPlat = 'Telegram';
-        else if (catLower.includes('spotify')) matchedPlat = 'Spotify';
-        else if (catLower.includes('linkedin')) matchedPlat = 'LinkedIn';
-        else if (catLower.includes('discord')) matchedPlat = 'Discord';
-        else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) matchedPlat = 'Website Traffic';
-        setOrderActivePlatform(matchedPlat);
+        // Only run default auto-selection if we have no active platform set or are on 'All'
+        if (orderActivePlatform === 'All') {
+          const defaultCat = uniqueOrderCategories[0];
+          setOrderActiveCat(defaultCat);
+          
+          // Auto-detect and sync top platform shortcut highlight
+          const catLower = defaultCat.toLowerCase();
+          let matchedPlat = 'All';
+          if (catLower.includes('instagram') || catLower.includes('ig ')) matchedPlat = 'Instagram';
+          else if (catLower.includes('facebook') || catLower.includes('fb') || catLower.includes('fanpage')) matchedPlat = 'Facebook';
+          else if (catLower.includes('youtube') || catLower.includes('yt ')) matchedPlat = 'YouTube';
+          else if (catLower.includes('tiktok')) matchedPlat = 'TikTok';
+          else if (catLower.includes('twitter') || catLower.includes('x.') || catLower === 'x' || catLower.includes('rt ')) matchedPlat = 'Twitter/X';
+          else if (catLower.includes('telegram') || catLower.includes('tg ')) matchedPlat = 'Telegram';
+          else if (catLower.includes('spotify')) matchedPlat = 'Spotify';
+          else if (catLower.includes('linkedin')) matchedPlat = 'LinkedIn';
+          else if (catLower.includes('discord')) matchedPlat = 'Discord';
+          else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) matchedPlat = 'Website Traffic';
+          setOrderActivePlatform(matchedPlat);
 
-        const svcsOfCat = activeServices.filter(s => s.category === defaultCat);
-        if (svcsOfCat.length > 0) {
-          setSelectedServiceId(svcsOfCat[0].id);
-          setOrderQty(svcsOfCat[0].min.toString());
+          const svcsOfCat = activeServices.filter(s => s.category === defaultCat);
+          if (svcsOfCat.length > 0) {
+            setSelectedServiceId(svcsOfCat[0].id);
+            setOrderQty(svcsOfCat[0].min.toString());
+          }
         }
       } else if (currentSelected) {
         if (orderActiveCat !== currentSelected.category) {
@@ -715,7 +749,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         }
       }
     }
-  }, [activePage, uniqueOrderCategories, activeServices, selectedServiceId]);
+  }, [activePage, uniqueOrderCategories, activeServices, selectedServiceId, orderActivePlatform]);
 
   // Auto-detect SMM platform from pasted Link URL
   useEffect(() => {
@@ -1225,29 +1259,64 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       case 'nagad': return "bg-gradient-to-r from-orange-500 to-orange-700 border-orange-500 text-white shadow-lg shadow-orange-500/20";
       case 'rocket': return "bg-gradient-to-r from-purple-500 to-purple-700 border-purple-500 text-white shadow-lg shadow-purple-500/20";
       case 'card': return "bg-gradient-to-r from-blue-500 to-blue-700 border-blue-500 text-white shadow-lg shadow-blue-500/20";
-      case 'crypto': return "bg-gradient-to-r from-yellow-500 to-yellow-600 border-yellow-500 text-white shadow-lg shadow-yellow-500/20";
+      case 'crypto': return "bg-gradient-to-r from-cyan-500 to-blue-600 border-cyan-550 text-white shadow-lg shadow-blue-500/20";
       default: return "";
     }
   };
 
+  const isColorTheme = settings.smmEnableColorTheme !== false;
+
+  const getSidebarBtnClass = (page: string) => {
+    const isActive = activePage === page;
+    if (isActive) {
+      return isColorTheme
+        ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-bold duration-150 relative text-left outline-none text-white bg-blue-500/10 border border-blue-500/15 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-blue-500 before:rounded-r"
+        : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-bold duration-150 relative text-left outline-none text-white bg-slate-800 border-slate-700 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-slate-400 before:rounded-r";
+    }
+    return "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium duration-150 relative text-left outline-none text-slate-400 hover:text-white hover:bg-white/5 border border-transparent";
+  };
+
+  const getSidebarIconColor = (page: string) => {
+    return activePage === page
+      ? (isColorTheme ? "text-blue-500" : "text-white")
+      : "text-slate-400";
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0d0f14] text-[#e2e8f0] font-sans antialiased select-none">
+    <div className={cn(
+      "flex h-screen overflow-hidden text-[#e2e8f0] font-sans antialiased select-none",
+      isColorTheme ? "bg-[#0d0f14]" : "bg-slate-950"
+    )}>
       
       {/* SIDEBAR */}
-      <aside className="hidden md:flex flex-col w-60 min-w-60 bg-[#0a0c10] border-r border-[#1e2336] relative z-20">
-        <div className="h-16 flex items-center gap-2.5 px-5 border-b border-[#1e2336] font-bold text-white text-lg tracking-tight">
-          <Activity className="text-blue-500" size={20} />
+      <aside className={cn(
+        "hidden md:flex flex-col w-60 min-w-60 relative z-20",
+        isColorTheme ? "bg-[#0a0c10] border-r border-[#1e2336]" : "bg-slate-900 border-r border-slate-800"
+      )}>
+        <div className={cn(
+          "h-16 flex items-center gap-2.5 px-5 font-bold text-white text-lg tracking-tight",
+          isColorTheme ? "border-b border-[#1e2336]" : "border-b border-slate-800"
+        )}>
+          <Activity className={isColorTheme ? "text-blue-500" : "text-slate-400"} size={20} />
           DIH SMM
         </div>
 
-        <div className="p-4 border-b border-[#1e2336] bg-blue-500/[0.03] space-y-1">
+        <div className={cn(
+          "p-4 space-y-1",
+          isColorTheme
+            ? "border-b border-[#1e2336] bg-blue-500/[0.03]"
+            : "border-b border-slate-800 bg-slate-950/20"
+        )}>
           <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Current Balance</div>
           <div className="text-2xl font-mono font-bold text-white">
-            <span className="text-blue-500">$</span>{fmtAmt(balance)}
+            <span className={isColorTheme ? "text-blue-500" : "text-slate-400"}>$</span>{fmtAmt(balance)}
           </div>
           <button 
             onClick={() => navigate('deposit')} 
-            className="text-xs text-blue-500 font-medium hover:underline focus:outline-none mt-1"
+            className={cn(
+              "text-xs font-semibold hover:underline focus:outline-none mt-1",
+              isColorTheme ? "text-blue-500" : "text-slate-400"
+            )}
           >
             + Add Funds
           </button>
@@ -1256,66 +1325,41 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto custom-scrollbar">
           <button
             onClick={() => navigate('dashboard')}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150 relative text-left outline-none",
-              activePage === 'dashboard'
-                ? "text-white bg-blue-500/10 border border-blue-500/15 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-blue-500 before:rounded-r"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
-            )}
+            className={getSidebarBtnClass('dashboard')}
           >
-            <LayoutDashboard size={18} className={activePage === 'dashboard' ? "text-blue-500" : "text-slate-400"} />
+            <LayoutDashboard size={18} className={getSidebarIconColor('dashboard')} />
             Dashboard
           </button>
 
           <button
             onClick={() => navigate('new-order')}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150 relative text-left outline-none",
-              activePage === 'new-order'
-                ? "text-white bg-blue-500/10 border border-blue-500/15 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-blue-500 before:rounded-r"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
-            )}
+            className={getSidebarBtnClass('new-order')}
           >
-            <PlusCircle size={18} className={activePage === 'new-order' ? "text-blue-500" : "text-slate-400"} />
+            <PlusCircle size={18} className={getSidebarIconColor('new-order')} />
             New Order
           </button>
 
           <button
             onClick={() => navigate('services')}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150 relative text-left outline-none",
-              activePage === 'services'
-                ? "text-white bg-blue-500/10 border border-blue-500/15 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-blue-500 before:rounded-r"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
-            )}
+            className={getSidebarBtnClass('services')}
           >
-            <List size={18} className={activePage === 'services' ? "text-blue-500" : "text-slate-400"} />
+            <List size={18} className={getSidebarIconColor('services')} />
             Services
           </button>
 
           <button
             onClick={() => navigate('orders')}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150 relative text-left outline-none",
-              activePage === 'orders'
-                ? "text-white bg-blue-500/10 border border-blue-500/15 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-blue-500 before:rounded-r"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
-            )}
+            className={getSidebarBtnClass('orders')}
           >
-            <ArrowDownToLine size={18} className={activePage === 'orders' ? "text-blue-500" : "text-slate-400"} />
+            <ArrowDownToLine size={18} className={getSidebarIconColor('orders')} />
             My Orders
           </button>
 
           <button
             onClick={() => navigate('deposit')}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-150 relative text-left outline-none",
-              activePage === 'deposit'
-                ? "text-white bg-blue-500/10 border border-blue-500/15 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:bg-blue-500 before:rounded-r"
-                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
-            )}
+            className={getSidebarBtnClass('deposit')}
           >
-            <CreditCard size={18} className={activePage === 'deposit' ? "text-blue-500" : "text-slate-400"} />
+            <CreditCard size={18} className={getSidebarIconColor('deposit')} />
             Add Funds
           </button>
         </nav>
@@ -1325,7 +1369,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       <main className="flex-1 flex flex-col overflow-hidden">
         
         {/* TOPBAR */}
-        <header className="h-16 border-b border-[#1e2336] flex items-center justify-between px-6 bg-[#0d0f14]/80 backdrop-blur-md sticky top-0 z-10 w-full">
+        <header className={cn(
+          "h-16 flex items-center justify-between px-6 backdrop-blur-md sticky top-0 z-10 w-full",
+          isColorTheme 
+            ? "border-b border-[#1e2336] bg-[#0d0f14]/80"
+            : "border-b border-slate-800 bg-slate-900/80"
+        )}>
           <div className="flex items-center gap-3">
             <h1 className="text-base font-semibold text-white capitalize md:block hidden">
               {activePage === 'new-order' ? 'Place New Order' : activePage === 'orders' ? 'My Orders' : activePage === 'deposit' ? 'Add Funds' : activePage}
@@ -1333,18 +1382,24 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             
             {/* Mobile Header indicator */}
             <div className="flex md:hidden items-center gap-2 font-bold text-white text-base">
-              <Activity className="text-blue-500" size={18} />
+              <Activity className={isColorTheme ? "text-blue-500" : "text-slate-400"} size={18} />
               DIH SMM
               <span className="text-slate-500 ml-1 font-medium text-xs">|</span>
-              <span className="text-[#3b82f6] text-xs font-mono">${fmtAmt(balance)}</span>
+              <span className={cn("text-xs font-mono font-bold", isColorTheme ? "text-blue-500" : "text-slate-100")}>${fmtAmt(balance)}</span>
             </div>
           </div>
 
           {/* Desktop User Status Gate */}
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
-              <div className="flex items-center gap-2 bg-[#141720] border border-[#1e2336] px-3.5 py-1.5 rounded-xl text-xs">
-                <div className="w-5 h-5 rounded bg-blue-500 text-white font-bold flex items-center justify-center uppercase truncate">
+              <div className={cn(
+                "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs",
+                isColorTheme ? "bg-[#141720] border border-[#1e2336]" : "bg-slate-950 border border-slate-850"
+              )}>
+                <div className={cn(
+                  "w-5 h-5 rounded text-white font-black flex items-center justify-center uppercase truncate",
+                  isColorTheme ? "bg-blue-500" : "bg-slate-700"
+                )}>
                   {userName[0]}
                 </div>
                 <div className="text-left font-sans">
@@ -1355,7 +1410,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             ) : (
               <button
                 onClick={onAuthClick}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-lg transition shadow-md shadow-blue-500/10 active:scale-95 animate-pulse"
+                className={cn(
+                  "px-4 py-1.5 text-white text-xs font-black rounded-lg transition active:scale-95 cursor-pointer",
+                  isColorTheme 
+                    ? "bg-gradient-to-r from-blue-650 via-blue-600 to-indigo-600 shadow-md shadow-blue-500/10 animate-pulse" 
+                    : "bg-slate-800 hover:bg-slate-700 border border-slate-705"
+                )}
               >
                 Log In / Register
               </button>
@@ -1366,35 +1426,35 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           <div className="flex md:hidden items-center gap-1.5">
             <button 
               onClick={() => navigate('dashboard')}
-              className={cn("p-1.5 rounded-md", activePage === 'dashboard' ? "bg-blue-500/15 text-blue-500" : "text-slate-400")}
+              className={cn("p-1.5 rounded-md", activePage === 'dashboard' ? (isColorTheme ? "bg-blue-500/15 text-blue-500" : "bg-slate-800 text-white") : "text-slate-400")}
               title="Dashboard"
             >
               <LayoutDashboard size={16} />
             </button>
             <button 
               onClick={() => navigate('new-order')}
-              className={cn("p-1.5 rounded-md", activePage === 'new-order' ? "bg-blue-500/15 text-blue-500" : "text-slate-400")}
+              className={cn("p-1.5 rounded-md", activePage === 'new-order' ? (isColorTheme ? "bg-blue-500/15 text-blue-500" : "bg-slate-800 text-white") : "text-slate-400")}
               title="New Order"
             >
               <PlusCircle size={16} />
             </button>
             <button 
               onClick={() => navigate('services')}
-              className={cn("p-1.5 rounded-md", activePage === 'services' ? "bg-blue-500/15 text-blue-500" : "text-slate-400")}
+              className={cn("p-1.5 rounded-md", activePage === 'services' ? (isColorTheme ? "bg-blue-500/15 text-blue-500" : "bg-slate-800 text-white") : "text-slate-400")}
               title="Services"
             >
               <List size={16} />
             </button>
             <button 
               onClick={() => navigate('orders')}
-              className={cn("p-1.5 rounded-md", activePage === 'orders' ? "bg-blue-500/15 text-blue-500" : "text-slate-400")}
+              className={cn("p-1.5 rounded-md", activePage === 'orders' ? (isColorTheme ? "bg-blue-500/15 text-blue-500" : "bg-slate-800 text-white") : "text-slate-400")}
               title="My Orders"
             >
               <ArrowDownToLine size={16} />
             </button>
             <button 
               onClick={() => navigate('deposit')}
-              className={cn("p-1.5 rounded-md", activePage === 'deposit' ? "bg-blue-500/15 text-blue-500" : "text-slate-400")}
+              className={cn("p-1.5 rounded-md", activePage === 'deposit' ? (isColorTheme ? "bg-blue-500/15 text-blue-500" : "bg-slate-800 text-white") : "text-slate-400")}
               title="Add Funds"
             >
               <CreditCard size={16} />
@@ -1406,26 +1466,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
           <div className="max-w-5xl mx-auto space-y-6">
 
-            {!isLoggedIn && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4.5 flex flex-col sm:flex-row items-center justify-between gap-4 select-none animate-in fade-in slide-in-from-top-4 duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400 shrink-0">
-                    <AlertCircle size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Guest Mode (Actions Not Saved)</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Please log in to your account. SMM user profiles get $0.00 default balance until approved deposits are made!</p>
-                  </div>
-                </div>
-                <button
-                  onClick={onAuthClick}
-                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-lg transition shrink-0 select-none shadow active:scale-95"
-                >
-                  🔑 Log In / Register
-                </button>
-              </div>
-            )}
-
             {/* DASHBOARD PAGE */}
             {activePage === 'dashboard' && (
               <div className="space-y-6">
@@ -1436,19 +1476,29 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                   </div>
                   <button 
                     onClick={() => navigate('new-order')} 
-                    className="flex items-center gap-1.5 px-4.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold tracking-wide shadow-md shadow-blue-500/10 duration-150 self-start sm:self-auto"
+                    className={cn(
+                      "flex items-center gap-1.5 px-4.5 py-2.5 rounded-lg text-white text-xs font-black tracking-wide duration-150 self-start sm:self-auto cursor-pointer hover:brightness-110",
+                      isColorTheme 
+                        ? "bg-gradient-to-r from-blue-650 via-blue-600 to-indigo-600 shadow-md shadow-blue-500/10" 
+                        : "bg-slate-800 hover:bg-slate-700 border border-slate-700"
+                    )}
                   >
                     Place New Order
                   </button>
                 </div>
 
                 {settings.smmSystemNotice && (
-                  <div className="bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/10 rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
-                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20 shrink-0">
-                      <Sparkles size={16} className="animate-pulse" />
-                    </div>
+                  <div className={cn(
+                    "rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in duration-300",
+                    isColorTheme 
+                      ? "bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/10"
+                      : "bg-slate-900 border border-slate-800"
+                  )}>
                     <div>
-                      <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-500 font-mono">Notice from Admin</h4>
+                      <h4 className={cn(
+                        "text-[10px] font-extrabold uppercase tracking-widest font-mono",
+                        isColorTheme ? "text-blue-500" : "text-slate-400"
+                      )}>Notice from Admin</h4>
                       <p className="text-[12px] text-slate-300 leading-relaxed mt-1 font-medium">{settings.smmSystemNotice}</p>
                     </div>
                   </div>
@@ -1456,48 +1506,80 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                 {/* STATS GRID */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-[#141720] border border-[#1e2336] rounded-xl p-5 relative overflow-hidden group hover:border-blue-500/20 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />
+                  <div className={cn(
+                    "rounded-xl p-5 relative overflow-hidden group transition-all",
+                    isColorTheme 
+                      ? "bg-[#141720] border border-[#1e2336] hover:border-blue-500/20" 
+                      : "bg-slate-900 border border-slate-800 hover:border-slate-700"
+                  )}>
+                    {isColorTheme && <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />}
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[12px] text-slate-400 font-medium">Total Spent</span>
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <CreditCard size={15} className="text-blue-500" />
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center",
+                        isColorTheme ? "bg-blue-500/10" : "bg-slate-800"
+                      )}>
+                        <CreditCard size={15} className={isColorTheme ? "text-blue-500" : "text-slate-400"} />
                       </div>
                     </div>
                     <div className="text-2xl font-bold font-mono text-white">${fmtAmt(totalSpent)}</div>
                     <div className="text-[11px] text-slate-500 mt-1">Lifetime spending</div>
                   </div>
 
-                  <div className="bg-[#141720] border border-[#1e2336] rounded-xl p-5 relative overflow-hidden group hover:border-blue-500/20 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />
+                  <div className={cn(
+                    "rounded-xl p-5 relative overflow-hidden group transition-all",
+                    isColorTheme 
+                      ? "bg-[#141720] border border-[#1e2336] hover:border-blue-500/20" 
+                      : "bg-slate-900 border border-slate-800 hover:border-slate-700"
+                  )}>
+                    {isColorTheme && <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />}
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[12px] text-slate-400 font-medium">Total Orders</span>
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <Activity size={15} className="text-blue-500" />
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center",
+                        isColorTheme ? "bg-blue-500/10" : "bg-slate-800"
+                      )}>
+                        <Activity size={15} className={isColorTheme ? "text-blue-500" : "text-slate-400"} />
                       </div>
                     </div>
                     <div className="text-2xl font-bold font-mono text-white">{orders.length}</div>
                     <div className="text-[11px] text-slate-500 mt-1">0 orders today</div>
                   </div>
 
-                  <div className="bg-[#141720] border border-[#1e2336] rounded-xl p-5 relative overflow-hidden group hover:border-blue-500/20 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />
+                  <div className={cn(
+                    "rounded-xl p-5 relative overflow-hidden group transition-all",
+                    isColorTheme 
+                      ? "bg-[#141720] border border-[#1e2336] hover:border-blue-500/20" 
+                      : "bg-slate-900 border border-slate-800 hover:border-slate-700"
+                  )}>
+                    {isColorTheme && <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />}
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[12px] text-slate-400 font-medium">Completed</span>
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <CheckCircle2 size={15} className="text-blue-500" />
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center",
+                        isColorTheme ? "bg-blue-500/10" : "bg-slate-800"
+                      )}>
+                        <CheckCircle2 size={15} className={isColorTheme ? "text-blue-500" : "text-slate-400"} />
                       </div>
                     </div>
                     <div className="text-2xl font-bold font-mono text-white">{completedCount}</div>
                     <div className="text-[11px] text-slate-500 mt-1">Successfully delivered</div>
                   </div>
 
-                  <div className="bg-[#141720] border border-[#1e2336] rounded-xl p-5 relative overflow-hidden group hover:border-blue-500/20 transition-all">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />
+                  <div className={cn(
+                    "rounded-xl p-5 relative overflow-hidden group transition-all",
+                    isColorTheme 
+                      ? "bg-[#141720] border border-[#1e2336] hover:border-blue-500/20" 
+                      : "bg-slate-900 border border-slate-800 hover:border-slate-700"
+                  )}>
+                    {isColorTheme && <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] to-transparent pointer-events-none" />}
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[12px] text-slate-400 font-medium">In Progress</span>
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <RefreshCw size={14} className="text-blue-500 animate-spin-reverse" />
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center",
+                        isColorTheme ? "bg-blue-500/10" : "bg-slate-800"
+                      )}>
+                        <RefreshCw size={14} className={cn(isColorTheme ? "text-blue-500" : "text-slate-400", "animate-spin-reverse")} />
                       </div>
                     </div>
                     <div className="text-2xl font-bold font-mono text-white">{pendingCount + processingCount}</div>
@@ -1506,13 +1588,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                 </div>
 
                 {/* RECENT ORDERS */}
-                <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden">
-                  <div className="p-5 border-b border-[#1e2336] flex items-center justify-between">
+                <div className={cn(
+                  "rounded-xl overflow-hidden",
+                  isColorTheme ? "bg-[#141720] border border-[#1e2336]" : "bg-slate-900 border border-slate-800"
+                )}>
+                  <div className={cn(
+                    "p-5 flex items-center justify-between",
+                    isColorTheme ? "border-b border-[#1e2336]" : "border-b border-slate-800"
+                  )}>
                     <div>
                       <h3 className="text-sm font-semibold text-white">Recent Orders</h3>
                       <p className="text-xs text-slate-400 mt-0.5">Your latest activity.</p>
                     </div>
-                    <button onClick={() => navigate('orders')} className="px-3 py-1.5 border border-[#1e2336] hover:border-blue-500/20 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all">
+                    <button onClick={() => navigate('orders')} className="px-3 py-1.5 border border-[#1e2336] hover:border-blue-500/20 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer">
                       View All
                     </button>
                   </div>
@@ -1571,15 +1659,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                 {/* CATEGORIES */}
                 <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map(c => (
+                  {mappedCategories.map(c => (
                     <button
                       key={c}
                       onClick={() => setCat(c)}
                       className={cn(
-                        "px-4.5 py-2.5 rounded-full text-xs font-semibold border tracking-wider transition-all duration-150 select-none",
+                        "px-4.5 py-2.5 rounded-full text-xs font-semibold border tracking-wider transition-all duration-150 select-none cursor-pointer",
                         c === activeCategory()
-                          ? "bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/10 font-bold"
-                          : "bg-[#141720] text-slate-400 border-[#1e2336] hover:text-white hover:border-[#3b82f6]/40"
+                          ? "bg-blue-650 text-white border-blue-650 shadow-md shadow-blue-500/10 font-black"
+                          : "bg-[#141720] text-slate-400 border-[#1e2336] hover:text-white hover:border-blue-500/40"
                       )}
                     >
                       {c}
@@ -1632,7 +1720,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           </div>
                           <button 
                             onClick={() => goOrder(s.id)}
-                            className="bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all"
+                            className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-605 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer"
                           >
                             Order &rarr;
                           </button>
@@ -1652,14 +1740,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                 <div className="bg-[#141720] border border-[#1e2336] rounded-xl p-5 shadow-xl space-y-4">
                   <div className="flex items-center justify-between pb-1">
                     <div className="flex items-center gap-2">
-                      <Sparkles size={16} className="text-violet-400 animate-pulse" />
                       <span className="text-xs font-extrabold text-white uppercase tracking-wider">Fast SMM Platform Shortcuts</span>
                     </div>
                     {orderActivePlatform !== 'All' && (
                       <button 
                         type="button"
-                        onClick={() => handlePlatformChange('All')}
-                        className="text-[11px] font-bold text-violet-400 hover:text-white transition-colors cursor-pointer select-none"
+                        onClick={() => navigate('services')}
+                        className="text-[11px] font-bold text-blue-500 hover:text-white transition-colors cursor-pointer select-none"
                       >
                         Show All
                       </button>
@@ -1667,24 +1754,24 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                   </div>
                   
                   <div className="flex flex-wrap gap-2 md:gap-2.5">
-                    {CATEGORIES.map((cat) => {
-                      const isSelected = orderActivePlatform === cat;
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => handlePlatformChange(cat)}
-                          className={cn(
-                            "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer select-none border",
-                            isSelected
-                              ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-transparent shadow-lg shadow-violet-500/15"
-                              : "bg-[#0d0f17]/60 text-slate-300 border-[#1e2336] hover:bg-white/[0.03] hover:text-white"
-                          )}
-                        >
-                          {getCategoryIcon(cat)}
-                          <span>{cat}</span>
-                        </button>
-                      );
+                    {mappedCategories.map((cat) => {
+                       const isSelected = orderActivePlatform === cat;
+                       return (
+                         <button
+                           key={cat}
+                           type="button"
+                           onClick={() => handlePlatformChange(cat)}
+                           className={cn(
+                             "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer select-none border",
+                             isSelected
+                               ? "bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white border-transparent shadow-lg shadow-blue-500/15 font-black"
+                               : "bg-[#0d0f17]/60 text-slate-300 border-[#1e2336] hover:bg-white/[0.03] hover:text-white"
+                           )}
+                         >
+                           {getCategoryIcon(cat)}
+                           <span>{cat}</span>
+                         </button>
+                       );
                     })}
                   </div>
                 </div>
@@ -1692,43 +1779,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   
                   <div className="lg:col-span-7 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
-                    <div className="px-5 py-3 border-b border-[#1e2336] flex items-center justify-between bg-gradient-to-r from-slate-900 to-[#141720]">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOrderTab('single');
-                            setOrderError(null);
-                            setOrderSuccess(null);
-                          }}
-                          className={cn(
-                            "px-4.5 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer select-none",
-                            orderTab === 'single'
-                              ? "bg-violet-600 text-white shadow-lg shadow-violet-600/20"
-                              : "text-slate-400 hover:text-slate-200"
-                          )}
-                        >
-                          New Order
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOrderTab('mass');
-                            setOrderError(null);
-                            setOrderSuccess(null);
-                          }}
-                          className={cn(
-                            "px-4.5 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer select-none",
-                            orderTab === 'mass'
-                              ? "bg-violet-600 text-white shadow-lg shadow-violet-600/20"
-                              : "text-slate-400 hover:text-slate-200"
-                          )}
-                        >
-                          Mass Order
-                        </button>
+                    <div className="px-5 py-3.5 border-b border-[#1e2336] flex items-center justify-between bg-gradient-to-r from-slate-900 to-[#141720]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-200">New SMM Order Form</span>
                       </div>
                       
-                      <div className="bg-[#0d0f17]/80 text-violet-400 border border-violet-500/15 px-2.5 py-0.8 rounded text-[9px] font-black tracking-widest uppercase font-mono">
+                      <div className="bg-blue-950/40 text-blue-400 border border-blue-500/30 px-2.5 py-0.8 rounded text-[9px] font-black tracking-widest uppercase font-mono">
                         Instant Proc
                       </div>
                     </div>
@@ -1737,7 +1793,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       
                       {/* Fallback to restore defaults if empty */}
                       {activeServices.length === 0 && (
-                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4.5 text-xs text-amber-400 space-y-2.5">
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4.5 text-xs text-blue-400 space-y-2.5">
                           <p className="font-bold flex items-center gap-1.5">⚠️ SMM Catalog is currently empty!</p>
                           <p className="text-slate-300 leading-relaxed">
                             It looks like all SMM services were cleared or not initialized. Press the button below to instantly populate your browser storage with our high-speed default catalog of 24 SMM services.
@@ -1748,14 +1804,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               localStorage.setItem('dih_smm_services_v2', JSON.stringify(SERVICES));
                               setServicesList(SERVICES);
                             }}
-                            className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black px-4 py-2 rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md inline-flex items-center gap-2"
+                            className="bg-blue-550 hover:bg-blue-600 text-white font-black px-4 py-2 rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md inline-flex items-center gap-2"
                           >
                             Restore Default 24 Services
                           </button>
                         </div>
                       )}
 
-                      {orderTab === 'single' ? (
+                      {true ? (
                         <>
                           {/* Search Bar */}
                           <div className="space-y-1.5">
@@ -1782,7 +1838,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                     }
                                   }
                                 }}
-                                className="w-full bg-[#0d0f17] border border-[#1e2336] pl-[#2.4rem] pr-8 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 placeholder-[#64748b] transition-colors h-11"
+                                className="w-full bg-[#0d0f17] border border-[#1e2336] pl-[#2.4rem] pr-8 py-3 text-xs text-white rounded-lg outline-none focus:border-blue-500 placeholder-[#64748b] transition-colors h-11"
                               />
                               {orderSearchQuery && (
                                 <button
@@ -1808,7 +1864,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   setCatDropdownOpen(!catDropdownOpen);
                                   setDropdownOpen(false);
                                 }}
-                                className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-violet-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
+                                className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-blue-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
                               >
                                 <span className="flex items-center gap-2">
                                   {getCategoryStyledName(orderActiveCat)}
@@ -1831,7 +1887,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                         placeholder="Search category..."
                                         value={catSearchQuery}
                                         onChange={(e) => setCatSearchQuery(e.target.value)}
-                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-violet-500"
+                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-blue-500"
                                         autoFocus
                                       />
                                     </div>
@@ -1851,11 +1907,11 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                               }}
                                               className={cn(
                                                 "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/[0.03] cursor-pointer rounded-lg flex items-center justify-between transition-colors",
-                                                isSelected ? "bg-violet-600/10 text-violet-400 font-extrabold border-l-2 border-violet-500" : ""
+                                                isSelected ? "bg-blue-500/10 text-blue-500 font-extrabold border-l-2 border-blue-500" : ""
                                               )}
                                             >
                                               <span>{getCategoryStyledName(cat)}</span>
-                                              {isSelected && <span className="text-[10px] bg-violet-500/20 px-2 py-0.5 rounded text-violet-400 uppercase tracking-widest font-black">Active</span>}
+                                              {isSelected && <span className="text-[10px] bg-blue-500/20 px-2 py-0.5 rounded text-blue-500 uppercase tracking-widest font-black">Active</span>}
                                             </div>
                                           );
                                         })}
@@ -1876,12 +1932,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   setDropdownOpen(!dropdownOpen);
                                   setCatDropdownOpen(false);
                                 }}
-                                className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-violet-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
+                                className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-blue-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
                               >
                                 <span className="truncate pr-4 flex items-center gap-1.5 w-full">
                                   {selectedService ? (
                                     <>
-                                      <span className="bg-violet-500/15 text-violet-400 text-[10px] font-black px-1.5 py-0.5 rounded border border-violet-500/25 font-mono">
+                                      <span className="bg-blue-500/15 text-blue-500 text-[10px] font-black px-1.5 py-0.5 rounded border border-blue-500/25 font-mono">
                                         {selectedService.id}
                                       </span>
                                       <span className="truncate font-semibold">{selectedService.name}</span>
@@ -1918,7 +1974,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                         placeholder="Search service by name or ID..."
                                         value={ddSearchQuery}
                                         onChange={(e) => setDdSearchQuery(e.target.value)}
-                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-violet-500"
+                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-blue-500"
                                         autoFocus
                                       />
                                       {/* Quick Refill & Non-Refill Tabs */}
@@ -1930,9 +1986,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                             setDdRefillFilter('all');
                                           }}
                                           className={cn(
-                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center",
+                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center cursor-pointer",
                                             ddRefillFilter === 'all'
-                                              ? "bg-violet-500/15 text-violet-400 border-violet-500/35"
+                                              ? "bg-blue-500/15 text-blue-500 border-blue-500/35"
                                               : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
                                           )}
                                         >
@@ -1945,7 +2001,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                             setDdRefillFilter('refill');
                                           }}
                                           className={cn(
-                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5",
+                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
                                             ddRefillFilter === 'refill'
                                               ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/35"
                                               : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
@@ -1960,7 +2016,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                             setDdRefillFilter('non-refill');
                                           }}
                                           className={cn(
-                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5",
+                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
                                             ddRefillFilter === 'non-refill'
                                               ? "bg-red-500/15 text-red-400 border-red-500/35"
                                               : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
@@ -1987,12 +2043,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                               }}
                                               className={cn(
                                                 "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-[#0d0f17] cursor-pointer rounded-lg flex flex-col gap-1 transition-colors",
-                                                isSelected ? "bg-violet-600/10 text-violet-400 font-bold border-l-2 border-violet-500 bg-[#0d0f17]/30" : ""
+                                                isSelected ? "bg-blue-500/10 text-blue-500 font-bold border-l-2 border-blue-500 bg-[#0d0f17]/30" : ""
                                               )}
                                             >
                                               <div className="flex items-center justify-between gap-1.5">
                                                 <span className="font-semibold truncate">
-                                                  <span className="text-violet-400 font-mono font-black border border-violet-500/20 bg-violet-500/10 px-1 py-0.2 rounded text-[10px] mr-1.5">{s.id}</span>
+                                                  <span className="text-blue-500 font-mono font-black border border-blue-500/20 bg-blue-500/10 px-1 py-0.2 rounded text-[10px] mr-1.5">{s.id}</span>
                                                   {s.name}
                                                 </span>
                                                 <span className="font-mono text-emerald-400 font-extrabold shrink-0">
@@ -2044,7 +2100,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 placeholder="Enter destination link (URL)" 
                                 value={orderLink}
                                 onChange={(e) => setOrderLink(e.target.value)}
-                                className="w-full bg-[#0d0f17] border border-[#1e2336] pl-9.5 pr-4 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 placeholder-[#64748b] transition-colors h-11"
+                                className="w-full bg-[#0d0f17] border border-[#1e2336] pl-9.5 pr-4 py-3 text-xs text-white rounded-lg outline-none focus:border-blue-500 placeholder-[#64748b] transition-colors h-11"
                               />
                             </div>
                           </div>
@@ -2057,7 +2113,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               placeholder="Enter desired amount" 
                               value={orderQty}
                               onChange={(e) => setOrderQty(e.target.value)}
-                              className="w-full bg-[#0d0f17] border border-[#1e2336] px-4 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 transition-colors font-mono h-11"
+                              className="w-full bg-[#0d0f17] border border-[#1e2336] px-4 py-3 text-xs text-white rounded-lg outline-none focus:border-blue-500 transition-colors font-mono h-11"
                             />
                             {selectedService && (
                               <div className="text-[10px] text-slate-500 pl-1 font-mono">
@@ -2120,63 +2176,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           <button 
                             type="button"
                             onClick={() => handlePlaceOrder()}
-                            className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.985] text-white font-extrabold text-xs uppercase tracking-widest rounded-lg hover:shadow-lg hover:shadow-violet-600/10 transition-all duration-150 h-12 cursor-pointer mt-2 shadow-md border border-violet-500/10"
+                            className="w-full py-3.5 bg-gradient-to-r from-blue-700 to-blue-550 hover:brightness-110 active:scale-[0.985] text-white font-black text-xs uppercase tracking-widest rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 h-12 cursor-pointer mt-2 shadow-md border border-blue-500/10"
                           >
                             Submit
                           </button>
                         </>
-                      ) : (
-                        /* MASS ORDER VIEW */
-                        <div className="space-y-4 animate-fadeIn">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5 flex justify-between items-center">
-                              <span>Mass Order Details</span>
-                              <span className="font-mono text-[9px] text-slate-500">Service_ID | Link | Quantity</span>
-                            </label>
-                            <textarea
-                              rows={7}
-                              placeholder="1|https://instagram.com/username|1000&#10;3|https://instagram.com/p/abc|5000"
-                              value={massOrderText}
-                              onChange={(e) => setMassOrderText(e.target.value)}
-                              className="w-full bg-[#0d0f17] border border-[#1e2336] px-4 py-3 text-xs text-white rounded-lg outline-none focus:border-violet-500 placeholder-[#475569] font-mono leading-relaxed"
-                            />
-                          </div>
-
-                          <div className="p-3 bg-violet-950/15 border border-violet-800/15 rounded-lg text-[11px] text-slate-400 leading-relaxed font-mono">
-                            <span className="font-extrabold text-violet-400">Instructions:</span> Enter one order per line in layout format: <span className="text-white">service_id | link | quantity</span>. Ensure values are split by a vertical bar <span className="text-white font-bold">|</span>.
-                          </div>
-
-                          {/* Balance Display */}
-                          <div className="bg-[#1c2132]/45 border border-[#1e2336] rounded-lg px-4.5 py-3.5 flex justify-between items-center text-xs shrink-0 font-mono">
-                            <div className="text-slate-400">Your Current Balance:</div>
-                            <div className="text-emerald-400 font-extrabold text-sm">${fmtAmt(balance)}</div>
-                          </div>
-
-                          {/* Alerts */}
-                          {orderError && (
-                            <div className="flex items-start gap-2.5 px-4 py-3.5 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed font-mono whitespace-pre-wrap">
-                              <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                              <div className="flex-1">{orderError}</div>
-                            </div>
-                          )}
-
-                          {orderSuccess && (
-                            <div className="flex items-center gap-2.5 px-4 py-3.5 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed font-mono">
-                              <CheckCircle2 size={15} className="shrink-0" />
-                              <div className="flex-1">{orderSuccess}</div>
-                            </div>
-                          )}
-
-                          {/* Submit Mass Orders */}
-                          <button 
-                            type="button"
-                            onClick={() => handlePlaceMassOrder()}
-                            className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 active:scale-[0.985] text-white font-extrabold text-xs uppercase tracking-widest rounded-lg hover:shadow-lg hover:shadow-violet-600/10 transition-all duration-150 h-12 cursor-pointer shadow-md border border-violet-500/10 font-mono"
-                          >
-                            Submit Mass Order
-                          </button>
-                        </div>
-                      )}
+                      ) : null}
 
                     </div>
                   </div>
@@ -2187,12 +2192,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
                         
                         {/* ID Badge Gradient Header */}
-                        <div className="p-5.5 bg-gradient-to-r from-violet-900 via-indigo-950 to-[#141720] border-b border-[#1e2336]">
+                        <div className="p-5.5 bg-gradient-to-r from-blue-950/60 via-blue-950/20 to-[#141720] border-b border-[#1e2336]">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-500 text-white shadow-md font-mono">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-550 text-white shadow-md font-mono">
                               # {selectedService.id}
                             </span>
-                            <span className="text-[10px] text-violet-300 font-bold uppercase tracking-widest bg-violet-500/15 border border-violet-500/25 px-2 py-0.5 rounded">
+                            <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/15 border border-blue-500/25 px-2 py-0.5 rounded">
                               Active Service
                             </span>
                           </div>
@@ -2208,15 +2213,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         <div className="p-5.5 space-y-5">
                           {/* Parameter & Specification list */}
                           <div className="space-y-4">
-                            {selectedService.desc && (
-                              <div className="space-y-1.5">
-                                <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Service Guidelines</h5>
-                                <div className="whitespace-pre-wrap text-slate-300 text-xs leading-relaxed font-sans bg-[#0d0f17]/30 border border-[#1e2336]/30 p-3.5 rounded-lg">
-                                  {selectedService.desc}
-                                </div>
-                              </div>
-                            )}
-
                             <div className="space-y-2">
                               <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-[#1e2336] pb-1.5">Specifications</h5>
                               
@@ -2265,22 +2261,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           {/* Important notes / Alerts list */}
                           <div className="space-y-3 border-t border-[#1e2336] pt-4.5">
                             <h5 className="text-[11px] font-black uppercase tracking-wider text-white">Important Notes:</h5>
-                            <div className="border-l-2 border-violet-500 pl-3.5 py-1.5 bg-violet-550/[0.02] rounded-r-lg">
+                            <div className="border-l-2 border-blue-500 pl-3.5 py-1.5 bg-blue-500/[0.02] rounded-r-lg">
                               <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed list-none">
                                 <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
                                   When the service is experiencing high demand, the starting speed may vary.
                                 </li>
                                 <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
                                   Please avoid placing a second order on the same link until the current order is fully completed.
                                 </li>
                                 <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
                                   If you encounter any issues with the service, kindly reach out to our support team for assistance.
                                 </li>
                                 <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-violet-500 font-black">•</span>
+                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
                                   <strong className="text-red-400 font-semibold">Do not place orders for private accounts or private links.</strong> Orders for private content won't be processed and may not be refunded.
                                 </li>
                               </ul>
