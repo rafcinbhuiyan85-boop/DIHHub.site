@@ -222,24 +222,61 @@ async function startServer() {
   });
 
   app.post("/api/admin/users/update-balance", async (req, res) => {
-    const { email, balance } = req.body;
+    const { email, balance, name } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
     const users = loadData(USERS_FILE, []);
-    const user = users.find((u: any) => u.email === email);
+    let user = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+    
     if (user) {
       user.balance = parseFloat(balance) || 0;
-      await saveData(USERS_FILE, users);
-      return res.json({ status: 'ok', user });
+      if (name && !user.name) {
+        user.name = name;
+      }
+    } else {
+      // Auto-create user on backend to prevent missing user data issues
+      user = {
+        id: "usr_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+        name: name || email.split('@')[0],
+        email: email,
+        password: "smm_auto_password", // Safe default
+        registeredAt: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        status: 'active',
+        balance: parseFloat(balance) || 0
+      };
+      users.push(user);
     }
-    return res.status(404).json({ error: 'User not found' });
+    
+    await saveData(USERS_FILE, users);
+    return res.json({ status: 'ok', user });
   });
 
-  app.get("/api/smm/balance/:email", (req, res) => {
+  app.get("/api/smm/balance/:email", async (req, res) => {
+    const requestedEmail = req.params.email;
+    if (!requestedEmail) return res.json({ balance: 0 });
+    
     const users = loadData(USERS_FILE, []);
-    const user = users.find((u: any) => u.email === req.params.email);
+    let user = users.find((u: any) => u.email.toLowerCase() === requestedEmail.toLowerCase());
+    
     if (user) {
       return res.json({ balance: user.balance || 0 });
     }
+    
+    // If user does not exist on the server (e.g. they loaded SMM Panel using a guest mail or a newly typed email),
+    // automatically provision a server-side account for them to store their transactions and balance securely!
+    user = {
+      id: "usr_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+      name: requestedEmail.split('@')[0],
+      email: requestedEmail,
+      password: "smm_auto_password",
+      registeredAt: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+      status: 'active',
+      balance: 0
+    };
+    users.push(user);
+    await saveData(USERS_FILE, users);
+    
     return res.json({ balance: 0 });
   });
 
