@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Info, Star, Flame, Clock, Rocket, Sword, Ghost, Laugh, Tv, Sparkles, Film, Heart, Cat } from 'lucide-react';
+import { Play, Info, Star, Flame, Clock, Rocket, Sword, Ghost, Laugh, Tv, Film, Heart, Cat } from 'lucide-react';
 import { 
   useTrendingMovies, 
   usePopularMovies, 
@@ -115,7 +115,7 @@ export function MoviesHome({ onNavigate }: { onNavigate: (path: string) => void 
   const animeRows = [
     { id:'anime-trending', title:'Weekly Trending Anime & Animations', icon:<Flame size={18} color="#f97316"/>, movies:animeTrending?.results, loading:la2, accent:'#f97316', visible: true },
     { id:'anime-popular', title:'Popular Animated Series', icon:<Tv size={18} color="#10b981"/>, movies:animatedSeries?.results, loading:la1, accent:'#10b981', visible: true },
-    { id:'anime-kids', title:'Kids & Fun Cartoons', icon:<Sparkles size={18} color="#a855f7"/>, movies:kidsAnimation?.results, loading:la3, accent:'#a855f7', visible: true }
+    { id:'anime-kids', title:'Kids & Fun Cartoons', icon:<Cat size={18} color="#a855f7"/>, movies:kidsAnimation?.results, loading:la3, accent:'#a855f7', visible: true }
   ];
 
   const activeRows = sector === 'movie' ? movieRows : sector === 'tv' ? tvRows : animeRows;

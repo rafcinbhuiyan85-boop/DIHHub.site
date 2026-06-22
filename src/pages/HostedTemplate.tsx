@@ -35,31 +35,6 @@ export default function HostedTemplate() {
   useEffect(() => {
     if (template) {
       document.title = template.name;
-      
-      // Inject CSS
-      if (template.cssContent) {
-        const style = document.createElement('style');
-        style.textContent = template.cssContent;
-        document.head.appendChild(style);
-        return () => {
-          document.head.removeChild(style);
-        };
-      }
-    }
-  }, [template]);
-
-  useEffect(() => {
-    if (template && template.jsContent) {
-      try {
-        const script = document.createElement('script');
-        script.textContent = template.jsContent;
-        document.body.appendChild(script);
-        return () => {
-          document.body.removeChild(script);
-        };
-      } catch (err) {
-        console.error("Template JS Error:", err);
-      }
     }
   }, [template]);
 
@@ -90,19 +65,36 @@ export default function HostedTemplate() {
     </div>
   );
 
-  const getCleanHtml = (html: string) => {
-    return html || '';
+  const getCleanHtml = () => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>${template.name || 'DIH Template'}</title>
+          <style>
+            ${template.cssContent || ''}
+          </style>
+        </head>
+        <body style="margin: 0; padding: 0;">
+          ${template.htmlContent || ''}
+          <script>
+            ${template.jsContent || ''}
+          </script>
+        </body>
+      </html>
+    `;
   };
 
   return (
-    <div id="template-root" className="w-full min-h-screen">
-      {/* 
-        WARNING: dangerouslySetInnerHTML is used to render user-uploaded HTML. 
-        In a production environment with public uploads, this should be sanitized 
-        or rendered in a sandboxed iframe. For this admin-only context, it's 
-        the requested hosting behavior.
-      */}
-      <div dangerouslySetInnerHTML={{ __html: getCleanHtml(template.htmlContent) }} />
+    <div id="template-root" className="fixed inset-0 w-screen h-screen bg-black overflow-hidden z-[999999]">
+      <iframe
+        srcDoc={getCleanHtml()}
+        className="w-full h-full border-none m-0 p-0"
+        title={template.name}
+        sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
+      />
     </div>
   );
 }

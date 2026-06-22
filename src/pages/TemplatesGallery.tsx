@@ -4,7 +4,6 @@ import { db } from '../lib/firebase';
 import { 
   Globe, 
   Search, 
-  Sparkles, 
   ExternalLink,
   Copy,
   Check,
@@ -123,7 +122,7 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
       <div className="absolute inset-0 bg-[#080b0f] flex flex-col items-center justify-center p-4">
         <div className="absolute inset-0 bg-radial-gradient from-purple-500/10 via-transparent to-transparent opacity-50" />
         <div className="relative w-16 h-16 flex items-center justify-center bg-purple-500/5 rounded-2xl border border-purple-500/10 shadow-inner mb-3 group-hover:scale-105 transition-transform duration-500">
-          <Sparkles className="text-purple-400" size={24} />
+          <Globe className="text-purple-400" size={24} />
         </div>
         <p className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Exclusive Template</p>
       </div>

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, PlusCircle, List, ArrowDownToLine, 
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
   AlertCircle, RefreshCw, X, HelpCircle, Activity, Star,
-  TrendingUp, Users, CheckCircle, ExternalLink, Sparkles,
+  TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video
 } from 'lucide-react';
@@ -157,6 +157,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   // Dynamic Gateway configuration sync from admin settings
   const [manualGateways, setManualGateways] = useState<any[]>([]);
+  const [localDeposits, setLocalDeposits] = useState<any[]>([]);
 
   // Dynamically map SERVICES and scale by multiplier
   const activeServices = useMemo(() => {
@@ -414,6 +415,21 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       } else {
         localStorage.setItem('dih_smm_services_v2', defaultServices);
         setServicesList(SERVICES);
+      }
+
+      // Load and sync user deposits
+      const cachedDeps = localStorage.getItem('dih_smm_deposits_v2');
+      if (cachedDeps) {
+        try {
+          const parsedDeps = JSON.parse(cachedDeps);
+          if (Array.isArray(parsedDeps)) {
+            setLocalDeposits(prev => JSON.stringify(prev) !== cachedDeps ? parsedDeps : prev);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setLocalDeposits([]);
       }
     };
 
@@ -2576,6 +2592,69 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                     >
                       Add Funds
                     </button>
+
+                    {/* USER DEPOSIT TRANSACTIONS LOG */}
+                    <div className="mt-8 border-t border-[#1e2336]/60 pt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                          Your Deposit Transactions History
+                        </h4>
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          Email: {userEmail}
+                        </span>
+                      </div>
+
+                      {(() => {
+                        const myDeps = localDeposits.filter((d: any) => d.userEmail === userEmail || d.userId === userToUse?.id);
+
+                        if (myDeps.length === 0) {
+                          return (
+                            <div className="text-center py-6 border border-dashed border-[#1e2336] rounded-xl text-xs text-slate-500 bg-[#0d0f16]/30">
+                              No deposit transactions submitted yet for <span className="font-mono text-slate-400 font-medium">{userEmail}</span>.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="overflow-x-auto rounded-xl border border-[#1e2336] bg-[#0d0f16]/50">
+                            <table className="w-full text-left text-[11px] text-slate-300">
+                              <thead>
+                                <tr className="bg-[#121622] border-b border-[#1e2336] text-slate-400 font-extrabold uppercase text-[9px] tracking-wider">
+                                  <th className="px-3.5 py-2.5">Date</th>
+                                  <th className="px-3.5 py-2.5">Gateway</th>
+                                  <th className="px-3.5 py-2.5">TxID</th>
+                                  <th className="px-3.5 py-2.5 text-right">Amount</th>
+                                  <th className="px-3.5 py-2.5 text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#1e2336]/40">
+                                {myDeps.slice().reverse().map((d: any) => (
+                                  <tr key={d.id} className="hover:bg-[#151926]/30 transition-colors">
+                                    <td className="px-3.5 py-3 text-slate-400">{d.date || 'Pending'}</td>
+                                    <td className="px-3.5 py-3 font-semibold uppercase">{d.method}</td>
+                                    <td className="px-3.5 py-3 font-mono text-[10px] text-slate-500 truncate max-w-[100px]" title={d.txid}>
+                                      {d.txid}
+                                    </td>
+                                    <td className="px-3.5 py-3 text-right font-bold text-emerald-400">
+                                      ${parseFloat(d.amount).toFixed(2)}
+                                    </td>
+                                    <td className="px-3.5 py-3 text-center">
+                                      <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                        d.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                        d.status === 'rejected' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
+                                        'bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse'
+                                      }`}>
+                                        {d.status || 'pending'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()}
+                    </div>
 
                   </div>
                 </div>

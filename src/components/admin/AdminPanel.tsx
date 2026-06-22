@@ -667,26 +667,73 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   }, [settings.smmDefaultBalance, auth.currentUser?.email]);
 
   const handleApproveSmmDeposit = (depId: number) => {
+    let matchedEmail = '';
+    let matchedAmount = 0;
+
     const updatedDeposits = smmDeposits.map(d => {
       if (d.id === depId && d.status === 'pending') {
+        const targetEmail = d.userEmail || '';
+        matchedEmail = targetEmail;
+        matchedAmount = d.amount;
+
         const updatedUsers = smmUsers.map(u => {
-          if (u.id === d.userId) {
+          const isMatch = (targetEmail && u.email && u.email.toLowerCase() === targetEmail.toLowerCase()) || (u.id === d.userId);
+          if (isMatch) {
             const newBal = u.balance + d.amount;
-            if (u.id === 999) {
+            
+            // Set local storage balance key so they see it instantly in SMM
+            const userEmailToUse = u.email || targetEmail || 'me@dihsmm.com';
+            localStorage.setItem(`dih_smm_balance_${userEmailToUse}`, newBal.toFixed(2));
+            if (u.id === 999 || userEmailToUse === auth.currentUser?.email) {
               localStorage.setItem('dih_smm_balance', newBal.toFixed(2));
             }
+
             return { ...u, balance: newBal };
           }
           return u;
         });
+
         setSmmUsers(updatedUsers);
         localStorage.setItem('dih_smm_users_v2', JSON.stringify(updatedUsers));
         return { ...d, status: 'approved' };
       }
       return d;
     });
+
     setSmmDeposits(updatedDeposits);
     localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeposits));
+
+    // Persist the balance update to the backend database server for reliability
+    if (matchedEmail && matchedAmount > 0) {
+      // Find the user's current SMM balance from server first, or update directly
+      fetch(`/api/smm/balance/${encodeURIComponent(matchedEmail)}`)
+        .then(res => res.json())
+        .then(data => {
+          const currentSvrBal = parseFloat(data.balance) || 0;
+          const newSvrBal = currentSvrBal + matchedAmount;
+
+          // Update back-end storage server
+          fetch('/api/admin/users/update-balance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: matchedEmail, balance: newSvrBal })
+          })
+          .then(() => {
+            // Write local key so they get immediate feedback
+            localStorage.setItem(`dih_smm_balance_${matchedEmail}`, newSvrBal.toFixed(2));
+          })
+          .catch(err => console.error("Error updating SMM balance on server:", err));
+        })
+        .catch(() => {
+          // Fallback if fetch fails: update with estimated amount
+          const estimateBal = matchedAmount;
+          fetch('/api/admin/users/update-balance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: matchedEmail, balance: estimateBal })
+          }).catch(err => console.error("Error updating SMM balance fallback:", err));
+        });
+    }
   };
 
   const handleRejectSmmDeposit = (depId: number) => {
@@ -1379,12 +1426,18 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   const handleSaveSmmUser = () => {
     if (!selectedSmmItem) return;
+    const targetEmail = smmFormUserEmail || selectedSmmItem.email;
+    const newBal = parseFloat(smmFormUserBalance) || 0.00;
+
     const updated = smmUsers.map(u => {
-      if (u.id === selectedSmmItem.id) {
-        const newBal = parseFloat(smmFormUserBalance) || u.balance;
-        if (u.id === 999) {
+      const isMatch = u.id === selectedSmmItem.id || (targetEmail && u.email && u.email.toLowerCase() === targetEmail.toLowerCase());
+      if (isMatch) {
+        // Set local storage balance key so they see it instantly in SMM Panel
+        localStorage.setItem(`dih_smm_balance_${targetEmail}`, newBal.toFixed(2));
+        if (u.id === 999 || targetEmail === auth.currentUser?.email) {
           localStorage.setItem('dih_smm_balance', newBal.toFixed(2));
         }
+
         return {
           ...u,
           name: smmFormUserName,
@@ -1394,8 +1447,24 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
       return u;
     });
+
     setSmmUsers(updated);
     localStorage.setItem('dih_smm_users_v2', JSON.stringify(updated));
+
+    // Sync to user database on server
+    if (targetEmail) {
+      fetch('/api/admin/users/update-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail, balance: newBal })
+      })
+      .then(() => {
+        // Double check local key is updated
+        localStorage.setItem(`dih_smm_balance_${targetEmail}`, newBal.toFixed(2));
+      })
+      .catch(err => console.error("Error updating user SMM balance on backend:", err));
+    }
+
     setIsSmmModalOpen(false);
   };
 
@@ -6138,7 +6207,10 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             .reverse()
                             .filter(d => !smmDepStatusFilter || d.status === smmDepStatusFilter)
                             .map((d) => {
-                              const usr = smmUsers.find(u => u.id === d.userId) || { name: 'Customer Client', email: 'user@smm.com' };
+                              const usr = smmUsers.find(u => u.id === d.userId || (d.userEmail && u.email && u.email.toLowerCase() === d.userEmail.toLowerCase())) || { 
+                                name: d.userName || 'Customer Client', 
+                                email: d.userEmail || 'user@smm.com' 
+                              };
                               return (
                                 <tr key={d.id} className="hover:bg-slate-900/10 transition">
                                   <td className="py-3">

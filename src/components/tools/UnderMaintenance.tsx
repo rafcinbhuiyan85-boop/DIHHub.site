@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, ArrowLeft, AlertTriangle, Clock, Rocket, Sparkles } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, AlertTriangle, Clock, Rocket } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface UnderMaintenanceProps {
@@ -28,7 +28,7 @@ export default function UnderMaintenance({ toolName, customNotice, onBack, statu
     iconColor = "text-indigo-500 border-indigo-500/20 bg-indigo-500/10 shadow-indigo-500/5 hover:border-indigo-500/20";
     pingRingColor = "border-indigo-500/30";
     glowColor = "bg-indigo-500/10";
-    Icon = Sparkles;
+    Icon = Clock;
   } else if (statusType === 'coming-soon') {
     badgeText = "COMING SOON";
     titleText = `${toolName} will be ready soon`;
