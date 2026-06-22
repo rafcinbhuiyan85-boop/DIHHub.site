@@ -587,7 +587,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       } else {
         const defaultProviders = [
           { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
-          { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: '0cf4753dd2965d4125eaa6b3d3a0e2bc', status: 'active', balance: 0.00, serviceCount: 0 }
+          { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
         ];
         setSmmProviders(defaultProviders);
         localStorage.setItem('dih_smm_providers_v2', JSON.stringify(defaultProviders));

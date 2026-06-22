@@ -305,7 +305,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   storeEnableAccounts: true,
   smmDefaultBalance: 0.00,
   smmPriceMultiplier: 1.0,
-  smmSystemNotice: 'Welcome to DIH SMM Panel! Enjoy safe, fast SMM panel services at the best rates in Bangladesh.',
+  smmSystemNotice: 'Welcome to DIH SMM Panel! Enjoy safe, fast SMM panel services at the best rates in World.',
   smmPaymentMethods: ['bkash', 'nagad', 'rocket', 'card', 'crypto'],
   smmEnableColorTheme: true,
   disabledTools: ['mobile-bypass'],

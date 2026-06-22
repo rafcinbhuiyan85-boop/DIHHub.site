@@ -21,6 +21,19 @@ interface SMMService {
   desc: string;
   time: string;
   quality: string;
+  refill?: string;
+}
+
+export function getCleanRefill(refill: any): string {
+  if (refill === undefined || refill === null) return 'No Refill';
+  const str = String(refill).trim().toLowerCase();
+  if (!str || str === '0' || str === 'false' || str.includes('no') || str.includes('non') || str.includes('na')) {
+    return 'No Refill';
+  }
+  if (str.includes('life') || str.includes('lifetime') || str.includes('permanent')) {
+    return 'Lifetime Refill';
+  }
+  return 'Yes Refill';
 }
 
 interface SMMOrder {
@@ -1480,18 +1493,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                 {settings.smmSystemNotice && (
                   <div className={cn(
-                    "rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in duration-300",
+                    "rounded-2xl p-4 shadow-sm animate-in fade-in duration-300",
                     isColorTheme 
                       ? "bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/10"
                       : "bg-slate-900 border border-slate-800"
                   )}>
-                    <div>
-                      <h4 className={cn(
-                        "text-[10px] font-extrabold uppercase tracking-widest font-mono",
-                        isColorTheme ? "text-blue-500" : "text-slate-400"
-                      )}>Notice from Admin</h4>
-                      <p className="text-[12px] text-slate-300 leading-relaxed mt-1 font-medium">{settings.smmSystemNotice}</p>
-                    </div>
+                    <p className="text-[12px] text-slate-300 leading-relaxed font-medium">
+                      {(settings.smmSystemNotice || "").replace(/Bangladesh/g, "World")}
+                    </p>
                   </div>
                 )}
 
@@ -1694,11 +1703,11 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             {s.refill && (
                               <span className={cn(
                                 "px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wide border shrink-0",
-                                s.refill.toLowerCase().includes('no')
+                                getCleanRefill(s.refill).toLowerCase().includes('no')
                                   ? "bg-red-500/10 text-red-400 border-red-500/15"
                                   : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15"
                               )}>
-                                🔄 Refill: {s.refill}
+                                🔄 Refill: {getCleanRefill(s.refill)}
                               </span>
                             )}
                             <span>{s.time}</span>
@@ -1935,11 +1944,11 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                       {selectedService.refill && (
                                         <span className={cn(
                                           "px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 font-mono tracking-wider border",
-                                          selectedService.refill.toLowerCase().includes('no') 
+                                          getCleanRefill(selectedService.refill).toLowerCase().includes('no') 
                                             ? "bg-red-500/10 text-red-400 border-red-500/10" 
                                             : "bg-emerald-500/10 text-emerald-400 border-emerald-500/10"
                                         )}>
-                                          🔄 {selectedService.refill}
+                                          🔄 {getCleanRefill(selectedService.refill)}
                                         </span>
                                       )}
                                     </>
