@@ -37,32 +37,7 @@ interface SMMOrder {
   createdAt: string;
 }
 
-const SERVICES: SMMService[] = [
-  {id:1,name:"Instagram Followers - Real & Active",category:"Instagram",price:1.50,min:100,max:100000,desc:"High quality real-looking followers. Guaranteed delivery.",time:"0-12 hours",quality:"Standard"},
-  {id:2,name:"Instagram Followers - Premium Quality",category:"Instagram",price:3.20,min:100,max:50000,desc:"Premium quality followers with profile pictures.",time:"0-6 hours",quality:"Premium"},
-  {id:3,name:"Instagram Likes - Fast Delivery",category:"Instagram",price:0.80,min:50,max:500000,desc:"Instant likes from active accounts.",time:"0-1 hours",quality:"Standard"},
-  {id:4,name:"Instagram Views - Reels & Videos",category:"Instagram",price:0.20,min:500,max:10000000,desc:"Fast views for Reels and videos.",time:"0-30 minutes",quality:"Standard"},
-  {id:5,name:"Instagram Comments - Custom",category:"Instagram",price:12.00,min:5,max:500,desc:"Real custom comments on your posts.",time:"1-6 hours",quality:"Premium"},
-  {id:6,name:"Instagram Story Views",category:"Instagram",price:0.15,min:100,max:5000000,desc:"Fast story views delivery.",time:"0-15 minutes",quality:"Standard"},
-  {id:7,name:"Facebook Page Likes",category:"Facebook",price:1.20,min:100,max:500000,desc:"Real-looking page likes with stable drop rate.",time:"0-24 hours",quality:"Standard"},
-  {id:8,name:"Facebook Post Likes",category:"Facebook",price:0.60,min:50,max:200000,desc:"Fast likes on your Facebook posts.",time:"0-6 hours",quality:"Standard"},
-  {id:9,name:"Facebook Video Views",category:"Facebook",price:0.10,min:1000,max:50000000,desc:"Boost your video view count instantly.",time:"0-30 minutes",quality:"Standard"},
-  {id:10,name:"Facebook Followers - Premium",category:"Facebook",price:2.50,min:100,max:100000,desc:"Premium quality Facebook followers.",time:"0-12 hours",quality:"Premium"},
-  {id:11,name:"YouTube Views - High Retention",category:"YouTube",price:1.80,min:500,max:10000000,desc:"High retention views that boost your rankings.",time:"0-24 hours",quality:"Premium"},
-  {id:12,name:"YouTube Subscribers - Real",category:"YouTube",price:8.50,min:50,max:50000,desc:"Real subscribers that stick around.",time:"1-3 days",quality:"Premium"},
-  {id:13,name:"YouTube Likes",category:"YouTube",price:1.20,min:100,max:500000,desc:"Fast YouTube likes delivery.",time:"0-6 hours",quality:"Standard"},
-  {id:14,name:"YouTube Watch Hours",category:"YouTube",price:18.00,min:100,max:10000,desc:"Real watch hours for monetization.",time:"7-30 days",quality:"VIP"},
-  {id:15,name:"TikTok Followers",category:"TikTok",price:2.00,min:100,max:500000,desc:"Fast TikTok followers from real accounts.",time:"0-12 hours",quality:"Standard"},
-  {id:16,name:"TikTok Likes",category:"TikTok",price:0.50,min:100,max:1000000,desc:"Boost your TikTok post engagement.",time:"0-2 hours",quality:"Standard"},
-  {id:17,name:"TikTok Views",category:"TikTok",price:0.12,min:1000,max:100000000,desc:"Viral-boost your TikTok videos with views.",time:"0-30 minutes",quality:"Standard"},
-  {id:18,name:"TikTok Comments - Custom",category:"TikTok",price:15.00,min:5,max:200,desc:"Custom comments on your TikTok videos.",time:"1-12 hours",quality:"Premium"},
-  {id:19,name:"Twitter/X Followers",category:"Twitter/X",price:2.80,min:100,max:500000,desc:"Real-looking X followers.",time:"0-24 hours",quality:"Standard"},
-  {id:20,name:"Twitter/X Likes",category:"Twitter/X",price:0.70,min:50,max:500000,desc:"Fast post likes on X/Twitter.",time:"0-6 hours",quality:"Standard"},
-  {id:21,name:"Twitter/X Retweets",category:"Twitter/X",price:1.50,min:50,max:100000,desc:"Boost post reach with retweets.",time:"0-12 hours",quality:"Standard"},
-  {id:22,name:"Telegram Channel Members",category:"Telegram",price:3.50,min:100,max:1000000,desc:"Add real-looking members to your channel.",time:"0-24 hours",quality:"Standard"},
-  {id:23,name:"Telegram Post Views",category:"Telegram",price:0.08,min:500,max:100000000,desc:"Boost post views on Telegram channels.",time:"0-15 minutes",quality:"Standard"},
-  {id:24,name:"Telegram Group Members",category:"Telegram",price:4.00,min:100,max:500000,desc:"Add members to your Telegram group.",time:"0-24 hours",quality:"Premium"},
-];
+const SERVICES: SMMService[] = [];
 
 const CATEGORIES = [
   'All', 

@@ -462,32 +462,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           console.error(e);
         }
       } else {
-        const defaultSvcs = [
-          {id:1,name:"Instagram Followers - Real & Active",category:"Instagram",price:1.50,min:100,max:100000,desc:"High quality real-looking followers.",time:"0-12 hours",quality:"Standard"},
-          {id:2,name:"Instagram Followers - Premium Quality",category:"Instagram",price:3.20,min:100,max:50000,desc:"Premium quality followers with photos.",time:"0-6 hours",quality:"Premium"},
-          {id:3,name:"Instagram Likes - Fast Delivery",category:"Instagram",price:0.80,min:50,max:500000,desc:"Instant likes from active accounts.",time:"0-1 hours",quality:"Standard"},
-          {id:4,name:"Instagram Views - Reels & Videos",category:"Instagram",price:0.20,min:500,max:10000000,desc:"Fast views for Reels and videos.",time:"0-30 minutes",quality:"Standard"},
-          {id:5,name:"Instagram Comments - Custom",category:"Instagram",price:12.00,min:5,max:500,desc:"Real custom comments.",time:"1-6 hours",quality:"Premium"},
-          {id:6,name:"Instagram Story Views",category:"Instagram",price:0.15,min:100,max:5000000,desc:"Fast story views delivery.",time:"0-15 minutes",quality:"Standard"},
-          {id:7,name:"Facebook Page Likes",category:"Facebook",price:1.20,min:100,max:500000,desc:"Real-looking page likes.",time:"0-24 hours",quality:"Standard"},
-          {id:8,name:"Facebook Post Likes",category:"Facebook",price:0.60,min:50,max:200000,desc:"Fast likes on posts.",time:"0-6 hours",quality:"Standard"},
-          {id:9,name:"Facebook Video Views",category:"Facebook",price:0.10,min:1000,max:50000000,desc:"Boost video count instantly.",time:"0-30 minutes",quality:"Standard"},
-          {id:10,name:"Facebook Followers - Premium",category:"Facebook",price:2.50,min:100,max:100000,desc:"Premium quality followers.",time:"0-12 hours",quality:"Premium"},
-          {id:11,name:"YouTube Views - High Retention",category:"YouTube",price:1.80,min:500,max:10000000,desc:"High retention views.",time:"0-24 hours",quality:"Premium"},
-          {id:12,name:"YouTube Subscribers - Real",category:"YouTube",price:8.50,min:50,max:50000,desc:"Real subscribers.",time:"1-3 days",quality:"Premium"},
-          {id:13,name:"YouTube Likes",category:"YouTube",price:1.20,min:100,max:500000,desc:"Fast YouTube likes.",time:"0-6 hours",quality:"Standard"},
-          {id:14,name:"YouTube Watch Hours",category:"YouTube",price:18.00,min:100,max:10000,desc:"Real watch hours for monetization.",time:"7-30 days",quality:"VIP"},
-          {id:15,name:"TikTok Followers",category:"TikTok",price:2.00,min:100,max:500000,desc:"Fast TikTok followers.",time:"0-12 hours",quality:"Standard"},
-          {id:16,name:"TikTok Likes",category:"TikTok",price:0.50,min:100,max:1000000,desc:"Boost TikTok engagement.",time:"0-2 hours",quality:"Standard"},
-          {id:17,name:"TikTok Views",category:"TikTok",price:0.12,min:1000,max:100000000,desc:"Viral-boost your videos.",time:"0-30 minutes",quality:"Standard"},
-          {id:18,name:"TikTok Comments - Custom",category:"TikTok",price:15.00,min:5,max:200,desc:"Custom comments.",time:"1-12 hours",quality:"Premium"},
-          {id:19,name:"Twitter/X Followers",category:"Twitter/X",price:2.80,min:100,max:500000,desc:"Real-looking X followers.",time:"0-24 hours",quality:"Standard"},
-          {id:20,name:"Twitter/X Likes",category:"Twitter/X",price:0.70,min:50,max:500000,desc:"Fast post likes.",time:"0-6 hours",quality:"Standard"},
-          {id:21,name:"Twitter/X Retweets",category:"Twitter/X",price:1.50,min:50,max:100000,desc:"Boost reach with retweets.",time:"0-12 hours",quality:"Standard"},
-          {id:22,name:"Telegram Channel Members",category:"Telegram",price:3.50,min:100,max:1000000,desc:"Real-looking channel members.",time:"0-24 hours",quality:"Standard"},
-          {id:23,name:"Telegram Post Views",category:"Telegram",price:0.08,min:500,max:100000000,desc:"Boost post views.",time:"0-15 minutes",quality:"Standard"},
-          {id:24,name:"Telegram Group Members",category:"Telegram",price:4.00,min:100,max:500000,desc:"Add group members.",time:"0-24 hours",quality:"Premium"}
-        ];
+        const defaultSvcs: any[] = [];
         setSmmServicesList(defaultSvcs);
         localStorage.setItem('dih_smm_services_v2', JSON.stringify(defaultSvcs));
       }
@@ -502,15 +477,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           console.error(e);
         }
       } else {
-        const defaultOrders = [
-          {id:1,userId:1,serviceId:1,serviceName:"Instagram Followers - Real & Active",category:"Instagram",link:"https://instagram.com/dihsmm",quantity:1000,amount:1.50,status:"completed",createdAt:"2026-06-14"},
-          {id:2,userId:1,serviceId:3,serviceName:"Instagram Likes - Fast Delivery",category:"Instagram",link:"https://instagram.com/p/abc123",quantity:5000,amount:4.00,status:"completed",createdAt:"2026-06-15"},
-          {id:3,userId:2,serviceId:11,serviceName:"YouTube Views - High Retention",category:"YouTube",link:"https://youtube.com/watch?v=xyz",quantity:10000,amount:18.00,status:"processing",createdAt:"2026-06-11"},
-          {id:4,userId:3,serviceId:15,serviceName:"TikTok Followers",category:"TikTok",link:"https://tiktok.com/@user3",quantity:500,amount:1.00,status:"pending",createdAt:"2026-06-16"},
-          {id:5,userId:2,serviceId:7,serviceName:"Facebook Page Likes",category:"Facebook",link:"https://facebook.com/page2",quantity:2000,amount:2.40,status:"completed",createdAt:"2026-06-13"},
-          {id:6,userId:4,serviceId:14,serviceName:"YouTube Watch Hours",category:"YouTube",link:"https://youtube.com/watch?v=abc",quantity:500,amount:9.00,status:"pending",createdAt:"2026-06-16"},
-          {id:7,userId:5,serviceId:22,serviceName:"Telegram Channel Members",category:"Telegram",link:"https://t.me/testchannel",quantity:1000,amount:3.50,status:"processing",createdAt:"2026-06-15"}
-        ];
+        const defaultOrders: any[] = [];
         setSmmOrders(defaultOrders);
         localStorage.setItem('dih_smm_orders_v2', JSON.stringify(defaultOrders));
       }
@@ -521,12 +488,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       const parsedBalance = currentActiveBalance ? parseFloat(currentActiveBalance) : 0.00;
       
       const defaultUsers = [
-        {id:999,name:"Active SMM User (My Account)",email: auth.currentUser?.email || "me@dihsmm.com",balance:parsedBalance,joined:"2026-06-01"},
-        {id:1,name:"Rahim Uddin",email:"rahim@example.com",balance:50.00,joined:"2026-06-01"},
-        {id:2,name:"Karim Hossain",email:"karim@example.com",balance:120.50,joined:"2026-06-03"},
-        {id:3,name:"Nasrin Akter",email:"nasrin@example.com",balance:8.20,joined:"2026-06-07"},
-        {id:4,name:"Farhan Ahmed",email:"farhan@example.com",balance:200.00,joined:"2026-06-10"},
-        {id:5,name:"Sumaiya Khatun",email:"sumaiya@example.com",balance:35.75,joined:"2026-06-12"}
+        {id:999,name:"Active SMM User (My Account)",email: auth.currentUser?.email || "me@dihsmm.com",balance:parsedBalance,joined:"2026-06-01"}
       ];
 
       fetch('/api/admin/users')
@@ -608,13 +570,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           console.error(e);
         }
       } else {
-        const defaultDeposits = [
-          {id:1,userId:1,amount:50.00,method:"bkash",status:"approved",date:"2026-06-01"},
-          {id:2,userId:2,amount:120.00,method:"nagad",status:"approved",date:"2026-06-03"},
-          {id:3,userId:3,amount:10.00,method:"rocket",status:"pending",date:"2026-06-16"},
-          {id:4,userId:4,amount:200.00,method:"card",status:"pending",date:"2026-06-16"},
-          {id:5,userId:5,amount:35.00,method:"bkash",status:"pending",date:"2026-06-17"}
-        ];
+        const defaultDeposits: any[] = [];
         setSmmDeposits(defaultDeposits);
         localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(defaultDeposits));
       }
@@ -630,8 +586,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         }
       } else {
         const defaultProviders = [
-          { id: 1, name: 'JustAnotherPanel (JAP)', apiUrl: 'https://justanotherpanel.com/api/v2', apiKey: '89a7f8b90a4c28d98e7287ff2e', status: 'active', balance: 450.85, serviceCount: 247 },
-          { id: 2, name: 'SMM Lite', apiUrl: 'https://smmlite.com/api/v2', apiKey: '9f28a38dfc7a829d10eefcd223', status: 'inactive', balance: 12.40, serviceCount: 120 }
+          { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
+          { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: '0cf4753dd2965d4125eaa6b3d3a0e2bc', status: 'active', balance: 0.00, serviceCount: 0 }
         ];
         setSmmProviders(defaultProviders);
         localStorage.setItem('dih_smm_providers_v2', JSON.stringify(defaultProviders));
