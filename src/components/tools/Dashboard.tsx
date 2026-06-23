@@ -20,14 +20,11 @@ const stats = [
 ];
 
 const tools = [
-  { id: 'tenmin-ai', icon: Volume2, label: '10Min AI Voice', description: 'Speak anyway, practice Bengali, English, Japanese voice call.', color: 'bg-indigo-600', isNew: true },
   { id: 'qr', icon: QrCode, label: 'QR Tools', description: 'Generate and decode QR codes instantly.', color: 'bg-blue-500' },
   { id: 'encryption', icon: ShieldCheck, label: 'Encryption', description: 'Secure your text with Base64 encoding.', color: 'bg-indigo-500' },
-  { id: 'to-base64', icon: ImageIcon, label: 'B64 Converter', description: 'Convert text or files to Base64 string.', color: 'bg-purple-500' },
+  { id: 'to-base64', icon: RefreshCcw, label: 'Base64 Converter', description: 'Convert text or files to/from Base64 strings.', color: 'bg-purple-500' },
+  { id: 'img-to-base64', icon: ImageIcon, label: 'Image to Base64', description: 'Convert image files directly into Base64 strings.', color: 'bg-pink-500' },
   { id: 'bg-remover', icon: ImageIcon, label: 'Background Remover', description: 'Professional background removal for any image.', color: 'bg-indigo-600' },
-  { id: 'passport', icon: UserSquare2, label: 'Passport Photo', description: 'Create print-ready passport sheets.', color: 'bg-orange-500' },
-  { id: 'auto-passport', icon: Star, label: 'Auto Passport', description: 'Automatic passport photo generation.', color: 'bg-amber-500', isNew: true },
-  { id: 'design-editor', icon: Palette, label: 'Design Editor', description: 'Create certificates, IDs, and more.', color: 'bg-pink-500' },
   { id: 'video', icon: Download, label: 'Video Downloader', description: 'Download from Social Media platforms.', color: 'bg-red-500' },
   { id: 'lib-encryptor', icon: ShieldAlert, label: 'Lib Encryptor', description: 'Hard AES-256 binary encryption.', color: 'bg-indigo-600' },
   { id: 'dex-protector', icon: Cpu, label: 'DEX Protector', description: 'Binary DEX/APK encryption.', color: 'bg-red-600' },
@@ -35,7 +32,6 @@ const tools = [
   { id: 'dih-movies', icon: Film, label: 'Dih Movies', description: 'Exclusive Movie Experience by DIH TEMPLATE.', color: 'bg-indigo-600', isNew: true },
   { id: 'bachelor-point', icon: Film, label: 'Bachelor Point S-5', description: 'Manually managed high-fidelity exclusive streaming portal.', color: 'bg-red-600', isNew: true },
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
-  { id: 'migration', icon: FileArchive, label: 'Migration Tool', description: 'Migrate your Replit projects by uploading a ZIP file.', color: 'bg-emerald-500', isNew: true },
   { id: 'hosted-admin', icon: Globe, label: 'DIH Templates', description: 'Premium quality landing page showcase and live deployment portal.', color: 'bg-orange-500', isNew: true },
   { id: 'dih-smm', icon: Flame, label: 'DIH SMM', description: 'Premium tier Social Media Marketing likes, views, followers booster panel.', color: 'bg-indigo-600', isNew: true },
 ];
@@ -320,7 +316,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
                          {[1, 2, 3, 4, 5].map(i => (
                           <div key={i} className={cn(
                             "w-1 h-1 rounded-full transition-all duration-500", 
-                            i <= (idx % 5 + 1) 
+                            i <= (isDihMovies ? 5 : (idx % 5 + 1)) 
                               ? isDihMovies ? "bg-amber-500 group-hover:scale-125" : "bg-primary group-hover:scale-125"
                               : "bg-slate-200 dark:bg-slate-800"
                           )} />

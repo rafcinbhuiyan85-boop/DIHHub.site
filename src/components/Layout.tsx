@@ -5,7 +5,7 @@ import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
 
-type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'cut-downloader' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'temp-mail' | 'temp-sms' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,23 +18,16 @@ interface LayoutProps {
 
 const navItems = [
   { id: 'dashboard' as ToolId, icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'tenmin-ai' as ToolId, icon: Volume2, label: '10Min AI Voice' },
   { id: 'qr' as ToolId, icon: QrCode, label: 'QR Code Tools' },
   { id: 'encryption' as ToolId, icon: ShieldCheck, label: 'Secure Encryption' },
   { id: 'to-base64' as ToolId, icon: ImageIcon, label: 'Base64 Converter' },
   { id: 'bg-remover' as ToolId, icon: ImageIcon, label: 'Background Remover' },
-  { id: 'passport' as ToolId, icon: UserSquare2, label: 'Passport Photo' },
-  { id: 'auto-passport' as ToolId, icon: Star, label: 'Auto Passport' },
   { id: 'video' as ToolId, icon: Download, label: 'Video Downloader' },
-  { id: 'cut-downloader' as ToolId, icon: Scissors, label: 'Cut Downloader' },
-  { id: 'design-editor' as ToolId, icon: Palette, label: 'Design Editor' },
   { id: 'dex-protector' as ToolId, icon: Cpu, label: 'DEX Protector' },
   { id: 'lib-encryptor' as ToolId, icon: Lock, label: 'Lib Protector' },
   { id: 'apk-store' as ToolId, icon: Package, label: 'APK Store' },
   { id: 'dih-movies' as ToolId, icon: Film, label: 'Dih Movies' },
   { id: 'bachelor-point' as ToolId, icon: Film, label: 'Bachelor Point S-5' },
-  { id: 'temp-mail' as ToolId, icon: Mail, label: 'Temp Mail' },
-  { id: 'temp-sms' as ToolId, icon: MessageSquare, label: 'Temp SMS' },
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
   { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
   { id: 'dih-smm' as ToolId, icon: Flame, label: 'DIH SMM' },

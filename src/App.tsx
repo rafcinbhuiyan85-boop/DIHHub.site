@@ -36,7 +36,7 @@ import TenminAI from './components/tools/TenminAI';
 import BachelorPoint from './components/tools/BachelorPoint';
 import DihSmm from './components/tools/DihSmm';
 
-type ToolId = 'dashboard' | 'tenmin-ai' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'passport' | 'auto-passport' | 'video' | 'design-editor' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'temp-mail' | 'temp-sms' | 'cut-downloader' | 'mobile-bypass' | 'migration' | 'dih-movies' | 'bachelor-point' | 'hosted-admin' | 'dih-smm';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration';
 
 function MainApp() {
   const { settings } = useAppSettings();
@@ -72,9 +72,9 @@ function MainApp() {
         }
         
         const toolIds: ToolId[] = [
-          'tenmin-ai', 'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
-          'passport', 'auto-passport', 'video', 'design-editor', 'lib-encryptor', 
-          'dex-protector', 'apk-store', 'temp-mail', 'temp-sms', 'cut-downloader', 
+          'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
+          'video', 'lib-encryptor', 
+          'dex-protector', 'apk-store', 
           'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm'
         ];
         if (toolIds.includes(cleanPath as ToolId)) {
@@ -171,9 +171,9 @@ function MainApp() {
     }
 
     const toolIds: ToolId[] = [
-      'tenmin-ai', 'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
-      'passport', 'auto-passport', 'video', 'design-editor', 'lib-encryptor', 
-      'dex-protector', 'apk-store', 'temp-mail', 'temp-sms', 'cut-downloader', 
+      'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
+      'video', 'lib-encryptor', 
+      'dex-protector', 'apk-store', 
       'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm'
     ];
 
@@ -263,23 +263,16 @@ function MainApp() {
       }
     }
 
-    switch (activeTool) {
-      case 'tenmin-ai': return <TenminAI />;
+    switch (activeTool as any) {
       case 'qr': return <QRCodeTool />;
       case 'encryption': return <EncryptionTool />;
       case 'to-base64': return <ImageToBase64 />;
+      case 'img-to-base64': return <ImageToBase64 />;
       case 'bg-remover': return <BackgroundRemover />;
-      case 'passport': return <PassportPhotoTool />;
-      case 'auto-passport': return <AutoPassport />;
       case 'video': return <VideoDownloader />;
-      case 'cut-downloader': return <CutDownloader />;
-      case 'design-editor': return <DesignEditor />;
       case 'lib-encryptor': return <LibEncryptor />;
       case 'dex-protector': return <DexProtector />;
       case 'apk-store': return <ApkStore />;
-      case 'temp-mail': return <TempMail />;
-      case 'temp-sms': return <TempSMS />;
-      case 'img-to-base64': return <ImageToBase64 />;
       case 'mobile-bypass': return <MobileBypass />;
       case 'dih-movies': return <DihMoviesApp />;
       case 'bachelor-point': return <BachelorPoint />;

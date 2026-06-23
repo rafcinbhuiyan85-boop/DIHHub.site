@@ -371,8 +371,10 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   // Modals / Forms States
   const [isSmmModalOpen, setIsSmmModalOpen] = useState(false);
   const [smmModalTitle, setSmmModalTitle] = useState('');
-  const [smmModalType, setSmmModalType] = useState<'add-service' | 'edit-service' | 'edit-order' | 'edit-user' | 'add-provider' | 'edit-provider' | 'edit-gateway' | null>(null);
+  const [smmModalType, setSmmModalType] = useState<'add-service' | 'edit-service' | 'edit-order' | 'edit-user' | 'add-provider' | 'edit-provider' | 'edit-gateway' | 'edit-shortcut-services' | null>(null);
   const [selectedSmmItem, setSelectedSmmItem] = useState<any>(null);
+  const [activeEditingPlatform, setActiveEditingPlatform] = useState<string | null>(null);
+  const [platformServiceSearch, setPlatformServiceSearch] = useState('');
 
   // SMM Form values state
   const [smmFormName, setSmmFormName] = useState('');
@@ -412,6 +414,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormGatewayType, setSmmFormGatewayType] = useState('Personal');
   const [smmFormGatewayInstructions, setSmmFormGatewayInstructions] = useState('');
   const [smmFormGatewayEnabled, setSmmFormGatewayEnabled] = useState(true);
+  const [smmFormGatewayMinDeposit, setSmmFormGatewayMinDeposit] = useState<number>(2.5);
 
   // SMM Sync Effect
   useEffect(() => {
@@ -604,13 +607,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         }
       } else {
         const defaultGateways = [
-          { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true },
-          { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true },
-          { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true },
-          { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true },
-          { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true },
-          { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true },
-          { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true }
+          { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true, minDeposit: 2.5 },
+          { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true, minDeposit: 2.5 },
+          { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true, minDeposit: 2.5 },
+          { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true, minDeposit: 2.5 },
+          { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true, minDeposit: 2.5 },
+          { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
+          { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
         ];
         setSmmManualGateways(defaultGateways);
         localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(defaultGateways));
@@ -1235,7 +1238,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           numberOrAddress: smmFormGatewayNumber,
           type: smmFormGatewayType,
           instructions: smmFormGatewayInstructions,
-          enabled: smmFormGatewayEnabled
+          enabled: smmFormGatewayEnabled,
+          minDeposit: smmFormGatewayMinDeposit
         };
       }
       return g;
@@ -2513,26 +2517,16 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
               <div className="grid grid-cols-1 gap-2.5">
                 {[
-                  { id: 'tenmin-ai', label: '10Min AI Voice', icon: Zap },
                   { id: 'qr', label: 'QR Generator & Decoder', icon: QrCode },
                   { id: 'encryption', label: 'Text Encryption', icon: ShieldCheck },
-                  { id: 'to-base64', label: 'File to Base64 (Legacy)', icon: Image },
-                  { id: 'img-to-base64', label: 'Image to Base64', icon: Image },
                   { id: 'bg-remover', label: 'Background Remover', icon: Palette },
-                  { id: 'passport', label: 'Passport Photo Maker', icon: LayoutDashboard },
-                  { id: 'auto-passport', label: 'Auto Passport', icon: Star },
-                  { id: 'design-editor', label: 'Design Editor (SaaS)', icon: Palette },
                   { id: 'video', label: 'Video Downloader', icon: Download },
-                  { id: 'cut-downloader', label: 'Cut Downloader', icon: Scissors },
                   { id: 'dih-movies', label: 'Dih Movies Streaming', icon: Film },
                   { id: 'bachelor-point', label: 'Bachelor Point S-5', icon: Film },
                   { id: 'lib-encryptor', label: 'Lib Encryptor', icon: ShieldAlert },
                   { id: 'dex-protector', label: 'DEX Protector', icon: Cpu },
                   { id: 'apk-store', label: 'APK Store', icon: Package },
-                  { id: 'temp-mail', label: 'Temp Mail', icon: MessageSquare },
-                  { id: 'temp-sms', label: 'Temp SMS', icon: Smartphone },
                   { id: 'mobile-bypass', label: 'Mobile Bypass Pro', icon: ShieldAlert },
-                  { id: 'migration', label: 'Migration Tool', icon: Cloud },
                   { id: 'hosted-admin', label: 'DIH TEMPLATE (Hosted)', icon: Globe },
                   { id: 'dih-smm', label: 'DIH SMM (Social Media)', icon: Flame },
                 ].map(tool => (
@@ -6528,6 +6522,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                     setSmmFormGatewayType(gate.type || 'Personal');
                                     setSmmFormGatewayInstructions(gate.instructions || '');
                                     setSmmFormGatewayEnabled(gate.enabled !== false);
+                                    setSmmFormGatewayMinDeposit(gate.minDeposit !== undefined ? gate.minDeposit : 2.5);
                                     setSmmModalTitle(`Edit Gateway: ${gate.title}`);
                                     setSmmModalType('edit-gateway');
                                     setIsSmmModalOpen(true);
@@ -6610,6 +6605,23 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             />
                             <p className="text-[9px] text-slate-500">Calculates and inflates/deflates all SMM service prices globally instantly.</p>
                           </div>
+
+                          {/* SMM USD to BDT Dollar Exchange Rate */}
+                          <div className="space-y-2 text-left">
+                            <label className="text-[11px] font-bold text-slate-400">USD to BDT Dollar Exchange Rate (৳)</label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-2.5 text-xs text-slate-550 font-mono font-bold">৳</span>
+                              <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                value={settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120}
+                                onChange={(e) => updateSettings({ smmUsdToBdtRate: parseFloat(e.target.value) || 120 })}
+                                className="w-full bg-[#08090d] border border-slate-800 rounded-xl pl-8 pr-3.5 py-2 text-xs text-white outline-none focus:border-blue-500 duration-150 font-mono font-bold"
+                              />
+                            </div>
+                            <p className="text-[9px] text-slate-500">The rate used to calculate BDT values (bKash, Nagad, Rocket) inside Add Funds (e.g. 1 USD = X BDT).</p>
+                          </div>
                         </div>
                       </div>
 
@@ -6623,32 +6635,81 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                         <p className="text-xs text-slate-500 font-medium mt-1">Customize the platform name shortcuts that appear on the main DihSMM dashboard under the "Fast SMM Platform Shortcuts" row.</p>
                       </div>
 
-                      <div className="space-y-3">
-                        <label className="text-[11px] font-bold text-slate-400">Shortcut Names (comma-separated list)</label>
-                        <input
-                          type="text"
-                          value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others"}
-                          onChange={(e) => updateSettings({ smmShortcuts: e.target.value })}
-                          placeholder="Instagram, Facebook, YouTube, TikTok..."
-                          className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium font-mono"
-                        />
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Telegram" })}
-                            className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
-                          >
-                            Set Basic (5 platforms)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others" })}
-                            className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
-                          >
-                            Restore All Standard
-                          </button>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-bold text-slate-400">Shortcut Names (comma-separated list)</label>
+                          <input
+                            type="text"
+                            value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others"}
+                            onChange={(e) => updateSettings({ smmShortcuts: e.target.value })}
+                            placeholder="Instagram, Facebook, YouTube, TikTok..."
+                            className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium font-mono"
+                          />
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Telegram" })}
+                              className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
+                            >
+                              Set Basic (5 platforms)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others" })}
+                              className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
+                            >
+                              Restore All Standard
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-slate-500 font-mono mt-1">💡 Enter platform names exactly as specified in SMM Services categories list so the quick filter buttons can match them properly.</p>
                         </div>
-                        <p className="text-[9px] text-slate-500 font-mono mt-1">💡 Enter platform names exactly as specified in SMM Services categories list so the quick filter buttons can match them properly.</p>
+
+                        {/* SERVICE-SMM SHORTCUT MAPPINGS MANAGER */}
+                        <div className="border-t border-slate-800/60 pt-4 space-y-3">
+                          <span className="text-[10px] font-black uppercase text-blue-500 tracking-wider">Configure Manual Linked Services</span>
+                          <p className="text-[11px] text-slate-500">Optionally override automated filters for each platform shortcut. Explicitly select which precise custom SMM services will display when users tap these quick buttons!</p>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                            {(() => {
+                              const platforms = (settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others")
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+                              
+                              return platforms.map((plat) => {
+                                const linkedIds = settings.smmShortcutMappings?.[plat] || [];
+                                const count = linkedIds.length;
+                                return (
+                                  <div key={plat} className="flex justify-between items-center bg-[#07090d] border border-slate-850 p-2.5 rounded-xl text-xs">
+                                    <div className="space-y-0.5">
+                                      <span className="font-bold text-slate-200">{plat}</span>
+                                      <div className="text-[9px] text-slate-500 font-medium">
+                                        {count > 0 
+                                          ? `✨ ${count} services linked explicitly` 
+                                          : '🔍 Automated text filter'
+                                        }
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEditingPlatform(plat);
+                                        setPlatformServiceSearch('');
+                                        setSmmModalTitle(`Link Services to: ${plat}`);
+                                        setSmmModalType('edit-shortcut-services');
+                                        setIsSmmModalOpen(true);
+                                      }}
+                                      className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/20 hover:border-transparent transition"
+                                    >
+                                      Link Services
+                                    </button>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
+
                       </div>
                     </div>
 
@@ -6657,9 +6718,9 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                       <div className="flex justify-between items-start">
                         <div>
                           <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
-                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Premium Color Theme</h3>
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">SMM Premium Color Theme</h3>
                           <p className="text-xs text-slate-500 font-medium mt-1">
-                            Toggle between the customized high-fidelity premium color/neon style or a clean, classic normal/slate layout.
+                            Toggle between the customized high-fidelity premium SMM color/neon style or a clean, classic normal/slate layout.
                           </p>
                         </div>
                         <button
@@ -6680,13 +6741,52 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
-                          Current Style Mode:
+                          Current SMM Style Mode:
                         </span>
                         <span className={cn(
                           "font-black font-mono text-[10px] uppercase tracking-wide",
                           settings.smmEnableColorTheme !== false ? "text-indigo-400" : "text-slate-400"
                         )}>
                           {settings.smmEnableColorTheme !== false ? "✨ Premium Color Design (Neon / Multi-Glow)" : "📦 Clean Slate Normal Design"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bachelor Point Design Themes Configuration */}
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Bachelor Point Color Theme</h3>
+                          <p className="text-xs text-slate-500 font-medium mt-1">
+                            Toggle between the customized high-fidelity premium red/glowing style or a clean, classic black/slate layout for Bachelor Point.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => updateSettings({ bachelorEnableColorTheme: settings.bachelorEnableColorTheme === false ? true : false })}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500/20 select-none",
+                            settings.bachelorEnableColorTheme !== false ? "bg-red-650" : "bg-slate-800"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              settings.bachelorEnableColorTheme !== false ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
+                          Current Bachelor Style:
+                        </span>
+                        <span className={cn(
+                          "font-black font-mono text-[10px] uppercase tracking-wide",
+                          settings.bachelorEnableColorTheme !== false ? "text-red-400" : "text-slate-400"
+                        )}>
+                          {settings.bachelorEnableColorTheme !== false ? "✨ Premium Color Design (Red Glow / Cinematic)" : "📦 Clean Slate Slate-950 design"}
                         </span>
                       </div>
                     </div>
@@ -7464,13 +7564,41 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Transfer Category</label>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex justify-between items-center">
+                                <span>Transfer Category</span>
+                                <div className="flex gap-1.5 -mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSmmFormGatewayType('Personal')}
+                                    className={cn(
+                                      "px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition cursor-pointer select-none border",
+                                      smmFormGatewayType === 'Personal' 
+                                        ? "bg-amber-500/15 border-amber-500/25 text-amber-400 font-extrabold" 
+                                        : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-400"
+                                    )}
+                                  >
+                                    Personal
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSmmFormGatewayType('Merchant')}
+                                    className={cn(
+                                      "px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition cursor-pointer select-none border",
+                                      smmFormGatewayType === 'Merchant' 
+                                        ? "bg-emerald-500/15 border-emerald-500/25 text-emerald-400 font-extrabold" 
+                                        : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-400"
+                                    )}
+                                  >
+                                    Merchant
+                                  </button>
+                                </div>
+                              </label>
                               <input
                                 type="text"
                                 value={smmFormGatewayType}
                                 onChange={(e) => setSmmFormGatewayType(e.target.value)}
                                 placeholder="e.g. Personal / Merchant / TRC-20"
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium"
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-medium font-sans"
                               />
                             </div>
                           </div>
@@ -7483,6 +7611,18 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-350 outline-none focus:border-blue-500 mt-1 resize-none custom-scrollbar font-medium"
                             />
                           </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Minimum Deposit limit (USD)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={smmFormGatewayMinDeposit}
+                              onChange={(e) => setSmmFormGatewayMinDeposit(parseFloat(e.target.value) || 0)}
+                              className="w-full bg-slate-950 border border-[#1e2336] rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-mono font-bold"
+                            />
+                            <p className="text-[9px] text-slate-500 mt-0.5">Users will not be allowed to submit a deposit transaction below this value (e.g., $2.5).</p>
+                          </div>
                           <div className="flex items-center gap-2 pt-2">
                             <input
                               type="checkbox"
@@ -7494,6 +7634,135 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             <label htmlFor="gateway-enabled-chk" className="text-[11px] text-slate-300 font-bold cursor-pointer select-none">
                               Publish deposit gateway pipeline live
                             </label>
+                          </div>
+                        </div>
+                      ) : smmModalType === 'edit-shortcut-services' ? (
+                        <div className="space-y-4 font-sans text-xs">
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Search Available SMM Services</span>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={platformServiceSearch}
+                                onChange={(e) => setPlatformServiceSearch(e.target.value)}
+                                placeholder="Search by name, ID or category..."
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center bg-slate-950/50 p-2.5 rounded-xl border border-slate-850">
+                            <span className="text-[10px] text-slate-400 font-bold">Category Quick Actions:</span>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Bulk select matching categories
+                                  const matches = smmServicesList.filter(s => 
+                                    s.category?.toLowerCase().includes((activeEditingPlatform || '').toLowerCase()) ||
+                                    s.name?.toLowerCase().includes((activeEditingPlatform || '').toLowerCase())
+                                  );
+                                  const matchIds = matches.map(s => s.id);
+                                  const currentMappings = settings.smmShortcutMappings || {};
+                                  const existing = currentMappings[activeEditingPlatform || ''] || [];
+                                  
+                                  // Merged list
+                                  const merged = Array.from(new Set([...existing, ...matchIds]));
+                                  updateSettings({
+                                    smmShortcutMappings: {
+                                      ...currentMappings,
+                                      [activeEditingPlatform || '']: merged
+                                    }
+                                  });
+                                }}
+                                className="text-[9px] font-extrabold uppercase px-2 py-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded border border-blue-500/20 hover:border-transparent transition cursor-pointer"
+                              >
+                                Link Auto-Matches ({smmServicesList.filter(s => s.category?.toLowerCase().includes((activeEditingPlatform || '').toLowerCase()) || s.name?.toLowerCase().includes((activeEditingPlatform || '').toLowerCase())).length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const currentMappings = settings.smmShortcutMappings || {};
+                                  updateSettings({
+                                    smmShortcutMappings: {
+                                      ...currentMappings,
+                                      [activeEditingPlatform || '']: []
+                                    }
+                                  });
+                                }}
+                                className="text-[9px] font-extrabold uppercase px-2 py-1 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded border border-red-500/20 hover:border-transparent transition cursor-pointer"
+                              >
+                                Clear All
+                              </button>
+                            </div>
+                          </div>
+
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">SMM Services Checklist ({smmServicesList.length} services)</span>
+                          <div className="border border-slate-850 rounded-2xl bg-slate-950 max-h-[300px] overflow-y-auto custom-scrollbar p-3 space-y-2">
+                            {(() => {
+                              const activePlat = activeEditingPlatform || '';
+                              const currentMappings = settings.smmShortcutMappings || {};
+                              const linkedIds = currentMappings[activePlat] || [];
+                              
+                              const filtered = smmServicesList.filter(s => {
+                                if (!platformServiceSearch) return true;
+                                const q = platformServiceSearch.toLowerCase();
+                                return s.name?.toLowerCase().includes(q) || 
+                                       s.category?.toLowerCase().includes(q) || 
+                                       s.id?.toString().includes(q);
+                              });
+
+                              if (filtered.length === 0) {
+                                return (
+                                  <div className="text-center py-8 text-xs text-slate-500 font-medium">
+                                    No services found matching search query.
+                                  </div>
+                                );
+                              }
+
+                              return filtered.map((s) => {
+                                const isLinked = linkedIds.includes(s.id);
+                                return (
+                                  <label 
+                                    key={s.id} 
+                                    className={cn(
+                                      "flex items-start gap-3 p-2 rounded-xl border select-none cursor-pointer transition text-xs",
+                                      isLinked 
+                                        ? "bg-blue-500/[0.03] border-blue-500/30 text-slate-100" 
+                                        : "bg-transparent border-slate-850 text-slate-400 hover:border-slate-800"
+                                    )}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isLinked}
+                                      onChange={() => {
+                                        let nextList;
+                                        if (isLinked) {
+                                          nextList = linkedIds.filter(id => id !== s.id);
+                                        } else {
+                                          nextList = [...linkedIds, s.id];
+                                        }
+                                        updateSettings({
+                                          smmShortcutMappings: {
+                                            ...currentMappings,
+                                            [activePlat]: nextList
+                                          }
+                                        });
+                                      }}
+                                      className="w-4 h-4 rounded text-blue-500 bg-slate-900 border-slate-800 focus:ring-0 cursor-pointer mt-0.5"
+                                    />
+                                    <div className="flex-1 space-y-0.5 text-left">
+                                      <div className="flex justify-between items-center">
+                                        <span className="font-extrabold text-[11px] font-mono pr-2 text-slate-505">ID: {s.id}</span>
+                                        <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider rounded bg-slate-900 text-slate-400 font-sans border border-slate-850">{s.category || 'Uncategorized'}</span>
+                                      </div>
+                                      <p className="font-semibold text-slate-200 text-[11px] leading-tight mt-0.5">{s.name}</p>
+                                      <p className="text-[10px] text-slate-500 font-mono font-bold">${parseFloat(s.price || '0').toFixed(3)} per 1k</p>
+                                    </div>
+                                  </label>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                       ) : null}
@@ -7518,6 +7787,8 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             handleSaveSmmProvider();
                           } else if (smmModalType === 'edit-gateway') {
                             handleSaveSmmGateway();
+                          } else if (smmModalType === 'edit-shortcut-services') {
+                            setIsSmmModalOpen(false);
                           }
                         }}
                         className="px-5 py-2 rounded-xl text-xs bg-blue-500 hover:bg-blue-600 text-white font-black transition shadow-lg shadow-blue-500/10 active:scale-95"
@@ -7551,7 +7822,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             checked={settings.visibleTools !== undefined && settings.visibleTools.length > 0} 
             onChange={(e) => {
               if (e.target.checked) {
-                updateSettings({ visibleTools: ['tenmin-ai', 'qr', 'encryption', 'to-base64', 'bg-remover', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'temp-mail', 'mobile-bypass', 'hosted-admin', 'dih-smm'] });
+                updateSettings({ visibleTools: ['qr', 'encryption', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'] });
               } else {
                 updateSettings({ visibleTools: [] });
               }

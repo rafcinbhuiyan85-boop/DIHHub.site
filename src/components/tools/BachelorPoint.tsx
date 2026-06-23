@@ -4,6 +4,8 @@ import {
   Search, X, ChevronLeft, Trash2, Plus, RefreshCw, Layers, Check,
   Upload, HardDrive, FileText, Video
 } from 'lucide-react';
+import { useAppSettings } from '../../hooks/useAppSettings';
+import { cn } from '../../lib/utils';
 import bachelorPointS5Poster from '../../assets/images/bachelor_point_s5_premium_1781464542219.jpg';
 
 interface Category {
@@ -99,101 +101,10 @@ const KEY_CATEGORIES = [
   { id: 8, name: 'Documentary' }
 ];
 
-const INITIAL_CONTENTS: ContentItem[] = [
-  {
-    id: 1,
-    title: 'Bachelor Point Season 5',
-    description: 'The beloved Bangla comedy series returns with a brand new season full of humor and heart from the bachelor boys of Dhaka.',
-    type: 'series',
-    poster_url: bachelorPointS5Poster,
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    duration_minutes: 25,
-    release_year: 2024,
-    category_id: 3,
-    is_featured: true,
-    view_count: 8520
-  },
-  {
-    id: 2,
-    title: 'Hawa',
-    description: 'A group of fishermen encounter a mysterious woman on their boat, leading to terrifying events in the deep sea.',
-    type: 'movie',
-    poster_url: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    duration_minutes: 132,
-    release_year: 2022,
-    category_id: 6,
-    is_featured: true,
-    view_count: 12050
-  },
-  {
-    id: 3,
-    title: 'Debi',
-    description: 'A psychological thriller about a woman who claims to be possessed, blurring the lines between faith, sanity, and science.',
-    type: 'movie',
-    poster_url: 'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    duration_minutes: 118,
-    release_year: 2018,
-    category_id: 4,
-    is_featured: false,
-    view_count: 6210
-  },
-  {
-    id: 4,
-    title: 'Mohanagar',
-    description: 'A gripping crime drama following a detective navigating the dark underbelly of Dhaka city within one intense night.',
-    type: 'series',
-    poster_url: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    duration_minutes: 40,
-    release_year: 2021,
-    category_id: 4,
-    is_featured: true,
-    view_count: 9815
-  },
-  {
-    id: 5,
-    title: 'Poran',
-    description: 'A young man falls in love while trying to escape the cycle of poverty and violent obsession in rural Bangladesh.',
-    type: 'movie',
-    poster_url: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
-    duration_minutes: 140,
-    release_year: 2022,
-    category_id: 5,
-    is_featured: false,
-    view_count: 5120
-  },
-  {
-    id: 6,
-    title: 'Rickshaw Girl',
-    description: 'An inspiring drama following a young girl who fights social norms to ride a rickshaw and support her ailing family.',
-    type: 'documentary',
-    poster_url: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    duration_minutes: 85,
-    release_year: 2021,
-    category_id: 8,
-    is_featured: false,
-    view_count: 3450
-  },
-  {
-    id: 7,
-    title: 'Eid Special Short Film',
-    description: 'A heartwarming family short celebrating the reunion, laughter, and emotional attachment of modern relations.',
-    type: 'short',
-    poster_url: 'https://images.unsplash.com/photo-1504439904031-93ded9f93e4e?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
-    duration_minutes: 18,
-    release_year: 2023,
-    category_id: 2,
-    is_featured: false,
-    view_count: 4730
-  }
-];
+const INITIAL_CONTENTS: ContentItem[] = [];
 
 export default function BachelorPoint() {
+  const { settings } = useAppSettings();
   const [activeTab, setActiveTab] = useState<'home' | 'browse' | 'watch' | 'admin' | 'add'>('home');
   const [categories, setCategories] = useState<Category[]>(KEY_CATEGORIES);
   const [contents, setContents] = useState<ContentItem[]>(INITIAL_CONTENTS);
@@ -513,9 +424,10 @@ export default function BachelorPoint() {
   });
 
   const activeWatchItem = contents.find(c => c.id === selectedWatchId);
+  const isColorTheme = settings.bachelorEnableColorTheme !== false;
 
   return (
-    <div className="min-h-screen bg-[#07090f] text-[#f0f0f5] pb-16 font-sans relative">
+    <div className={cn("min-h-screen pb-16 font-sans relative", isColorTheme ? "bg-[#07090f] text-[#f0f0f5]" : "bg-slate-950 text-slate-150")}>
       
       {/* Toast Notifications */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5">
@@ -548,7 +460,7 @@ export default function BachelorPoint() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
         
         {/* Sub Navigation */}
-        <nav className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b border-slate-900 sticky top-0 z-40 bg-[#07090f]/95 backdrop-blur-xl">
+        <nav className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b sticky top-0 z-40 backdrop-blur-xl", isColorTheme ? "border-[#ff003c]/10 bg-[#07090f]/95 text-white" : "border-slate-800 bg-slate-950/95 text-slate-100")}>
           <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => changeTab('home')}>
             <div>
               <div className="text-[9px] font-black tracking-[0.2em] text-[#e5173f] uppercase">BANGLA COMEDY</div>

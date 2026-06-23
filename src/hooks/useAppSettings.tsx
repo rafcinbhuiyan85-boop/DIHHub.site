@@ -117,6 +117,9 @@ export interface AppSettings {
   smmSystemNotice: string;
   smmPaymentMethods: string[];
   smmEnableColorTheme?: boolean;
+  bachelorEnableColorTheme?: boolean;
+  smmUsdToBdtRate?: number;
+  smmShortcutMappings?: Record<string, number[]>;
   disabledTools?: string[];
   toolNotices?: Record<string, string>;
   upcomingTools?: string[];
@@ -157,52 +160,40 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
-  newTools: ['qr', 'encryption', 'to-base64', 'auto-passport', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
+  newTools: ['qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
   newBadgeText: 'NEW',
   faviconUrl: '/favicon-dih.png',
   appLogoUrl: '',
   toolLabels: {
-    'tenmin-ai': '10Min AI Voice',
     'qr': 'QR Code Tools',
     'encryption': 'Secure Encryption',
     'to-base64': 'Base64 Converter',
+    'img-to-base64': 'Image to Base64',
     'bg-remover': 'Background Remover',
-    'passport': 'Passport Photo',
-    'auto-passport': 'Auto Passport',
     'nid': 'NID Card Maker',
     'video': 'Video Downloader',
-    'cut-downloader': 'Cut Downloader',
-    'design-editor': 'Design Editor',
     'lib-encryptor': 'Lib Protector',
     'dex-protector': 'DEX Protector',
     'apk-store': 'APK Store',
     'dih-movies': 'Dih Movies',
     'bachelor-point': 'Bachelor Point S-5',
-    'temp-mail': 'Temp Mail',
-    'temp-sms': 'Temp SMS',
     'mobile-bypass': 'Mobile Bypass Pro',
     'hosted-admin': 'DIH Templates'
   },
   toolDescriptions: {
-    'tenmin-ai': 'Practice speaking Bengali, English, and Japanese on real-time voice calls.',
     'qr': 'Create custom QR codes for links or text.',
     'encryption': 'Lock your messages with a secure password.',
-    'to-base64': 'Convert text or files to Base64 code.',
+    'to-base64': 'Convert text or files to/from Base64 strings.',
+    'img-to-base64': 'Convert images to Base64 strings instantly.',
     'bg-remover': 'Remove image backgrounds in one click.',
-    'passport': 'Create passport size photos for printing.',
-    'auto-passport': 'Professional passport photo generation.',
     'nid': 'Generate printable copies of NID cards.',
     'video': 'Save videos from Facebook or YouTube.',
-    'cut-downloader': 'Trim and download specific parts of any video.',
-    'design-editor': 'Edit and design your photos easily.',
     'lib-encryptor': 'Protect your files with encryption.',
     'dex-protector': 'Secure your Android app files.',
     'apk-store': 'Download premium apps and resources.',
     'dih-movies': 'Watch free movies and shows online.',
     'bachelor-point': 'Manually manage, upload, and stream high fidelity exclusive video contents.',
-    'temp-mail': 'Get a temporary email for private registrations.',
-    'temp-sms': 'Temporary phone numbers for OTP verification.',
     'mobile-bypass': '100% Working Mobile FRP, MDM & Bootloader Bypass solution.',
     'hosted-admin': 'Premium quality landing page showcase and live deployment portal.'
   },
@@ -308,11 +299,19 @@ export const DEFAULT_SETTINGS: AppSettings = {
   smmSystemNotice: 'Welcome to DIH SMM Panel! Enjoy safe, fast SMM panel services at the best rates in World.',
   smmPaymentMethods: ['bkash', 'nagad', 'rocket', 'card', 'crypto'],
   smmEnableColorTheme: true,
+  bachelorEnableColorTheme: true,
+  smmUsdToBdtRate: 120,
+  smmShortcutMappings: {},
   disabledTools: ['mobile-bypass'],
   toolNotices: {},
   upcomingTools: [],
-  comingSoonTools: ['auto-passport']
+  comingSoonTools: []
 };
+
+const DELETED_TOOLS = [
+  'temp-mail', 'temp-sms', 'tenmin-ai', 
+  'passport', 'auto-passport', 'design-editor', 'cut-downloader', 'migration'
+];
 
 export interface AppSettingsContextType {
   settings: AppSettings;
@@ -332,7 +331,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(saved);
       if (!parsed) return DEFAULT_SETTINGS;
       
-      const parsedVisibleTools = Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools;
+      const parsedVisibleTools = (Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools)
+        .filter((t: string) => !DELETED_TOOLS.includes(t));
       const healedVisibleTools = parsedVisibleTools;
       
       // Ensure all default templates are present
@@ -353,8 +353,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         dashboardStats: parsed.dashboardStats || DEFAULT_SETTINGS.dashboardStats,
         templates: mergedTemplates,
         visibleTools: healedVisibleTools,
-        upcomingTools: parsed.upcomingTools ?? DEFAULT_SETTINGS.upcomingTools,
-        comingSoonTools: parsed.comingSoonTools ?? DEFAULT_SETTINGS.comingSoonTools,
+        upcomingTools: (parsed.upcomingTools ?? DEFAULT_SETTINGS.upcomingTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
+        comingSoonTools: (parsed.comingSoonTools ?? DEFAULT_SETTINGS.comingSoonTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
         disabledTools: parsed.disabledTools ?? DEFAULT_SETTINGS.disabledTools
       };
     } catch (e) {
@@ -373,14 +373,15 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const globalSettings = await res.json();
           if (globalSettings) {
-             const serverVisibleTools = Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools;
+             const serverVisibleTools = (Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools)
+               .filter((t: string) => !DELETED_TOOLS.includes(t));
              const healedVisibleTools = serverVisibleTools;
 
              setSettings(prev => ({
                ...prev,
                ...globalSettings,
                visibleTools: healedVisibleTools,
-               newTools: Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools,
+               newTools: (Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
                // Merge templates to avoid losing local ones if needed, 
                // but typically admin wants total control
                templates: globalSettings.templates || prev.templates

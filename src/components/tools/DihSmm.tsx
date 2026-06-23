@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, PlusCircle, List, ArrowDownToLine, 
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
-  AlertCircle, RefreshCw, X, HelpCircle, Activity, Star,
+  AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu,
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video
@@ -26,14 +26,27 @@ interface SMMService {
 
 export function getCleanRefill(refill: any): string {
   if (refill === undefined || refill === null) return 'No Refill';
-  const str = String(refill).trim().toLowerCase();
-  if (!str || str === '0' || str === 'false' || str.includes('no') || str.includes('non') || str.includes('na')) {
+  const rawStr = String(refill).trim();
+  const str = rawStr.toLowerCase();
+  
+  if (!str || str === '0' || str === 'false' || str.includes('no refill') || str.includes('non') || str === 'no' || str === 'na') {
     return 'No Refill';
   }
+  
   if (str.includes('life') || str.includes('lifetime') || str.includes('permanent')) {
     return 'Lifetime Refill';
   }
-  return 'Yes Refill';
+
+  const numbersOnly = str.replace(/[^0-9]/g, '');
+  if (numbersOnly && !str.includes('yes')) {
+    return `Refill ${numbersOnly} Days`;
+  }
+  
+  if (str === '1' || str === 'true' || str === 'yes') {
+    return 'Yes Refill';
+  }
+
+  return rawStr;
 }
 
 interface SMMOrder {
@@ -74,6 +87,7 @@ interface DihSmmProps {
 
 export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const { settings } = useAppSettings();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Handle active user dynamic synchronization
   const [localUser, setLocalUser] = useState<any>(null);
@@ -99,7 +113,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   }, []);
 
   const userToUse = currentUser || localUser;
-  const userEmail = userToUse?.email || 'guest@dihsmm.com';
+  const userEmail = userToUse?.email || 'contact@dihhub.site';
   const userName = userToUse?.name || 'Guest User';
   const isLoggedIn = !!userToUse;
 
@@ -298,13 +312,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       }
     } else {
       const defaultGateways = [
-        { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true },
-        { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true },
-        { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true },
-        { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true },
-        { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true },
-        { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true },
-        { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true }
+        { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true, minDeposit: 2.5 },
+        { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true, minDeposit: 2.5 },
+        { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true, minDeposit: 2.5 },
+        { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true, minDeposit: 2.5 },
+        { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true, minDeposit: 2.5 },
+        { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
+        { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
       ];
       setManualGateways(defaultGateways);
     }
@@ -690,6 +704,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   const navigate = (page: 'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit', serviceId?: number) => {
     setActivePage(page);
+    setMobileMenuOpen(false);
     if (page === 'new-order' && serviceId) {
       setSelectedServiceId(serviceId);
       const s = activeServices.find(x => x.id === serviceId);
@@ -1147,6 +1162,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return;
     }
 
+    // Enforce dynamic active gateway's minimum deposit limit
+    const activeGate = manualGateways.find(g => g.id === selectedMethod);
+    const minLimit = activeGate && activeGate.minDeposit !== undefined ? activeGate.minDeposit : 2.5;
+    if (amt < minLimit) {
+      setDepError(`Deposit amount must be at least $${minLimit.toFixed(2)} for ${activeGate?.title || 'this gateway'}.`);
+      return;
+    }
+
     if (!senderDetails.trim()) {
       setDepError('Please enter Sender account details (e.g. your sending mobile number).');
       return;
@@ -1200,46 +1223,55 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   // Filtering
   const filteredServices = useMemo(() => {
+    // Check if there is an explicit manual service linkage mapping
+    const manualIds = settings.smmShortcutMappings?.[activeCat];
+    const hasManualLinks = Array.isArray(manualIds) && manualIds.length > 0;
+
     return activeServices.filter(s => {
-      const activeCatLower = activeCat.toLowerCase();
-      const svcCatLower = s.category.toLowerCase();
-      
       let matchesCat = false;
-      if (activeCat === 'All') {
-        matchesCat = true;
-      } else if (activeCatLower === 'instagram') {
-        matchesCat = svcCatLower.includes('instagram') || svcCatLower.includes('ig');
-      } else if (activeCatLower === 'facebook') {
-        matchesCat = svcCatLower.includes('facebook') || svcCatLower.includes('fb');
-      } else if (activeCatLower === 'youtube') {
-        matchesCat = svcCatLower.includes('youtube') || svcCatLower.includes('yt');
-      } else if (activeCatLower === 'tiktok') {
-        matchesCat = svcCatLower.includes('tiktok') || svcCatLower.includes('tt');
-      } else if (activeCatLower === 'telegram') {
-        matchesCat = svcCatLower.includes('telegram') || svcCatLower.includes('tg');
-      } else if (activeCatLower === 'twitter' || activeCatLower === 'twitter/x') {
-        matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x ');
-      } else if (activeCatLower === 'linkedin') {
-        matchesCat = svcCatLower.includes('linkedin');
-      } else if (activeCatLower === 'spotify') {
-        matchesCat = svcCatLower.includes('spotify');
-      } else if (activeCatLower === 'discord') {
-        matchesCat = svcCatLower.includes('discord');
-      } else if (activeCatLower === 'website traffic') {
-        matchesCat = svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web');
-      } else if (activeCatLower === 'others') {
-        // Anything that doesn't explicitly match the primary main ones
-        const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcCatLower.includes(k));
-        matchesCat = !isKnown;
+      
+      if (hasManualLinks) {
+        matchesCat = manualIds.includes(s.id);
       } else {
-        matchesCat = svcCatLower === activeCatLower;
+        const activeCatLower = activeCat.toLowerCase();
+        const svcCatLower = s.category.toLowerCase();
+        
+        if (activeCat === 'All') {
+          matchesCat = true;
+        } else if (activeCatLower === 'instagram') {
+          matchesCat = svcCatLower.includes('instagram') || svcCatLower.includes('ig');
+        } else if (activeCatLower === 'facebook') {
+          matchesCat = svcCatLower.includes('facebook') || svcCatLower.includes('fb');
+        } else if (activeCatLower === 'youtube') {
+          matchesCat = svcCatLower.includes('youtube') || svcCatLower.includes('yt');
+        } else if (activeCatLower === 'tiktok') {
+          matchesCat = svcCatLower.includes('tiktok') || svcCatLower.includes('tt');
+        } else if (activeCatLower === 'telegram') {
+          matchesCat = svcCatLower.includes('telegram') || svcCatLower.includes('tg');
+        } else if (activeCatLower === 'twitter' || activeCatLower === 'twitter/x') {
+          matchesCat = svcCatLower.includes('twitter') || svcCatLower.includes('x ');
+        } else if (activeCatLower === 'linkedin') {
+          matchesCat = svcCatLower.includes('linkedin');
+        } else if (activeCatLower === 'spotify') {
+          matchesCat = svcCatLower.includes('spotify');
+        } else if (activeCatLower === 'discord') {
+          matchesCat = svcCatLower.includes('discord');
+        } else if (activeCatLower === 'website traffic') {
+          matchesCat = svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web');
+        } else if (activeCatLower === 'others') {
+          // Anything that doesn't explicitly match the primary main ones
+          const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcCatLower.includes(k));
+          matchesCat = !isKnown;
+        } else {
+          matchesCat = svcCatLower === activeCatLower;
+        }
       }
 
       const matchesQuery = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            s.category.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCat && matchesQuery;
     });
-  }, [activeServices, activeCat, searchQuery]);
+  }, [activeServices, activeCat, searchQuery, settings.smmShortcutMappings]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
@@ -1288,13 +1320,23 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   return (
     <div className={cn(
-      "flex h-screen overflow-hidden text-[#e2e8f0] font-sans antialiased select-none",
+      "flex h-screen overflow-x-hidden overflow-y-hidden w-full text-[#e2e8f0] font-sans antialiased select-none",
       isColorTheme ? "bg-[#0d0f14]" : "bg-slate-950"
     )}>
+      <div className="flex flex-1 min-w-0 w-full h-full overflow-hidden relative">
+      
+      {/* MOBILE DARK BACKDROP */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden animate-fade-in cursor-pointer"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
       
       {/* SIDEBAR */}
       <aside className={cn(
-        "hidden md:flex flex-col w-60 min-w-60 relative z-20",
+        "flex flex-col w-60 min-w-60 fixed md:relative inset-y-0 left-0 z-50 md:z-20 md:flex transition-transform duration-300 shrink-0",
+        mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         isColorTheme ? "bg-[#0a0c10] border-r border-[#1e2336]" : "bg-slate-900 border-r border-slate-800"
       )}>
         <div className={cn(
@@ -1380,12 +1422,21 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             : "border-b border-slate-800 bg-slate-900/80"
         )}>
           <div className="flex items-center gap-3">
-            <h1 className="text-base font-semibold text-white capitalize md:block hidden">
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className={cn(
+                "p-2 rounded-xl md:hidden text-slate-400 hover:text-white hover:bg-white/5 active:scale-95 focus:outline-none transition-all mr-1",
+                isColorTheme ? "bg-[#141720]/50 border border-[#1e2336]/60" : "bg-slate-900 border border-slate-800"
+              )}
+            >
+              <Menu size={18} />
+            </button>
+            <h1 className="text-base font-semibold text-white capitalize block">
               {activePage === 'new-order' ? 'Place New Order' : activePage === 'orders' ? 'My Orders' : activePage === 'deposit' ? 'Add Funds' : activePage}
             </h1>
             
-            {/* Mobile Header indicator */}
-            <div className="flex md:hidden items-center gap-2 font-bold text-white text-base">
+            {/* Mobile Header indicator - hidden in desktop design */}
+            <div className="hidden items-center gap-2 font-bold text-white text-base">
               <Activity className={isColorTheme ? "text-blue-500" : "text-slate-400"} size={18} />
               DIH SMM
               <span className="text-slate-500 ml-1 font-medium text-xs">|</span>
@@ -1393,8 +1444,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             </div>
           </div>
 
-          {/* Desktop User Status Gate */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* User Status Gate - always visible */}
+          <div className="flex items-center gap-3">
             {isLoggedIn ? (
               <div className={cn(
                 "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs",
@@ -1426,8 +1477,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             )}
           </div>
 
-          {/* Mobile Bottom-Like Nav bar inside header */}
-          <div className="flex md:hidden items-center gap-1.5">
+          {/* Mobile Bottom-Like Nav bar inside header - hidden in desktop design */}
+          <div className="hidden items-center gap-1.5">
             <button 
               onClick={() => navigate('dashboard')}
               className={cn("p-1.5 rounded-md", activePage === 'dashboard' ? (isColorTheme ? "bg-blue-500/15 text-blue-500" : "bg-slate-800 text-white") : "text-slate-400")}
@@ -1710,7 +1761,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 🔄 Refill: {getCleanRefill(s.refill)}
                               </span>
                             )}
-                            <span>{s.time}</span>
                           </div>
                         </div>
 
@@ -2064,18 +2114,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                                     <span>•</span>
                                                     <span className={cn(
                                                       "px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 transition-colors duration-150",
-                                                      s.refill.toLowerCase().includes('no') 
+                                                      getCleanRefill(s.refill).toLowerCase().includes('no') 
                                                         ? "bg-red-500/10 text-red-400 border border-red-500/10" 
                                                         : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/10"
                                                     )}>
-                                                      🔄 {s.refill}
+                                                      🔄 {getCleanRefill(s.refill)}
                                                     </span>
-                                                  </>
-                                                )}
-                                                {s.time && (
-                                                  <>
-                                                    <span>•</span>
-                                                    <span>⚡ {s.time}</span>
                                                   </>
                                                 )}
                                               </div>
@@ -2120,21 +2164,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 Min: {fmt(selectedService.min)} – Max: {fmt(selectedService.max)}
                               </div>
                             )}
-                          </div>
-
-                          {/* Average Time (Readonly input) */}
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-1 pl-0.5">
-                              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Average time</label>
-                              <HelpCircle size={12} className="text-slate-500 cursor-help" title="Dynamic real-time SMM provider speed estimation" />
-                            </div>
-                            <input 
-                              type="text" 
-                              readOnly 
-                              disabled
-                              value={selectedService ? getAverageTimeText(selectedService.time, selectedService.id, selectedService.category) : "Choose a service first"}
-                              className="w-full bg-[#0d0f17]/40 border border-[#1e2336] px-4 py-3 text-xs text-slate-400 rounded-lg outline-none select-none h-11"
-                            />
                           </div>
 
                           {/* Charge (Readonly input showing total price) */}
@@ -2220,14 +2249,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 {/* Refill Status Prominent Card */}
                                 <div className={cn(
                                   "p-3 rounded-lg border flex flex-col gap-1 transition-colors duration-200",
-                                  (selectedService.refill || 'No Refill').toLowerCase().includes('no')
+                                  getCleanRefill(selectedService.refill).toLowerCase().includes('no')
                                     ? "bg-red-500/5 border-red-500/10 text-red-400"
                                     : "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
                                 )}>
                                   <span className="text-[9px] font-black uppercase tracking-wider opacity-60">Refill Guarantee</span>
                                   <span className="text-xs font-black flex items-center gap-1.5">
-                                    {(selectedService.refill || 'No Refill').toLowerCase().includes('no') ? '❌' : '🔄'}
-                                    {selectedService.refill || 'No Refill'}
+                                    {getCleanRefill(selectedService.refill).toLowerCase().includes('no') ? '❌' : '🔄'}
+                                    {getCleanRefill(selectedService.refill)}
                                   </span>
                                 </div>
 
@@ -2236,14 +2265,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Destination URL</span>
                                   <span className="text-xs font-bold leading-none truncate mt-0.5">
                                     {orderActiveCat.toLowerCase().includes('followers') ? '🔗 Profile / Channel Link' : '🔗 Video / Post / Photo link'}
-                                  </span>
-                                </div>
-
-                                {/* Start speed & delivery time */}
-                                <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Delivery Speed</span>
-                                  <span className="text-xs font-bold leading-none mt-0.5 flex items-center gap-1">
-                                    ⚡ {selectedService.time || '1-12 Hours (High Speed)'}
                                   </span>
                                 </div>
 
@@ -2488,6 +2509,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             <span className="font-bold text-blue-400 not-italic block mb-0.5 text-[10px] uppercase">Instruction:</span>
                             {activeGate.instructions}
                           </div>
+
+                          {/* BD Mobile Payments Conversion UI */}
+                          {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) && (
+                            <div className="bg-amber-500/5 border border-amber-500/15 text-amber-400 p-3 rounded-lg text-xs space-y-1 mt-2 font-sans">
+                              <div className="flex justify-between items-center font-bold">
+                                <span>Exchange Rate:</span>
+                                <span>1 USD = ৳{settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120} BDT</span>
+                              </div>
+                              {parseFloat(depositAmount) > 0 && (
+                                <div className="flex justify-between items-center font-black text-[13px] border-t border-amber-500/10 pt-1.5 mt-1.5">
+                                  <span>Total to Send:</span>
+                                  <span>৳{((parseFloat(depositAmount) || 0) * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120)).toFixed(2)} BDT</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
@@ -2516,7 +2553,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                     {/* AMOUNT */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Amount (USD)</label>
+                      <div className="flex justify-between items-center pr-1 pl-0.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount (USD)</label>
+                        <span className="text-[10px] text-slate-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10">
+                          Min: ${(manualGateways.find(g => g.id === selectedMethod)?.minDeposit !== undefined ? manualGateways.find(g => g.id === selectedMethod)?.minDeposit : 2.5).toFixed(2)} USD
+                        </span>
+                      </div>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-20px text-blue-500 font-bold pointer-events-none">$</span>
                         <input
@@ -2650,6 +2692,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         </div>
       </main>
 
+      </div>
     </div>
   );
 
