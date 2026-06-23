@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { OFFICIAL_LETTERHEAD_SVG } from '../templates/officialLetterhead';
 import { NID_FRONT_SVG, NID_BACK_SVG } from '../templates/nidTemplate';
 
@@ -160,8 +160,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
-  newTools: ['qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
+  newTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'],
   newBadgeText: 'NEW',
   faviconUrl: '/favicon-dih.png',
   appLogoUrl: '',
@@ -169,7 +169,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'qr': 'QR Code Tools',
     'encryption': 'Secure Encryption',
     'to-base64': 'Base64 Converter',
-    'img-to-base64': 'Image to Base64',
     'bg-remover': 'Background Remover',
     'nid': 'NID Card Maker',
     'video': 'Video Downloader',
@@ -185,7 +184,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'qr': 'Create custom QR codes for links or text.',
     'encryption': 'Lock your messages with a secure password.',
     'to-base64': 'Convert text or files to/from Base64 strings.',
-    'img-to-base64': 'Convert images to Base64 strings instantly.',
     'bg-remover': 'Remove image backgrounds in one click.',
     'nid': 'Generate printable copies of NID cards.',
     'video': 'Save videos from Facebook or YouTube.',
@@ -413,6 +411,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.faviconUrl]);
 
+  const lastLocalUpdateRef = useRef<number>(Date.now());
+
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -430,15 +430,123 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(delayDebounceFn);
   }, [settings, isLoaded]);
 
+  // Broadcast settings updates in real-time
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      const channel = new BroadcastChannel('dh_settings_sync');
+      channel.postMessage({ type: 'SETTINGS_UPDATE', settings });
+      channel.close();
+    } catch (e) {
+      // BroadcaseChannel fallback
+    }
+  }, [settings, isLoaded]);
+
+  // Real-time synchronization across same-browser tabs/iframes via BroadcastChannel
+  useEffect(() => {
+    try {
+      const channel = new BroadcastChannel('dh_settings_sync');
+      channel.onmessage = (event) => {
+        if (event.data && event.data.type === 'SETTINGS_UPDATE') {
+          const incoming = event.data.settings;
+          setSettings(prev => {
+            const prevStr = JSON.stringify(prev);
+            const incomingStr = JSON.stringify(incoming);
+            if (prevStr !== incomingStr) {
+              return incoming;
+            }
+            return prev;
+          });
+        }
+      };
+      return () => {
+        channel.close();
+      };
+    } catch (e) {
+      // Degrade gracefully
+    }
+  }, []);
+
+  // Real-time synchronization across same-browser tabs/iframes
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'dh_v3_settings' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed) {
+            setSettings(prev => {
+              const prevStr = JSON.stringify(prev);
+              const newStr = JSON.stringify({ ...prev, ...parsed });
+              if (prevStr !== newStr) {
+                return { ...prev, ...parsed };
+              }
+              return prev;
+            });
+          }
+        } catch (err) {
+          console.error('Failed to sync settings from storage event:', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Real-time synchronization across different devices/browsers via polling
+  useEffect(() => {
+    const syncWithServer = async () => {
+      // Avoid overwriting settings if recently modified locally (idle time of 4 seconds)
+      if (Date.now() - lastLocalUpdateRef.current < 4000) return;
+
+      try {
+        const res = await fetch('/api/admin/settings');
+        if (res.ok) {
+          const globalSettings = await res.json();
+          if (globalSettings) {
+            setSettings(prev => {
+              const prevStr = JSON.stringify({ ...prev, templates: [] });
+              const globalStr = JSON.stringify({ ...globalSettings, templates: [] });
+              if (prevStr !== globalStr) {
+                const serverVisibleTools = (Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools)
+                  .filter((t: string) => !DELETED_TOOLS.includes(t));
+                return {
+                  ...prev,
+                  ...globalSettings,
+                  visibleTools: serverVisibleTools,
+                  newTools: (Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
+                  templates: globalSettings.templates || prev.templates
+                };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to query global settings during polling:', err);
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncWithServer();
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const updateSettings = (newSettings: Partial<AppSettings>) => {
+    lastLocalUpdateRef.current = Date.now();
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const addTemplate = (template: Template) => {
+    lastLocalUpdateRef.current = Date.now();
     setSettings(prev => ({ ...prev, templates: [...prev.templates, template] }));
   };
 
   const removeTemplate = (id: string) => {
+    lastLocalUpdateRef.current = Date.now();
     setSettings(prev => ({ ...prev, templates: prev.templates.filter(t => t.id !== id) }));
   };
 

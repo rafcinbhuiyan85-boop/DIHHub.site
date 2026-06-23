@@ -36,7 +36,7 @@ import TenminAI from './components/tools/TenminAI';
 import BachelorPoint from './components/tools/BachelorPoint';
 import DihSmm from './components/tools/DihSmm';
 
-type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'img-to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration';
 
 function MainApp() {
   const { settings } = useAppSettings();
@@ -72,7 +72,7 @@ function MainApp() {
         }
         
         const toolIds: ToolId[] = [
-          'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
+          'qr', 'encryption', 'to-base64', 'bg-remover', 
           'video', 'lib-encryptor', 
           'dex-protector', 'apk-store', 
           'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm'
@@ -171,7 +171,7 @@ function MainApp() {
     }
 
     const toolIds: ToolId[] = [
-      'qr', 'encryption', 'to-base64', 'img-to-base64', 'bg-remover', 
+      'qr', 'encryption', 'to-base64', 'bg-remover', 
       'video', 'lib-encryptor', 
       'dex-protector', 'apk-store', 
       'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm'
@@ -267,7 +267,6 @@ function MainApp() {
       case 'qr': return <QRCodeTool />;
       case 'encryption': return <EncryptionTool />;
       case 'to-base64': return <ImageToBase64 />;
-      case 'img-to-base64': return <ImageToBase64 />;
       case 'bg-remover': return <BackgroundRemover />;
       case 'video': return <VideoDownloader />;
       case 'lib-encryptor': return <LibEncryptor />;

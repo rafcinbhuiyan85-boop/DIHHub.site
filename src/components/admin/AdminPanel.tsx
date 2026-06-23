@@ -138,99 +138,7 @@ class BP_FileStorage {
 const bpFileStorage = new BP_FileStorage();
 const BP_STORAGE_KEY = 'bp_s5_custom_data_v2';
 
-const BP_INITIAL_CONTENTS: BP_ContentItem[] = [
-  {
-    id: 1,
-    title: 'Bachelor Point Season 5',
-    description: 'The beloved Bangla comedy series returns with a brand new season full of humor and heart from the bachelor boys of Dhaka.',
-    type: 'series',
-    poster_url: bachelorPointS5Poster,
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    duration_minutes: 25,
-    release_year: 2024,
-    category_id: 3,
-    is_featured: true,
-    view_count: 8520
-  },
-  {
-    id: 2,
-    title: 'Hawa',
-    description: 'A group of fishermen encounter a mysterious woman on their boat, leading to terrifying events in the deep sea.',
-    type: 'movie',
-    poster_url: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    duration_minutes: 132,
-    release_year: 2022,
-    category_id: 6,
-    is_featured: true,
-    view_count: 12050
-  },
-  {
-    id: 3,
-    title: 'Debi',
-    description: 'A psychological thriller about a woman who claims to be possessed, blurring the lines between faith, sanity, and science.',
-    type: 'movie',
-    poster_url: 'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    duration_minutes: 118,
-    release_year: 2018,
-    category_id: 4,
-    is_featured: false,
-    view_count: 6210
-  },
-  {
-    id: 4,
-    title: 'Mohanagar',
-    description: 'A gripping crime drama following a detective navigating the dark underbelly of Dhaka city within one intense night.',
-    type: 'series',
-    poster_url: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    duration_minutes: 40,
-    release_year: 2021,
-    category_id: 4,
-    is_featured: true,
-    view_count: 9815
-  },
-  {
-    id: 5,
-    title: 'Poran',
-    description: 'A young man falls in love while trying to escape the cycle of poverty and violent obsession in rural Bangladesh.',
-    type: 'movie',
-    poster_url: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
-    duration_minutes: 140,
-    release_year: 2022,
-    category_id: 5,
-    is_featured: false,
-    view_count: 5120
-  },
-  {
-    id: 6,
-    title: 'Rickshaw Girl',
-    description: 'An inspiring drama following a young girl who fights social norms to ride a rickshaw and support her ailing family.',
-    type: 'documentary',
-    poster_url: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    duration_minutes: 85,
-    release_year: 2021,
-    category_id: 8,
-    is_featured: false,
-    view_count: 3450
-  },
-  {
-    id: 7,
-    title: 'Eid Special Short Film',
-    description: 'A heartwarming family short celebrating the reunion, laughter, and emotional attachment of modern relations.',
-    type: 'short',
-    poster_url: 'https://images.unsplash.com/photo-1504439904031-93ded9f93e4e?w=400&h=600&fit=crop',
-    video_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
-    duration_minutes: 18,
-    release_year: 2023,
-    category_id: 2,
-    is_featured: false,
-    view_count: 4730
-  }
-];
+const BP_INITIAL_CONTENTS: BP_ContentItem[] = [];
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const { settings, updateSettings, addTemplate, removeTemplate } = useAppSettings();
@@ -4664,7 +4572,46 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
           )}
 
           {activeTab === 'config-bachelor-point' && (
-            <div className="animate-in fade-in duration-300">
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Bachelor Point Design Themes Configuration */}
+              <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Bachelor Point Color Theme</h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                      Toggle between the customized high-fidelity premium red/glowing style or a clean, classic black/slate layout for Bachelor Point.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateSettings({ bachelorEnableColorTheme: settings.bachelorEnableColorTheme === false ? true : false })}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500/20 select-none",
+                      settings.bachelorEnableColorTheme !== false ? "bg-red-650" : "bg-slate-800"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                        settings.bachelorEnableColorTheme !== false ? "translate-x-5" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
+                    Current Bachelor Style:
+                  </span>
+                  <span className={cn(
+                    "font-black font-mono text-[10px] uppercase tracking-wide",
+                    settings.bachelorEnableColorTheme !== false ? "text-red-400" : "text-slate-400"
+                  )}>
+                    {settings.bachelorEnableColorTheme !== false ? "✨ Premium Color Design (Red Glow / Cinematic)" : "📦 Clean Slate Slate-950 design"}
+                  </span>
+                </div>
+              </div>
+
               <BachelorPointManager />
             </div>
           )}
@@ -6748,45 +6695,6 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           settings.smmEnableColorTheme !== false ? "text-indigo-400" : "text-slate-400"
                         )}>
                           {settings.smmEnableColorTheme !== false ? "✨ Premium Color Design (Neon / Multi-Glow)" : "📦 Clean Slate Normal Design"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bachelor Point Design Themes Configuration */}
-                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
-                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Bachelor Point Color Theme</h3>
-                          <p className="text-xs text-slate-500 font-medium mt-1">
-                            Toggle between the customized high-fidelity premium red/glowing style or a clean, classic black/slate layout for Bachelor Point.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => updateSettings({ bachelorEnableColorTheme: settings.bachelorEnableColorTheme === false ? true : false })}
-                          className={cn(
-                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500/20 select-none",
-                            settings.bachelorEnableColorTheme !== false ? "bg-red-650" : "bg-slate-800"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                              settings.bachelorEnableColorTheme !== false ? "translate-x-5" : "translate-x-0"
-                            )}
-                          />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
-                          Current Bachelor Style:
-                        </span>
-                        <span className={cn(
-                          "font-black font-mono text-[10px] uppercase tracking-wide",
-                          settings.bachelorEnableColorTheme !== false ? "text-red-400" : "text-slate-400"
-                        )}>
-                          {settings.bachelorEnableColorTheme !== false ? "✨ Premium Color Design (Red Glow / Cinematic)" : "📦 Clean Slate Slate-950 design"}
                         </span>
                       </div>
                     </div>

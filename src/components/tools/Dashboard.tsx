@@ -23,7 +23,6 @@ const tools = [
   { id: 'qr', icon: QrCode, label: 'QR Tools', description: 'Generate and decode QR codes instantly.', color: 'bg-blue-500' },
   { id: 'encryption', icon: ShieldCheck, label: 'Encryption', description: 'Secure your text with Base64 encoding.', color: 'bg-indigo-500' },
   { id: 'to-base64', icon: RefreshCcw, label: 'Base64 Converter', description: 'Convert text or files to/from Base64 strings.', color: 'bg-purple-500' },
-  { id: 'img-to-base64', icon: ImageIcon, label: 'Image to Base64', description: 'Convert image files directly into Base64 strings.', color: 'bg-pink-500' },
   { id: 'bg-remover', icon: ImageIcon, label: 'Background Remover', description: 'Professional background removal for any image.', color: 'bg-indigo-600' },
   { id: 'video', icon: Download, label: 'Video Downloader', description: 'Download from Social Media platforms.', color: 'bg-red-500' },
   { id: 'lib-encryptor', icon: ShieldAlert, label: 'Lib Encryptor', description: 'Hard AES-256 binary encryption.', color: 'bg-indigo-600' },

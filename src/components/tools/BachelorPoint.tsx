@@ -156,15 +156,27 @@ export default function BachelorPoint() {
           const parsed = JSON.parse(saved);
           if (parsed.categories) setCategories(parsed.categories);
           if (parsed.contents) {
-            // Force update the poster_url of Bachelor Point Season 5 (id: 1) if it's the old placeholder
-            const mapped = parsed.contents.map((item: any) => {
-              if (item.id === 1) {
-                return { ...item, poster_url: bachelorPointS5Poster };
-              }
-              return item;
+            // Filter out any default demo videos (with ID <= 7 or gtv-videos-bucket URLs)
+            const cleaned = parsed.contents.filter((item: any) => {
+              const isDemo = item.id <= 7 || (item.video_url && item.video_url.includes('gtv-videos-bucket'));
+              return !isDemo;
             });
-            setContents(mapped);
+            setContents(cleaned);
+            if (cleaned.length !== parsed.contents.length) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                categories: parsed.categories || KEY_CATEGORIES,
+                contents: cleaned
+              }));
+              window.dispatchEvent(new Event('bp_storage_update'));
+              try {
+                const bChan = new BroadcastChannel('bp_storage_sync');
+                bChan.postMessage('bp_storage_update');
+                bChan.close();
+              } catch (e) {}
+            }
           }
+        } else {
+          setContents([]);
         }
       } catch (e) {
         console.error('Failed to load custom streamer data', e);
@@ -175,9 +187,24 @@ export default function BachelorPoint() {
     window.addEventListener('storage', loadFromStorage);
     window.addEventListener('bp_storage_update', loadFromStorage);
 
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('bp_storage_sync');
+      channel.onmessage = (event) => {
+        if (event.data === 'bp_storage_update') {
+          loadFromStorage();
+        }
+      };
+    } catch (e) {
+      // fallback
+    }
+
     return () => {
       window.removeEventListener('storage', loadFromStorage);
       window.removeEventListener('bp_storage_update', loadFromStorage);
+      if (channel) {
+        channel.close();
+      }
     };
   }, []);
 
@@ -246,6 +273,11 @@ export default function BachelorPoint() {
         contents: nextItems
       }));
       window.dispatchEvent(new Event('bp_storage_update'));
+      try {
+        const bChan = new BroadcastChannel('bp_storage_sync');
+        bChan.postMessage('bp_storage_update');
+        bChan.close();
+      } catch (e) {}
     } catch (e) {
       console.error('Failed to persist custom streamer data', e);
     }
@@ -425,9 +457,18 @@ export default function BachelorPoint() {
 
   const activeWatchItem = contents.find(c => c.id === selectedWatchId);
   const isColorTheme = settings.bachelorEnableColorTheme !== false;
+  const bpPrimary = isColorTheme ? '#e5173f' : '#3b82f6';
+  const bpHover = isColorTheme ? '#b01030' : '#1d4ed8';
+  const bgRgb = isColorTheme ? '7, 9, 15' : '9, 15, 30';
 
   return (
-    <div className={cn("min-h-screen pb-16 font-sans relative", isColorTheme ? "bg-[#07090f] text-[#f0f0f5]" : "bg-slate-950 text-slate-150")}>
+    <div 
+      style={{
+        '--bp-primary': bpPrimary,
+        '--bp-hover': bpHover,
+      } as React.CSSProperties}
+      className={cn("min-h-screen pb-16 font-sans relative", isColorTheme ? "bg-[#07090f] text-[#f0f0f5]" : "bg-[#090f1e] text-slate-100")}
+    >
       
       {/* Toast Notifications */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5">
@@ -460,11 +501,11 @@ export default function BachelorPoint() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
         
         {/* Sub Navigation */}
-        <nav className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b sticky top-0 z-40 backdrop-blur-xl", isColorTheme ? "border-[#ff003c]/10 bg-[#07090f]/95 text-white" : "border-slate-800 bg-slate-950/95 text-slate-100")}>
+        <nav className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b sticky top-0 z-40 backdrop-blur-xl", isColorTheme ? "border-[#ff003c]/10 bg-[#07090f]/95 text-white" : "border-slate-800 bg-[#090f1e]/95 text-slate-100")}>
           <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => changeTab('home')}>
             <div>
-              <div className="text-[9px] font-black tracking-[0.2em] text-[#e5173f] uppercase">BANGLA COMEDY</div>
-              <div className="text-sm font-black tracking-widest text-[#f5173f] uppercase">Bachelor Point S-5</div>
+              <div className="text-[9px] font-black tracking-[0.2em] text-[var(--bp-primary)] uppercase">BANGLA COMEDY</div>
+              <div className="text-sm font-black tracking-widest text-[var(--bp-primary)] uppercase">Bachelor Point S-5</div>
             </div>
           </div>
 
@@ -478,7 +519,7 @@ export default function BachelorPoint() {
                 setSearchQuery(e.target.value);
                 setActiveTab('home');
               }}
-              className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none text-white focus:border-[#e5173f]/50 transition-all font-semibold"
+              className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none text-white focus:border-[var(--bp-primary)]/50 transition-all font-semibold"
             />
           </div>
         </nav>
@@ -504,7 +545,7 @@ export default function BachelorPoint() {
                   <div className="flex flex-wrap items-center gap-3 pt-2">
                     <button 
                       onClick={() => changeTab('watch', heroContent.id)}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-[#e5173f] hover:bg-[#b01030] text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-red-500/20 hover:-translate-y-0.5 active:scale-95"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--bp-primary)] hover:bg-[var(--bp-hover)] text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-[var(--bp-primary)]/20 hover:-translate-y-0.5 active:scale-95"
                     >
                       <Play size={14} fill="white" /> Start Watching
                     </button>
@@ -519,7 +560,7 @@ export default function BachelorPoint() {
               <div className="space-y-5">
                 <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                   <h2 className="text-sm font-black tracking-widest uppercase text-white flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-red-500 rounded-sm" /> Newly Uploaded (New Only)
+                    <span className="w-1.5 h-6 bg-[var(--bp-primary)] rounded-sm" /> Newly Uploaded (New Only)
                   </h2>
                 </div>
                 
@@ -528,7 +569,7 @@ export default function BachelorPoint() {
                     <div 
                       key={item.id}
                       onClick={() => changeTab('watch', item.id)}
-                      className="group cursor-pointer bg-slate-950 border border-slate-905 rounded-xl overflow-hidden hover:scale-105 active:scale-98 transition-all hover:shadow-2xl hover:shadow-red-500/5"
+                      className="group cursor-pointer bg-slate-950 border border-slate-905 rounded-xl overflow-hidden hover:scale-105 active:scale-98 transition-all hover:shadow-2xl hover:shadow-[var(--bp-primary)]/5"
                     >
                       <div className="aspect-[2/3] relative bg-[#12121a] overflow-hidden">
                         <img 
@@ -537,7 +578,7 @@ export default function BachelorPoint() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300">
-                          <div className="w-11 h-11 rounded-full bg-[#e5173f] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform duration-300 shadow-lg shadow-red-500/20">
+                          <div className="w-11 h-11 rounded-full bg-[var(--bp-primary)] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform duration-300 shadow-lg shadow-[var(--bp-primary)]/20">
                             <Play size={16} fill="white" className="text-white ml-0.5" />
                           </div>
                         </div>
@@ -582,7 +623,7 @@ export default function BachelorPoint() {
                         </div>
                         {(item.id > 7 || item.poster_file_key || item.video_file_key) && (
                           <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1">
-                            <span className="bg-[#e5173f] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
+                            <span className="bg-[var(--bp-primary)] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
                               New
                             </span>
                           </div>
@@ -617,13 +658,13 @@ export default function BachelorPoint() {
                 placeholder="Search releases by name..."
                 value={browseSearch}
                 onChange={(e) => setBrowseSearch(e.target.value)}
-                className="flex-1 min-w-[200px] px-4 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f]/40 font-semibold text-white"
+                className="flex-1 min-w-[200px] px-4 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[var(--bp-primary)]/40 font-semibold text-white"
               />
 
               <select 
                 value={browseType} 
                 onChange={(e) => setBrowseType(e.target.value)}
-                className="px-4 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none text-slate-400 font-extrabold uppercase cursor-pointer focus:border-[#e5173f]"
+                className="px-4 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none text-slate-400 font-extrabold uppercase cursor-pointer focus:border-[var(--bp-primary)]"
               >
                 <option value="">All Formats</option>
                 <option value="movie">Movies</option>
@@ -635,7 +676,7 @@ export default function BachelorPoint() {
               <select 
                 value={browseCat} 
                 onChange={(e) => setBrowseCat(e.target.value)}
-                className="px-4 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none text-slate-400 font-extrabold uppercase cursor-pointer focus:border-[#e5173f]"
+                className="px-4 py-2.5 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none text-slate-400 font-extrabold uppercase cursor-pointer focus:border-[var(--bp-primary)]"
               >
                 <option value="">All Genres</option>
                 {categories.map(c => (
@@ -672,7 +713,7 @@ export default function BachelorPoint() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                        <div className="w-11 h-11 rounded-full bg-[#e5173f] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform">
+                        <div className="w-11 h-11 rounded-full bg-[var(--bp-primary)] flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform">
                           <Play size={16} fill="white" className="text-white ml-0.5" />
                         </div>
                       </div>
@@ -716,7 +757,7 @@ export default function BachelorPoint() {
               
               {/* Custom Logo overlay like HTML */}
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-slate-800 pointer-events-none">
-                <span className="text-[10px] font-black text-white/95">DIH <span className="text-[#e5173f]">CINEMA</span></span>
+                <span className="text-[10px] font-black text-white/95">DIH <span className="text-[var(--bp-primary)]">CINEMA</span></span>
               </div>
             </div>
 
@@ -739,7 +780,7 @@ export default function BachelorPoint() {
               </div>
               <button 
                 onClick={() => changeTab('add')}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#e5173f] hover:bg-[#b01030] text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[var(--bp-primary)] hover:bg-[var(--bp-hover)] text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95"
               >
                 <Plus size={14} /> Add Content manual
               </button>
@@ -748,9 +789,9 @@ export default function BachelorPoint() {
             {/* METRICS ROW */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
-                { label: 'Total Streams', value: contents.length, color: 'text-[#e5173f]' },
+                { label: 'Total Streams', value: contents.length, color: 'text-[var(--bp-primary)]' },
                 { label: 'Movies Listed', value: contents.filter(c => c.type === 'movie').length, color: 'text-sky-400' },
-                { label: 'Web Series', value: contents.filter(c => c.type === 'series').length, color: 'text-[#e5173f]' },
+                { label: 'Web Series', value: contents.filter(c => c.type === 'series').length, color: 'text-[var(--bp-primary)]' },
                 { label: 'Short Films', value: contents.filter(c => c.type === 'short').length, color: 'text-amber-400' },
                 { label: 'Documentaries', value: contents.filter(c => c.type === 'documentary').length, color: 'text-emerald-400' }
               ].map((m, i) => (
@@ -791,7 +832,7 @@ export default function BachelorPoint() {
                               Watch
                             </button>
                             {bDeletingId === c.id ? (
-                              <button 
+                               <button 
                                 onClick={() => {
                                   handleDeleteContent(c.id, c.title);
                                   setBDeletingId(null);
@@ -809,7 +850,7 @@ export default function BachelorPoint() {
                                     setBDeletingId(current => current === c.id ? null : current);
                                   }, 4000);
                                 }}
-                                className="px-2.5 py-1 bg-rose-950/40 border border-rose-500/15 text-rose-400 hover:bg-[#e5173f] hover:text-white rounded font-extrabold text-[10px] uppercase tracking-wider transition-all"
+                                className="px-2.5 py-1 bg-rose-950/40 border border-rose-500/15 text-rose-400 hover:bg-[var(--bp-primary)] hover:text-white rounded font-extrabold text-[10px] uppercase tracking-wider transition-all"
                               >
                                 Delete
                               </button>
@@ -850,16 +891,16 @@ export default function BachelorPoint() {
                     placeholder="e.g. Aynabaji"
                     value={fTitle}
                     onChange={(e) => setFTitle(e.target.value)}
-                    className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-semibold"
+                    className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[var(--bp-primary)] text-white font-semibold"
                   />
                 </div>
 
-                 {/* LOCAL FILE UPLOADER FOR POSTER THUMBNAIL */}
+                  {/* LOCAL FILE UPLOADER FOR POSTER THUMBNAIL */}
                 <div className="flex flex-col gap-2">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Poster Thumbnail Graphic (Optional)</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div 
-                      className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
+                      className="border-2 border-dashed border-slate-850 hover:border-[var(--bp-primary)]/50 bg-[#12121a]/30 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -873,7 +914,6 @@ export default function BachelorPoint() {
                       onClick={() => {
                         const input = document.createElement('input');
                         input.type = 'file';
-                        input.accept = 'image/*';
                         input.onchange = (e) => {
                           const file = (e.target as HTMLInputElement).files?.[0];
                           if (file) setFPosterFile(file);
@@ -921,7 +961,7 @@ export default function BachelorPoint() {
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Video File Upload *</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div 
-                      className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
+                      className="border-2 border-dashed border-slate-850 hover:border-[var(--bp-primary)]/50 bg-[#12121a]/30 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
@@ -935,7 +975,6 @@ export default function BachelorPoint() {
                       onClick={() => {
                         const input = document.createElement('input');
                         input.type = 'file';
-                        input.accept = 'video/*';
                         input.onchange = (e) => {
                           const file = (e.target as HTMLInputElement).files?.[0];
                           if (file) setFVideoFile(file);
@@ -983,7 +1022,7 @@ export default function BachelorPoint() {
                   </button>
                   <button 
                     type="submit" 
-                    className="px-6 py-2.5 bg-[#e5173f] hover:bg-[#b01030] text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md"
+                    className="px-6 py-2.5 bg-[var(--bp-primary)] hover:bg-[var(--bp-hover)] text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md"
                   >
                     Save Release
                   </button>
@@ -1015,7 +1054,7 @@ export default function BachelorPoint() {
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-                className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[#e5173f] text-white font-semibold"
+                className="px-3 py-2 bg-[#12121a] border border-slate-800 rounded-lg text-xs outline-none focus:border-[var(--bp-primary)] text-white font-semibold"
               />
             </div>
 
@@ -1028,7 +1067,7 @@ export default function BachelorPoint() {
               </button>
               <button 
                 onClick={handleAddCategory}
-                className="px-4 py-2 bg-[#e5173f] hover:bg-[#b01030] text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                className="px-4 py-2 bg-[var(--bp-primary)] hover:bg-[var(--bp-hover)] text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
               >
                 Add Category
               </button>
