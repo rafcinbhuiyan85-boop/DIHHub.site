@@ -22,6 +22,8 @@ interface SMMService {
   time: string;
   quality: string;
   refill?: string;
+  providerId?: string | number;
+  providerServiceId?: string | number;
 }
 
 export function getCleanRefill(refill: any): string {
@@ -61,6 +63,8 @@ interface SMMOrder {
   startCount: number;
   remains: number;
   createdAt: string;
+  apiOrderId?: string | number;
+  error?: string;
 }
 
 const SERVICES: SMMService[] = [];
@@ -123,6 +127,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   // Dynamically managed services list
   const [servicesList, setServicesList] = useState<SMMService[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
 
   // States
   const [balance, setBalance] = useState<number>(0.00);
@@ -401,7 +406,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       if (cachedBalance) {
         setBalance(parseFloat(cachedBalance));
       } else {
-        const initialBalance = 0.00; // Always start with 0.00 balance unless a deposit is verified/approved
+        const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
         setBalance(initialBalance);
         localStorage.setItem(balanceKey, initialBalance.toFixed(2));
       }
@@ -556,6 +561,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           if (Array.isArray(deps)) {
             localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(deps));
             setLocalDeposits(deps);
+          }
+        }
+
+        // 4. Providers
+        const resProvs = await fetch('/api/smm/providers');
+        if (resProvs.ok) {
+          const provs = await resProvs.json();
+          if (Array.isArray(provs)) {
+            setProviders(provs);
           }
         }
       } catch (err) {
@@ -1194,14 +1208,102 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       createdAt: new Date().toISOString().split('T')[0]
     };
 
-    saveOrders([newOrder, ...orders]);
+    const updatedOrdersList = [newOrder, ...orders];
+    saveOrders(updatedOrdersList);
     setNextId(nextOrderId + 1);
 
     setOrderLink('');
     setOrderQty('');
-    setOrderSuccess(`Order #${newOrder.id} placed successfully!`);
-    
-    setTimeout(() => setOrderSuccess(null), 4000);
+    setOrderSuccess(`Order #${newOrder.id} placed locally. Connecting SMM Provider to deliver...`);
+
+    // SMM Provider Real-Time Placement Proxy
+    const provId = selectedService.providerId;
+    const prov = providers.find(p => p.id?.toString() === provId?.toString());
+    const hasRealApi = prov && prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
+
+    if (hasRealApi) {
+      fetch('/api/admin/smm/place-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: prov.apiUrl,
+          key: prov.apiKey,
+          service: selectedService.providerServiceId || selectedService.id,
+          link: link,
+          quantity: qty
+        })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData.order) {
+            // Success! Update order with apiOrderId and set status to processing
+            const successOrders = updatedOrdersList.map(o => {
+              if (o.id === newOrder.id) {
+                return { ...o, apiOrderId: apiData.order, status: 'processing' as const };
+              }
+              return o;
+            });
+            saveOrders(successOrders);
+            setOrderSuccess(`Order #${newOrder.id} successfully placed on provider! External Order ID: #${apiData.order}`);
+          } else if (apiData.error) {
+            // Failed. Void order, mark as cancelled, refund balance
+            const failedOrders = updatedOrdersList.map(o => {
+              if (o.id === newOrder.id) {
+                return { ...o, error: apiData.error, status: 'cancelled' as const };
+              }
+              return o;
+            });
+            saveOrders(failedOrders);
+            updateBalance(balance); // Refund
+            setOrderError(`SMM Provider Error: ${apiData.error}`);
+            setOrderSuccess(null);
+          } else {
+            const unknownMsg = apiData.response || JSON.stringify(apiData);
+            const failedOrders = updatedOrdersList.map(o => {
+              if (o.id === newOrder.id) {
+                return { ...o, error: `Invalid provider response: ${unknownMsg}`, status: 'cancelled' as const };
+              }
+              return o;
+            });
+            saveOrders(failedOrders);
+            updateBalance(balance); // Refund
+            setOrderError(`SMM Provider response was not structured: ${unknownMsg}`);
+            setOrderSuccess(null);
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          const failedOrders = updatedOrdersList.map(o => {
+            if (o.id === newOrder.id) {
+              return { ...o, error: errData.error || 'Server error placing order', status: 'cancelled' as const };
+            }
+            return o;
+          });
+          saveOrders(failedOrders);
+          updateBalance(balance); // Refund
+          setOrderError(`Provider failed to accept order: ${errData.error || 'Connection error'}`);
+          setOrderSuccess(null);
+        }
+      })
+      .catch((err) => {
+        const failedOrders = updatedOrdersList.map(o => {
+          if (o.id === newOrder.id) {
+            return { ...o, error: err.message, status: 'cancelled' as const };
+          }
+          return o;
+        });
+        saveOrders(failedOrders);
+        updateBalance(balance); // Refund
+        setOrderError(`Connection failed: ${err.message}`);
+        setOrderSuccess(null);
+      });
+    } else {
+      // Offline/Manual mock flow completes instantly
+      setTimeout(() => {
+        setOrderSuccess(`Order #${newOrder.id} placed successfully!`);
+        setTimeout(() => setOrderSuccess(null), 4000);
+      }, 1000);
+    }
   };
 
   const handlePlaceMassOrder = () => {

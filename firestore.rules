@@ -79,6 +79,18 @@ service cloud.firestore {
     match /dih_v3_hostinger/{docId} {
       allow read, write: if true;
     }
+    match /dih_v3_smm_services/{docId} {
+      allow read, write: if true;
+    }
+    match /dih_v3_smm_orders/{docId} {
+      allow read, write: if true;
+    }
+    match /dih_v3_smm_deposits/{docId} {
+      allow read, write: if true;
+    }
+    match /dih_v3_smm_providers/{docId} {
+      allow read, write: if true;
+    }
     match /users/{docId} {
       allow read, write: if true;
     }

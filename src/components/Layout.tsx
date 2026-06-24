@@ -162,13 +162,14 @@ export default function Layout({
 
   const dihMoviesNavItem = unfilteredNavItems.find(i => i.id === 'dih-movies');
   const bachelorPointNavItem = unfilteredNavItems.find(i => i.id === 'bachelor-point');
-  const otherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies' && i.id !== 'bachelor-point');
+  const isBachelorPointThemed = bachelorPointNavItem && settings.bachelorEnableColorTheme !== false;
+  const otherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies' && (isBachelorPointThemed ? i.id !== 'bachelor-point' : true));
 
   const filteredNavItems = [
     navItems.find(i => i.id === 'dashboard')!,
     ...otherNavItems,
     ...(dihMoviesNavItem ? [dihMoviesNavItem] : []),
-    ...(bachelorPointNavItem ? [bachelorPointNavItem] : [])
+    ...(isBachelorPointThemed ? [bachelorPointNavItem] : [])
   ];
 
   return (
@@ -241,7 +242,8 @@ export default function Layout({
               const isDihMovies = item.id === 'dih-movies';
               const isBachelorPoint = item.id === 'bachelor-point';
               const isDihSmm = item.id === 'dih-smm';
-              const isStreamingTool = isDihMovies || isBachelorPoint;
+              const isBachelorPointThemedItem = isBachelorPoint && settings.bachelorEnableColorTheme !== false;
+              const isStreamingTool = isDihMovies || isBachelorPointThemedItem;
 
               return (
                 <React.Fragment key={item.id}>
@@ -254,19 +256,15 @@ export default function Layout({
                     </div>
                   )}
 
-                  {isBachelorPoint && (
+                  {isBachelorPointThemedItem && (
                     <div className="px-3 pt-4 pb-1 mt-2">
                       <p className={cn(
                         "text-[9px] font-black tracking-[0.2em] uppercase flex items-center gap-1.5 select-none",
-                        settings.bachelorEnableColorTheme !== false
-                          ? "text-rose-500 dark:text-rose-400"
-                          : "text-blue-500 dark:text-blue-400"
+                        "text-rose-500 dark:text-rose-400"
                       )}>
                         <span className={cn(
                           "w-1.5 h-1.5 rounded-full animate-pulse",
-                          settings.bachelorEnableColorTheme !== false
-                            ? "bg-rose-500 shadow-[0_0_8px_rgba(229,23,63,0.6)]"
-                            : "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                          "bg-rose-500 shadow-[0_0_8px_rgba(229,23,63,0.6)]"
                         )} />
                         BANGLA COMEDY
                       </p>
@@ -306,14 +304,10 @@ export default function Layout({
                         ? isActive
                           ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 text-slate-950 font-black shadow-lg shadow-amber-500/30 scale-[1.01]"
                           : "text-amber-700 dark:text-amber-300/90 hover:text-amber-600 dark:hover:text-amber-200 bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/5 dark:hover:bg-amber-500/15 border border-amber-500/10 hover:border-amber-500/30 font-extrabold hover:translate-x-1"
-                        : isBachelorPoint
+                        : isBachelorPointThemedItem
                           ? isActive
-                            ? settings.bachelorEnableColorTheme !== false
-                              ? "bg-[#e5173f] text-white font-black shadow-lg shadow-[#e5173f]/40 scale-[1.01]"
-                              : "bg-[#3b82f6] text-white font-black shadow-lg shadow-[#3b82f6]/40 scale-[1.01]"
-                            : settings.bachelorEnableColorTheme !== false
-                              ? "text-rose-700 dark:text-rose-300 hover:text-rose-650 dark:hover:text-rose-200 bg-rose-500/5 hover:bg-rose-500/10 dark:bg-rose-500/5 dark:hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 font-extrabold hover:translate-x-1"
-                              : "text-blue-700 dark:text-blue-300 hover:text-blue-650 dark:hover:text-blue-200 bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/5 dark:hover:bg-blue-500/15 border border-blue-500/10 hover:border-blue-500/30 font-extrabold hover:translate-x-1"
+                            ? "bg-[#e5173f] text-white font-black shadow-lg shadow-[#e5173f]/40 scale-[1.01]"
+                            : "text-rose-700 dark:text-rose-300 hover:text-rose-650 dark:hover:text-rose-200 bg-rose-500/5 hover:bg-rose-500/10 dark:bg-rose-500/5 dark:hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 font-extrabold hover:translate-x-1"
                           : isDihSmm
                             ? isActive
                               ? settings.smmEnableColorTheme !== false
@@ -328,7 +322,7 @@ export default function Layout({
                       isDisabled && !isActive && "opacity-75 hover:opacity-100 text-rose-600/80 dark:text-rose-500/80 hover:text-rose-600 dark:hover:text-rose-500 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10"
                     )}
                   >
-                    {!isBachelorPoint && (
+                    {!isBachelorPointThemedItem && (
                       <item.icon size={14} className={cn(
                         "transition-transform", 
                         isActive ? "scale-110" : "group-hover/item:scale-110", 

@@ -200,6 +200,23 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   // Search & Filter States
   const [smmOrderSearch, setSmmOrderSearch] = useState('');
+
+  // Sync SMM providers state to the server whenever it changes locally
+  useEffect(() => {
+    if (smmProviders.length === 0) return;
+    const saveProvidersToServer = async () => {
+      try {
+        await fetch('/api/smm/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(smmProviders)
+        });
+      } catch (err) {
+        console.error("Error auto-syncing SMM providers to backend:", err);
+      }
+    };
+    saveProvidersToServer();
+  }, [smmProviders]);
   const [smmOrderStatusFilter, setSmmOrderStatusFilter] = useState('');
   const [smmSvcSearch, setSmmSvcSearch] = useState('');
   const [smmSvcCatFilter, setSmmSvcCatFilter] = useState('');
@@ -569,22 +586,37 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
 
       // 5. PROVIDERS
-      const cachedProviders = localStorage.getItem('dih_smm_providers_v2');
-      if (cachedProviders) {
-        try {
-          const parsed = JSON.parse(cachedProviders);
-          setSmmProviders(prev => JSON.stringify(prev) !== cachedProviders ? parsed : prev);
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        const defaultProviders = [
-          { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
-          { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
-        ];
-        setSmmProviders(defaultProviders);
-        localStorage.setItem('dih_smm_providers_v2', JSON.stringify(defaultProviders));
-      }
+      fetch('/api/smm/providers')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setSmmProviders(prev => JSON.stringify(prev) !== JSON.stringify(data) ? data : prev);
+            localStorage.setItem('dih_smm_providers_v2', JSON.stringify(data));
+          } else {
+            const defaultProviders = [
+              { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
+              { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
+            ];
+            setSmmProviders(defaultProviders);
+            localStorage.setItem('dih_smm_providers_v2', JSON.stringify(defaultProviders));
+            fetch('/api/smm/providers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(defaultProviders)
+            }).catch(err => console.error("Error seeding providers:", err));
+          }
+        })
+        .catch(() => {
+          const cachedProviders = localStorage.getItem('dih_smm_providers_v2');
+          if (cachedProviders) {
+            try {
+              const parsed = JSON.parse(cachedProviders);
+              setSmmProviders(prev => JSON.stringify(prev) !== cachedProviders ? parsed : prev);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        });
 
       // 6. MANUAL GATEWAYS
       if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways) && settings.smmManualGateways.length > 0) {

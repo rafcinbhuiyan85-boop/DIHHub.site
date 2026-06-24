@@ -62,6 +62,10 @@ function getCollectionName(filePath: string): string {
   if (base === 'logs.json') return 'dih_v3_logs';
   if (base === 'migrations.json') return 'dih_v3_migrations';
   if (base === 'hostinger_data.json') return 'dih_v3_hostinger';
+  if (base === 'smm-services.json') return 'dih_v3_smm_services';
+  if (base === 'smm-orders.json') return 'dih_v3_smm_orders';
+  if (base === 'smm-deposits.json') return 'dih_v3_smm_deposits';
+  if (base === 'smm-providers.json') return 'dih_v3_smm_providers';
   return 'dih_v3_unknown';
 }
 

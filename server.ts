@@ -93,6 +93,7 @@ const STORE_FILE = path.join(DATA_DIR, 'store.json');
 const SMM_SERVICES_FILE = path.join(DATA_DIR, 'smm-services.json');
 const SMM_ORDERS_FILE = path.join(DATA_DIR, 'smm-orders.json');
 const SMM_DEPOSITS_FILE = path.join(DATA_DIR, 'smm-deposits.json');
+const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
 
 const loadData = (file: string, defaultVal: any) => {
   if (!fs.existsSync(file)) return defaultVal;
@@ -133,6 +134,10 @@ async function startServer() {
       await syncFileWithCloud(LOGS_FILE, []);
       await syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []);
       await syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {});
+      await syncFileWithCloud(SMM_SERVICES_FILE, []);
+      await syncFileWithCloud(SMM_ORDERS_FILE, []);
+      await syncFileWithCloud(SMM_DEPOSITS_FILE, []);
+      await syncFileWithCloud(SMM_PROVIDERS_FILE, []);
       console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
     } catch (err) {
       console.error("⚠️ [CloudSync] Error in background startup database synchronization:", err);
@@ -267,6 +272,9 @@ async function startServer() {
     
     // If user does not exist on the server (e.g. they loaded SMM Panel using a guest mail or a newly typed email),
     // automatically provision a server-side account for them to store their transactions and balance securely!
+    const settings = loadData(SETTINGS_FILE, {});
+    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50;
+
     user = {
       id: "usr_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
       name: requestedEmail.split('@')[0],
@@ -275,12 +283,12 @@ async function startServer() {
       registeredAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
       status: 'active',
-      balance: 0
+      balance: initialBalance
     };
     users.push(user);
     await saveData(USERS_FILE, users);
     
-    return res.json({ balance: 0 });
+    return res.json({ balance: initialBalance });
   });
 
   app.post("/api/smm/verify-screenshot", async (req, res) => {
@@ -474,6 +482,16 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
   app.post("/api/smm/deposits", async (req, res) => {
     await saveData(SMM_DEPOSITS_FILE, req.body || []);
+    res.json({ status: "ok" });
+  });
+
+  app.get("/api/smm/providers", (req, res) => {
+    const providers = loadData(SMM_PROVIDERS_FILE, []);
+    res.json(providers);
+  });
+
+  app.post("/api/smm/providers", async (req, res) => {
+    await saveData(SMM_PROVIDERS_FILE, req.body || []);
     res.json({ status: "ok" });
   });
 

@@ -459,7 +459,7 @@ export default function BachelorPoint() {
   const isColorTheme = settings.bachelorEnableColorTheme !== false;
   const bpPrimary = isColorTheme ? '#e5173f' : '#3b82f6';
   const bpHover = isColorTheme ? '#b01030' : '#1d4ed8';
-  const bgRgb = isColorTheme ? '7, 9, 15' : '9, 15, 30';
+  const bgRgb = isColorTheme ? '7, 9, 15' : '15, 23, 42';
 
   return (
     <div 
@@ -467,7 +467,7 @@ export default function BachelorPoint() {
         '--bp-primary': bpPrimary,
         '--bp-hover': bpHover,
       } as React.CSSProperties}
-      className={cn("min-h-screen pb-16 font-sans relative", isColorTheme ? "bg-[#07090f] text-[#f0f0f5]" : "bg-[#090f1e] text-slate-100")}
+      className={cn("min-h-screen pb-16 font-sans relative", isColorTheme ? "bg-[#07090f] text-[#f0f0f5]" : "text-slate-900 dark:text-slate-100")}
     >
       
       {/* Toast Notifications */}
@@ -501,7 +501,7 @@ export default function BachelorPoint() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
         
         {/* Sub Navigation */}
-        <nav className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b sticky top-0 z-40 backdrop-blur-xl", isColorTheme ? "border-[#ff003c]/10 bg-[#07090f]/95 text-white" : "border-slate-800 bg-[#090f1e]/95 text-slate-100")}>
+        <nav className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 py-4 mb-6 border-b sticky top-0 z-40 backdrop-blur-xl", isColorTheme ? "border-[#ff003c]/10 bg-[#07090f]/95 text-white" : "border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 text-slate-900 dark:text-slate-100")}>
           <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => changeTab('home')}>
             <div>
               <div className="text-[9px] font-black tracking-[0.2em] text-[var(--bp-primary)] uppercase">BANGLA COMEDY</div>
@@ -519,7 +519,12 @@ export default function BachelorPoint() {
                 setSearchQuery(e.target.value);
                 setActiveTab('home');
               }}
-              className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs outline-none text-white focus:border-[var(--bp-primary)]/50 transition-all font-semibold"
+              className={cn(
+                "w-full pl-9 pr-4 py-2 rounded-lg text-xs outline-none focus:border-[var(--bp-primary)]/50 transition-all font-semibold",
+                isColorTheme 
+                  ? "bg-slate-950 border border-slate-800 text-white" 
+                  : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+              )}
             />
           </div>
         </nav>
