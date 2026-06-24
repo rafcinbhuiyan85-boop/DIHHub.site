@@ -158,7 +158,7 @@ export default function BachelorPoint() {
           if (parsed.contents) {
             // Filter out any default demo videos (with ID <= 7 or gtv-videos-bucket URLs)
             const cleaned = parsed.contents.filter((item: any) => {
-              const isDemo = item.id <= 7 || (item.video_url && item.video_url.includes('gtv-videos-bucket'));
+              const isDemo = (item.id <= 7 && !item.poster_file_key && !item.video_file_key) || (item.video_url && item.video_url.includes('gtv-videos-bucket'));
               return !isDemo;
             });
             setContents(cleaned);

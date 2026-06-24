@@ -196,6 +196,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmDeletingDepositId, setSmmDeletingDepositId] = useState<number | null>(null);
   const [smmConfirmClearAll, setSmmConfirmClearAll] = useState(false);
   const [smmConfirmBatchDelete, setSmmConfirmBatchDelete] = useState(false);
+  const [activeSmmScreenshotUrl, setActiveSmmScreenshotUrl] = useState<string | null>(null);
 
   // Search & Filter States
   const [smmOrderSearch, setSmmOrderSearch] = useState('');
@@ -323,6 +324,87 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormGatewayInstructions, setSmmFormGatewayInstructions] = useState('');
   const [smmFormGatewayEnabled, setSmmFormGatewayEnabled] = useState(true);
   const [smmFormGatewayMinDeposit, setSmmFormGatewayMinDeposit] = useState<number>(2.5);
+
+  const saveSmmServices = async (services: any[]) => {
+    setSmmServicesList(services);
+    localStorage.setItem('dih_smm_services_v2', JSON.stringify(services));
+    try {
+      await fetch('/api/smm/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(services)
+      });
+    } catch (e) {
+      console.error('Failed to sync SMM services to server:', e);
+    }
+  };
+
+  const saveSmmOrders = async (orders: any[]) => {
+    setSmmOrders(orders);
+    localStorage.setItem('dih_smm_orders_v2', JSON.stringify(orders));
+    try {
+      await fetch('/api/smm/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orders)
+      });
+    } catch (e) {
+      console.error('Failed to sync SMM orders to server:', e);
+    }
+  };
+
+  const saveSmmDeposits = async (deposits: any[]) => {
+    setSmmDeposits(deposits);
+    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(deposits));
+    try {
+      await fetch('/api/smm/deposits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deposits)
+      });
+    } catch (e) {
+      console.error('Failed to sync SMM deposits to server:', e);
+    }
+  };
+
+  // SMM Server Synchronizer
+  useEffect(() => {
+    if (activeTab !== 'dih-smm' && !activeTab.startsWith('config-')) return;
+    
+    const syncWithServer = async () => {
+      try {
+        const resSvcs = await fetch('/api/smm/services');
+        if (resSvcs.ok) {
+          const svcs = await resSvcs.json();
+          if (Array.isArray(svcs) && svcs.length > 0) {
+            localStorage.setItem('dih_smm_services_v2', JSON.stringify(svcs));
+            setSmmServicesList(svcs);
+          }
+        }
+        const resOrders = await fetch('/api/smm/orders');
+        if (resOrders.ok) {
+          const ords = await resOrders.json();
+          if (Array.isArray(ords)) {
+            localStorage.setItem('dih_smm_orders_v2', JSON.stringify(ords));
+            setSmmOrders(ords);
+          }
+        }
+        const resDeps = await fetch('/api/smm/deposits');
+        if (resDeps.ok) {
+          const deps = await resDeps.json();
+          if (Array.isArray(deps)) {
+            localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(deps));
+            setSmmDeposits(deps);
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing SMM from server in AdminPanel:", err);
+      }
+    };
+    syncWithServer();
+    const interval = setInterval(syncWithServer, 10000);
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   // SMM Sync Effect
   useEffect(() => {
@@ -505,33 +587,37 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
 
       // 6. MANUAL GATEWAYS
-      const cachedGateways = localStorage.getItem('dih_smm_manual_gateways_v2');
-      if (cachedGateways) {
-        try {
-          const parsed = JSON.parse(cachedGateways);
-          setSmmManualGateways(prev => JSON.stringify(prev) !== cachedGateways ? parsed : prev);
-        } catch (e) {
-          console.error(e);
-        }
+      if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways) && settings.smmManualGateways.length > 0) {
+        setSmmManualGateways(settings.smmManualGateways);
       } else {
-        const defaultGateways = [
-          { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true, minDeposit: 2.5 },
-          { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true, minDeposit: 2.5 },
-          { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true, minDeposit: 2.5 },
-          { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true, minDeposit: 2.5 },
-          { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true, minDeposit: 2.5 },
-          { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
-          { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
-        ];
-        setSmmManualGateways(defaultGateways);
-        localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(defaultGateways));
+        const cachedGateways = localStorage.getItem('dih_smm_manual_gateways_v2');
+        if (cachedGateways) {
+          try {
+            const parsed = JSON.parse(cachedGateways);
+            setSmmManualGateways(prev => JSON.stringify(prev) !== cachedGateways ? parsed : prev);
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          const defaultGateways = [
+            { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true, minDeposit: 2.5 },
+            { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true, minDeposit: 2.5 },
+            { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true, minDeposit: 2.5 },
+            { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true, minDeposit: 2.5 },
+            { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true, minDeposit: 2.5 },
+            { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
+            { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
+          ];
+          setSmmManualGateways(defaultGateways);
+          localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(defaultGateways));
+        }
       }
     };
 
     loadSmmData();
-    const interval = setInterval(loadSmmData, 1500);
+    const interval = setInterval(loadSmmData, 10000);
     return () => clearInterval(interval);
-  }, [settings.smmDefaultBalance, auth.currentUser?.email]);
+  }, [settings.smmDefaultBalance, auth.currentUser?.email, activeTab]);
 
   const handleApproveSmmDeposit = (depId: number) => {
     let matchedEmail = '';
@@ -602,8 +688,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       .catch(err => console.error("Error updating SMM balance on server:", err));
     }
 
-    setSmmDeposits(updatedDeposits);
-    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeposits));
+    saveSmmDeposits(updatedDeposits);
   };
 
   const handleRejectSmmDeposit = (depId: number) => {
@@ -613,34 +698,29 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
       return d;
     });
-    setSmmDeposits(updatedDeposits);
-    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeposits));
+    saveSmmDeposits(updatedDeposits);
   };
 
-  const handleDeleteSmmService = (svcId: any) => {
+   const handleDeleteSmmService = (svcId: any) => {
     const nextList = smmServicesList.filter(s => s.id.toString() !== svcId.toString());
-    localStorage.setItem('dih_smm_services_v2', JSON.stringify(nextList));
-    setSmmServicesList(nextList);
+    saveSmmServices(nextList);
   };
 
   const handleBulkDeleteServices = (svcIds: any[]) => {
     const idsAsStrings = svcIds.map(id => id.toString());
     const nextList = smmServicesList.filter(s => !idsAsStrings.includes(s.id.toString()));
-    localStorage.setItem('dih_smm_services_v2', JSON.stringify(nextList));
-    setSmmServicesList(nextList);
+    saveSmmServices(nextList);
     setSelectedCatalogSvcIds([]);
   };
 
   const handleClearAllServices = () => {
-    localStorage.setItem('dih_smm_services_v2', JSON.stringify([]));
-    setSmmServicesList([]);
+    saveSmmServices([]);
     setSelectedCatalogSvcIds([]);
   };
 
   const handleDeleteSmmOrder = (orderId: number) => {
     const nextList = smmOrders.filter(o => o.id !== orderId);
-    setSmmOrders(nextList);
-    localStorage.setItem('dih_smm_orders_v2', JSON.stringify(nextList));
+    saveSmmOrders(nextList);
   };
 
   const handleDeleteSmmUser = (userId: number) => {
@@ -652,8 +732,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   const handleDeleteSmmDeposit = (depId: number) => {
     const nextList = smmDeposits.filter(d => d.id !== depId);
-    setSmmDeposits(nextList);
-    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(nextList));
+    saveSmmDeposits(nextList);
   };
 
   const handleSaveSmmService = () => {
@@ -700,8 +779,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       updatedList = smmServicesList;
     }
 
-    localStorage.setItem('dih_smm_services_v2', JSON.stringify(updatedList));
-    setSmmServicesList(updatedList);
+    saveSmmServices(updatedList);
     setIsSmmModalOpen(false);
   };
 
@@ -989,8 +1067,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       });
 
       if (syncCount > 0) {
-        setSmmServicesList(updatedList);
-        localStorage.setItem('dih_smm_services_v2', JSON.stringify(updatedList));
+        saveSmmServices(updatedList);
         
         const updatedProvs = smmProviders.map(p => {
           if (p.id === prov.id) {
@@ -1121,8 +1198,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       setSmmProviders(updatedProviders);
       localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProviders));
       
-      setSmmServicesList(mergedList);
-      localStorage.setItem('dih_smm_services_v2', JSON.stringify(mergedList));
+      saveSmmServices(mergedList);
       
       setImportStep('completed');
       setSmmToast({ 
@@ -1154,6 +1230,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     });
     setSmmManualGateways(updated);
     localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(updated));
+    updateSettings({ smmManualGateways: updated });
     setIsSmmModalOpen(false);
   };
 
@@ -1174,8 +1251,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
       return o;
     });
-    setSmmOrders(updated);
-    localStorage.setItem('dih_smm_orders_v2', JSON.stringify(updated));
+    saveSmmOrders(updated);
     setIsSmmModalOpen(false);
   };
 
@@ -6113,11 +6189,32 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                               };
                               return (
                                 <tr key={d.id} className="hover:bg-slate-900/10 transition">
-                                  <td className="py-3">
+                                  <td className="py-3 text-left">
                                     <div className="font-mono text-slate-500 text-[11px]">#DEP{d.id}</div>
                                     {d.txid && (
                                       <div className="text-[9px] bg-slate-950 border border-slate-850 rounded px-1.5 py-0.5 mt-1 font-mono text-blue-400 font-bold select-all inline-block truncate max-w-[124px]">
                                         Tx: {d.txid}
+                                      </div>
+                                    )}
+                                    {d.screenshot && (
+                                      <div className="mt-1 flex flex-col gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveSmmScreenshotUrl(d.screenshot)}
+                                          className="text-[9px] font-black text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded inline-flex items-center justify-center gap-1 cursor-pointer transition active:scale-95 max-w-[90px]"
+                                        >
+                                          View SS
+                                        </button>
+                                        {d.detectedTxId && (
+                                          <span className="text-[8px] text-slate-500 block">
+                                            Found: {d.detectedTxId}
+                                          </span>
+                                        )}
+                                        {d.aiReason && (
+                                          <span className="text-[8px] text-slate-400 block max-w-[120px] leading-tight truncate" title={d.aiReason}>
+                                            System: {d.aiReason}
+                                          </span>
+                                        )}
                                       </div>
                                     )}
                                   </td>
@@ -6216,6 +6313,38 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                         </tbody>
                       </table>
                     </div>
+
+                    {/* SMM LIGHTBOX PREVIEW MODAL */}
+                    {activeSmmScreenshotUrl && (
+                      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+                        <div className="relative max-w-lg w-full bg-[#10141f] border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col gap-4">
+                          <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">SMM Deposit Receipt Screenshot</h4>
+                            <button
+                              type="button"
+                              onClick={() => setActiveSmmScreenshotUrl(null)}
+                              className="text-slate-400 hover:text-white transition p-1 cursor-pointer"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <div className="relative rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[60vh] border border-slate-800/60 p-2">
+                            <img
+                              src={activeSmmScreenshotUrl}
+                              alt="SMM Payment Proof"
+                              className="max-h-[50vh] object-contain rounded-lg"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSmmScreenshotUrl(null)}
+                            className="w-full py-2.5 bg-slate-850 hover:bg-slate-800 text-slate-300 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer"
+                          >
+                            Close Preview
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

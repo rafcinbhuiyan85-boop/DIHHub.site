@@ -124,6 +124,7 @@ export interface AppSettings {
   toolNotices?: Record<string, string>;
   upcomingTools?: string[];
   comingSoonTools?: string[];
+  smmManualGateways?: any[];
 }
 
 const DEFAULT_TEMPLATES: Template[] = [
@@ -303,7 +304,16 @@ export const DEFAULT_SETTINGS: AppSettings = {
   disabledTools: ['mobile-bypass'],
   toolNotices: {},
   upcomingTools: [],
-  comingSoonTools: []
+  comingSoonTools: [],
+  smmManualGateways: [
+    { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true, minDeposit: 2.5 },
+    { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true, minDeposit: 2.5 },
+    { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true, minDeposit: 2.5 },
+    { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true, minDeposit: 2.5 },
+    { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true, minDeposit: 2.5 },
+    { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
+    { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
+  ]
 };
 
 const DELETED_TOOLS = [
@@ -367,7 +377,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     // Sync with server on mount
     const fetchGlobalSettings = async () => {
       try {
-        const res = await fetch('/api/admin/settings');
+        const res = await fetch(`/api/admin/settings?t=${Date.now()}`);
         if (res.ok) {
           const globalSettings = await res.json();
           if (globalSettings) {
@@ -499,7 +509,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       if (Date.now() - lastLocalUpdateRef.current < 4000) return;
 
       try {
-        const res = await fetch('/api/admin/settings');
+        const res = await fetch(`/api/admin/settings?t=${Date.now()}`);
         if (res.ok) {
           const globalSettings = await res.json();
           if (globalSettings) {

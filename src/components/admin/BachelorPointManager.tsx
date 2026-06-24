@@ -131,7 +131,7 @@ export default function BachelorPointManager() {
           const parsed = JSON.parse(saved);
           if (parsed.contents) {
             const cleaned = parsed.contents.filter((item: any) => {
-              const isDemo = item.id <= 7 || (item.video_url && item.video_url.includes('gtv-videos-bucket'));
+              const isDemo = (item.id <= 7 && !item.poster_file_key && !item.video_file_key) || (item.video_url && item.video_url.includes('gtv-videos-bucket'));
               return !isDemo;
             });
             setContents(cleaned);

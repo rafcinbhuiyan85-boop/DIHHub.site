@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  LayoutDashboard, PlusCircle, List, ArrowDownToLine, 
+  LayoutDashboard, PlusCircle, List, ArrowDownToLine, Upload,
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
   AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu,
   TrendingUp, Users, CheckCircle, ExternalLink,
@@ -161,6 +161,45 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [manualGateways, setManualGateways] = useState<any[]>([]);
   const [localDeposits, setLocalDeposits] = useState<any[]>([]);
 
+  // Step-by-Step Payment Screenshot OCR Verification States
+  const [depositStep, setDepositStep] = useState<'form' | 'verify'>('form');
+  const [depositScreenshot, setDepositScreenshot] = useState<string | null>(null);
+  const [isVerifyingScreenshot, setIsVerifyingScreenshot] = useState<boolean>(false);
+  const [verifyResponseMsg, setVerifyResponseMsg] = useState<string | null>(null);
+
+  // High quality image compression to prevent exceeding localStorage quota (resizes to 800px width max)
+  const resizeAndCompressImage = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } else {
+          resolve(base64Str);
+        }
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+    });
+  };
+
   // Dynamically map SERVICES and scale by multiplier
   const activeServices = useMemo(() => {
     return Array.isArray(servicesList)
@@ -303,6 +342,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   }, [orderFilteredServices, ddSearchQuery, ddRefillFilter]);
 
   useEffect(() => {
+    if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways) && settings.smmManualGateways.length > 0) {
+      setManualGateways(settings.smmManualGateways);
+      return;
+    }
     const cached = localStorage.getItem('dih_smm_manual_gateways_v2');
     if (cached) {
       try {
@@ -322,7 +365,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       ];
       setManualGateways(defaultGateways);
     }
-  }, [activePage]);
+  }, [activePage, settings.smmManualGateways]);
 
   // Orders default list
   const [orders, setOrders] = useState<SMMOrder[]>([]);
@@ -469,6 +512,62 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     return () => clearInterval(interval);
   }, [isLoggedIn, userEmail, balanceKey]);
 
+  // Periodic server synchronization to load any newly added/synced services, orders, or deposits from Admin
+  useEffect(() => {
+    const syncWithServer = async () => {
+      try {
+        // 1. Services
+        const resSvcs = await fetch('/api/smm/services');
+        if (resSvcs.ok) {
+          const svcs = await resSvcs.json();
+          if (Array.isArray(svcs) && svcs.length > 0) {
+            localStorage.setItem('dih_smm_services_v2', JSON.stringify(svcs));
+            setServicesList(svcs);
+          }
+        }
+        
+        // 2. Orders
+        const resOrders = await fetch('/api/smm/orders');
+        if (resOrders.ok) {
+          const ordersVal = await resOrders.json();
+          if (Array.isArray(ordersVal)) {
+            // Merge with local user specific orders
+            const localCachedStr = localStorage.getItem(ordersKey);
+            let localCached: SMMOrder[] = [];
+            if (localCachedStr) {
+              try { localCached = JSON.parse(localCachedStr); } catch(e) {}
+            }
+            // Add user's local orders to server list if not present, and update local state
+            const merged = [...ordersVal];
+            localCached.forEach(lc => {
+              if (!merged.find(m => m.id === lc.id)) {
+                merged.push(lc);
+              }
+            });
+            localStorage.setItem(ordersKey, JSON.stringify(merged));
+            setOrders(merged);
+          }
+        }
+
+        // 3. Deposits
+        const resDeps = await fetch('/api/smm/deposits');
+        if (resDeps.ok) {
+          const deps = await resDeps.json();
+          if (Array.isArray(deps)) {
+            localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(deps));
+            setLocalDeposits(deps);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching SMM data from server:", err);
+      }
+    };
+
+    syncWithServer();
+    const interval = setInterval(syncWithServer, 10000); // sync every 10 seconds
+    return () => clearInterval(interval);
+  }, [ordersKey]);
+
   const updateBalance = (newBal: number) => {
     setBalance(newBal);
     localStorage.setItem(balanceKey, newBal.toFixed(2));
@@ -489,9 +588,62 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     localStorage.setItem('dih_smm_next_id', id.toString());
   };
 
-  const saveOrders = (updatedOrders: SMMOrder[]) => {
+  const saveOrders = async (updatedOrders: SMMOrder[]) => {
     setOrders(updatedOrders);
     localStorage.setItem(ordersKey, JSON.stringify(updatedOrders));
+    try {
+      const res = await fetch('/api/smm/orders');
+      let globalOrders = [];
+      if (res.ok) {
+        globalOrders = await res.json();
+      }
+      if (!Array.isArray(globalOrders)) globalOrders = [];
+      const mergedOrders = [...globalOrders];
+      updatedOrders.forEach(uo => {
+        const idx = mergedOrders.findIndex(go => go.id === uo.id);
+        if (idx !== -1) {
+          mergedOrders[idx] = uo;
+        } else {
+          mergedOrders.push(uo);
+        }
+      });
+      await fetch('/api/smm/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mergedOrders)
+      });
+    } catch (e) {
+      console.error("Error syncing orders with server:", e);
+    }
+  };
+
+  const saveDeposits = async (updatedDeps: any[]) => {
+    setLocalDeposits(updatedDeps);
+    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeps));
+    try {
+      const res = await fetch('/api/smm/deposits');
+      let globalDeps = [];
+      if (res.ok) {
+        globalDeps = await res.json();
+      }
+      if (!Array.isArray(globalDeps)) globalDeps = [];
+      const mergedDeps = [...globalDeps];
+      updatedDeps.forEach(ud => {
+        const idx = mergedDeps.findIndex(gd => gd.id === ud.id);
+        if (idx !== -1) {
+          mergedDeps[idx] = ud;
+        } else {
+          mergedDeps.push(ud);
+        }
+      });
+      await fetch('/api/smm/deposits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mergedDeps)
+      });
+    } catch (e) {
+      console.error("Error syncing deposits with server:", e);
+    }
   };
 
   const getGatewayBrandInfo = (gateId: string, defaultName: string) => {
@@ -1152,7 +1304,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }, 6000);
   };
 
-  const handleDeposit = () => {
+  const handleInitiateDeposit = () => {
     setDepError(null);
     setDepSuccess(null);
 
@@ -1180,45 +1332,103 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return;
     }
 
-    const methodStr = selectedMethod || 'bkash';
+    // Advance to verification screenshot upload step
+    setDepositStep('verify');
+    setDepositScreenshot(null);
+    setVerifyResponseMsg(null);
+  };
 
-    // Parse current deposits tracking logs
-    const cached = localStorage.getItem('dih_smm_deposits_v2');
-    let currentDeps = [];
-    if (cached) {
-      try {
-        currentDeps = JSON.parse(cached);
-      } catch (e) {
-        console.error(e);
-      }
+  const handleCompleteDeposit = async () => {
+    if (!depositScreenshot) {
+      setDepError('Please upload/provide a payment confirmation screenshot (SS).');
+      return;
     }
 
-    // Fixed ID calculations to prevent Math.max in empty arrays or NaN
-    const nextDepId = currentDeps.length 
-      ? Math.max(...currentDeps.map((d: any) => d.id || 0)) + 1 
-      : 1;
+    setIsVerifyingScreenshot(true);
+    setDepError(null);
+    setVerifyResponseMsg('System scanning screenshot for Transaction ID...');
 
-    const newDeposit = {
-      id: nextDepId,
-      userId: userToUse?.id || 999,
-      userEmail: userEmail,
-      userName: userName,
-      amount: amt,
-      method: methodStr,
-      sender: senderDetails.trim(),
-      txid: transactionId.trim(),
-      status: 'pending',
-      date: new Date().toISOString().split('T')[0]
-    };
+    const amt = parseFloat(depositAmount);
+    const methodStr = selectedMethod || 'bkash';
 
-    const updatedDeps = [...currentDeps, newDeposit];
-    localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(updatedDeps));
+    try {
+      // Call backend API to verify the screenshot using Gemini
+      const res = await fetch('/api/smm/verify-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: depositScreenshot,
+          txid: transactionId.trim()
+        })
+      });
 
-    setDepositAmount('');
-    setSenderDetails('');
-    setTransactionId('');
-    setDepSuccess(`Manual Deposit of $${fmtAmt(amt)} via ${methodStr.toUpperCase()} submitted! Ref ID: ${newDeposit.txid}. Open SMM Admin Panel to verify and approve.`);
-    setTimeout(() => setDepSuccess(null), 8000);
+      let verification = { isMatch: false, reason: "Verification API connection error.", detectedTxId: null };
+      if (res.ok) {
+        verification = await res.json();
+      }
+
+      // Parse current deposits tracking logs
+      const cached = localStorage.getItem('dih_smm_deposits_v2');
+      let currentDeps = [];
+      if (cached) {
+        try {
+          currentDeps = JSON.parse(cached);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Fixed ID calculations to prevent Math.max in empty arrays or NaN
+      const nextDepId = currentDeps.length 
+        ? Math.max(...currentDeps.map((d: any) => d.id || 0)) + 1 
+        : 1;
+
+      // Determine status based on verification result
+      const isAutoApprove = verification.isMatch === true;
+      const status = isAutoApprove ? 'approved' : 'pending';
+
+      const newDeposit = {
+        id: nextDepId,
+        userId: userToUse?.id || 999,
+        userEmail: userEmail,
+        userName: userName,
+        amount: amt,
+        method: methodStr,
+        sender: senderDetails.trim(),
+        txid: transactionId.trim(),
+        status: status,
+        screenshot: depositScreenshot, // Store compressed base64 screenshot
+        aiReason: verification.reason,
+        detectedTxId: verification.detectedTxId,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      const updatedDeps = [...currentDeps, newDeposit];
+      saveDeposits(updatedDeps);
+
+      // If auto-approved, credit the user's balance immediately!
+      if (isAutoApprove) {
+        const newBal = balance + amt;
+        updateBalance(newBal);
+        
+        setDepSuccess(`✨ AUTO-CREDITED: Screenshot verified successfully! $${fmtAmt(amt)} has been automatically added to your balance.`);
+      } else {
+        setDepSuccess(`Deposit of $${fmtAmt(amt)} submitted as PENDING! ${verification.reason || 'System could not match TxID.'} An admin will review your screenshot manually.`);
+      }
+
+      // Clean up states and go back to form
+      setDepositAmount('');
+      setSenderDetails('');
+      setTransactionId('');
+      setDepositScreenshot(null);
+      setDepositStep('form');
+    } catch (err: any) {
+      console.error(err);
+      setDepError('Failed to verify screenshot. Please try again or submit anyway.');
+    } finally {
+      setIsVerifyingScreenshot(false);
+      setVerifyResponseMsg(null);
+    }
   };
 
   // Filtering
@@ -2440,184 +2650,353 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                     <h3 className="text-sm font-semibold text-white">Add Funds</h3>
                   </div>
                   <div className="p-5.5 space-y-5.5">
-                    
-                    {/* METHODS */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Payment Method</label>
-                      {(!manualGateways || manualGateways.length === 0) ? (
-                        <div className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-center text-xs text-red-400 font-medium font-sans">
-                          Deposits are currently disabled by the administrator. Please try again later.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-sans">
-                          {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
-                            const brand = getGatewayBrandInfo(gate.id, gate.title);
-                            return (
-                              <button
-                                key={gate.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedMethod(gate.id);
-                                  setDepError(null);
-                                  setDepSuccess(null);
-                                }}
-                                className={cn(
-                                  "py-3.5 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 scale-100 outline-none select-none flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[84px] hover:scale-[1.03] active:scale-[0.97]",
-                                  brand.colorClass
-                                )}
-                              >
-                                <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200 hover:scale-110">
-                                  {brand.logo}
-                                </div>
-                                <span className="tracking-wider text-[10px] font-bold mt-0.5">{brand.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* SELECTED METHOD DETAILS */}
-                    {(() => {
-                      const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                      if (!activeGate) return null;
-                      return (
-                        <div className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] space-y-2.5 font-sans animate-in fade-in duration-200">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-extrabold text-white text-[11px] uppercase tracking-wide">Wallet details:</span>
-                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-black text-[9px] uppercase">{activeGate.type || 'Personal'}</span>
-                          </div>
-
-                          <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-lg p-3 flex justify-between items-center font-mono text-xs">
-                            <span className="text-slate-400">Account:</span>
-                            <span className="text-white font-extrabold select-all flex items-center gap-1.5">
-                              {activeGate.numberOrAddress}
-                              <button 
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(activeGate.numberOrAddress);
-                                  alert('Account details copied to clipboard!');
-                                }}
-                                className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/5 px-1.5 py-0.5 rounded font-sans cursor-pointer active:scale-95 transition-all"
-                              >
-                                Copy
-                              </button>
-                            </span>
-                          </div>
-
-                          <div className="text-[11px] text-slate-400 italic leading-relaxed bg-[#0c0e14]/40 border border-[#1e2336]/30 p-2 rounded">
-                            <span className="font-bold text-blue-400 not-italic block mb-0.5 text-[10px] uppercase">Instruction:</span>
-                            {activeGate.instructions}
-                          </div>
-
-                          {/* BD Mobile Payments Conversion UI */}
-                          {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) && (
-                            <div className="bg-amber-500/5 border border-amber-500/15 text-amber-400 p-3 rounded-lg text-xs space-y-1 mt-2 font-sans">
-                              <div className="flex justify-between items-center font-bold">
-                                <span>Exchange Rate:</span>
-                                <span>1 USD = ৳{settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120} BDT</span>
-                              </div>
-                              {parseFloat(depositAmount) > 0 && (
-                                <div className="flex justify-between items-center font-black text-[13px] border-t border-amber-500/10 pt-1.5 mt-1.5">
-                                  <span>Total to Send:</span>
-                                  <span>৳{((parseFloat(depositAmount) || 0) * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120)).toFixed(2)} BDT</span>
-                                </div>
-                              )}
+                    {depositStep === 'form' ? (
+                      <>
+                        {/* METHODS */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Payment Method</label>
+                          {(!manualGateways || manualGateways.length === 0) ? (
+                            <div className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-center text-xs text-red-400 font-medium font-sans">
+                              Deposits are currently disabled by the administrator. Please try again later.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-sans">
+                              {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
+                                const brand = getGatewayBrandInfo(gate.id, gate.title);
+                                return (
+                                  <button
+                                    key={gate.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedMethod(gate.id);
+                                      setDepError(null);
+                                      setDepSuccess(null);
+                                    }}
+                                    className={cn(
+                                      "py-3.5 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 scale-100 outline-none select-none flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[84px] hover:scale-[1.03] active:scale-[0.97]",
+                                      brand.colorClass
+                                    )}
+                                  >
+                                    <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200 hover:scale-110">
+                                      {brand.logo}
+                                    </div>
+                                    <span className="tracking-wider text-[10px] font-bold mt-0.5">{brand.label}</span>
+                                  </button>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
-                      );
-                    })()}
 
-                    {/* QUICK SELECT */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Quick Select</label>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {[5, 10, 20, 50, 100, 200].map(val => (
+                        {/* SELECTED METHOD DETAILS */}
+                        {(() => {
+                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
+                          if (!activeGate) return null;
+                          return (
+                            <div className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] space-y-2.5 font-sans animate-in fade-in duration-200">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-extrabold text-white text-[11px] uppercase tracking-wide">Wallet details:</span>
+                                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-black text-[9px] uppercase">{activeGate.type || 'Personal'}</span>
+                              </div>
+
+                              <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-lg p-3 flex justify-between items-center font-mono text-xs">
+                                <span className="text-slate-400">Account:</span>
+                                <span className="text-white font-extrabold select-all flex items-center gap-1.5">
+                                  {activeGate.numberOrAddress}
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(activeGate.numberOrAddress);
+                                      alert('Account details copied to clipboard!');
+                                    }}
+                                    className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/5 px-1.5 py-0.5 rounded font-sans cursor-pointer active:scale-95 transition-all"
+                                  >
+                                    Copy
+                                  </button>
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-slate-400 italic leading-relaxed bg-[#0c0e14]/40 border border-[#1e2336]/30 p-2 rounded">
+                                <span className="font-bold text-blue-400 not-italic block mb-0.5 text-[10px] uppercase">Instruction:</span>
+                                {activeGate.instructions}
+                              </div>
+
+                              {/* BD Mobile Payments Conversion UI */}
+                              {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) && (
+                                <div className="bg-amber-500/5 border border-amber-500/15 text-amber-400 p-3 rounded-lg text-xs space-y-1 mt-2 font-sans">
+                                  <div className="flex justify-between items-center font-bold">
+                                    <span>Exchange Rate:</span>
+                                    <span>1 USD = ৳{settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120} BDT</span>
+                                  </div>
+                                  {parseFloat(depositAmount) > 0 && (
+                                    <div className="flex justify-between items-center font-black text-[13px] border-t border-amber-500/10 pt-1.5 mt-1.5">
+                                      <span>Total to Send:</span>
+                                      <span>৳{((parseFloat(depositAmount) || 0) * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120)).toFixed(2)} BDT</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* QUICK SELECT */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Quick Select</label>
+                          <div className="grid grid-cols-6 gap-1.5">
+                            {[5, 10, 20, 50, 100, 200].map(val => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => handleQuickSelect(val)}
+                                className={cn(
+                                  "py-2 rounded-lg border text-xs font-semibold font-mono text-center transition-all duration-150 select-none outline-none",
+                                  parseFloat(depositAmount) === val
+                                    ? "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/10"
+                                    : "border-[#1e2336] bg-white/5 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
+                                )}
+                              >
+                                ${val}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* AMOUNT */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center pr-1 pl-0.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount (USD)</label>
+                            <span className="text-[10px] text-slate-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10">
+                              Min: ${(manualGateways.find(g => g.id === selectedMethod)?.minDeposit !== undefined ? manualGateways.find(g => g.id === selectedMethod)?.minDeposit : 2.5).toFixed(2)} USD
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-20px text-blue-500 font-bold pointer-events-none">$</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={depositAmount}
+                              onChange={(e) => setDepositAmount(e.target.value)}
+                              className="w-full bg-[#141720] border border-[#1e2336] pl-8.5 pr-4 py-3.5 text-xl font-mono font-semibold text-white rounded-lg outline-none focus:border-blue-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+
+                        {/* USER DEPOSIT TRADING PROOF INPUTS */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 font-sans pt-1">
+                          <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Your Sender Account Details</label>
+                            <input
+                              type="text"
+                              placeholder="Sender No. or Name"
+                              value={senderDetails}
+                              onChange={(e) => setSenderDetails(e.target.value)}
+                              className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-1.5 text-left">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
+                            <input
+                              type="text"
+                              placeholder="TxID or Ref Number"
+                              value={transactionId}
+                              onChange={(e) => setTransactionId(e.target.value)}
+                              className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
+                            />
+                          </div>
+                        </div>
+
+                        {/* DEPOSIT ALERTS */}
+                        {depError && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
+                            <AlertCircle size={15} className="shrink-0" />
+                            {depError}
+                          </div>
+                        )}
+
+                        {depSuccess && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed">
+                            <CheckCircle2 size={15} className="shrink-0" />
+                            {depSuccess}
+                          </div>
+                        )}
+
+                        <button 
+                          onClick={() => handleInitiateDeposit()}
+                          className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm tracking-wide rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 active:scale-[0.982]"
+                        >
+                          Add Funds
+                        </button>
+                      </>
+                    ) : (
+                      <div className="space-y-5 text-left animate-in fade-in duration-200">
+                        {/* SCREENSHOT UPLOAD STEP */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className="text-xs font-black uppercase tracking-wider text-slate-400">Upload payment screenshot (SS)</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDepositStep('form');
+                                setDepError(null);
+                              }}
+                              className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider cursor-pointer transition"
+                            >
+                              ← Change Info
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-normal">
+                            Please upload a screenshot of your payment confirmation receipt showing your Transaction ID (<span className="font-mono text-blue-400 font-bold font-semibold">{transactionId}</span>).
+                          </p>
+                        </div>
+
+                        {/* DRAG & DROP OR CHOOSE IMAGE */}
+                        <div className="border-2 border-dashed border-[#1e2336] hover:border-blue-500/40 rounded-xl p-5 bg-[#0c0e14]/50 text-center transition-all relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="deposit-screenshot-file"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = async (event) => {
+                                  const result = event.target?.result as string;
+                                  if (result) {
+                                    setVerifyResponseMsg("Compressing receipt image for scan...");
+                                    const compressed = await resizeAndCompressImage(result);
+                                    setDepositScreenshot(compressed);
+                                    setVerifyResponseMsg(null);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          {!depositScreenshot ? (
+                            <label htmlFor="deposit-screenshot-file" className="cursor-pointer flex flex-col items-center justify-center gap-3 py-3">
+                              <div className="w-12 h-12 rounded-full bg-blue-500/5 flex items-center justify-center border border-blue-500/10 text-blue-400 transition hover:bg-blue-500/10">
+                                <Upload size={20} />
+                              </div>
+                              <div>
+                                <span className="text-xs font-bold text-slate-200 block">Click to upload screenshot</span>
+                                <span className="text-[10px] text-slate-500 mt-1 block">Supports bKash, Nagad, Rocket receipt images</span>
+                              </div>
+                            </label>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="relative rounded-lg overflow-hidden border border-[#1e2336] max-h-[220px] bg-slate-950 flex items-center justify-center">
+                                <img
+                                  src={depositScreenshot}
+                                  alt="Payment Screenshot Preview"
+                                  className="max-h-[210px] object-contain"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setDepositScreenshot(null)}
+                                  className="absolute top-2 right-2 bg-red-650 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors cursor-pointer shadow-md"
+                                  title="Remove Image"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                              <span className="text-[10px] text-emerald-400 font-mono font-black block bg-emerald-500/5 py-1 rounded border border-emerald-500/10">
+                               ✓ Screenshot loaded and ready for verification
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {verifyResponseMsg && (
+                          <div className="text-xs text-blue-400 bg-blue-500/5 border border-blue-500/10 rounded-lg p-3 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping shrink-0" />
+                            <span className="font-semibold font-mono">{verifyResponseMsg}</span>
+                          </div>
+                        )}
+
+                        {depError && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
+                            <AlertCircle size={15} className="shrink-0" />
+                            {depError}
+                          </div>
+                        )}
+
+                        {/* COMPLETED ACTIONS */}
+                        <div className="space-y-2">
                           <button
-                            key={val}
-                            type="button"
-                            onClick={() => handleQuickSelect(val)}
-                            className={cn(
-                              "py-2 rounded-lg border text-xs font-semibold font-mono text-center transition-all duration-150 select-none outline-none",
-                              parseFloat(depositAmount) === val
-                                ? "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/10"
-                                : "border-[#1e2336] bg-white/5 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
-                            )}
+                            onClick={() => handleCompleteDeposit()}
+                            disabled={!depositScreenshot || isVerifyingScreenshot}
+                            className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                           >
-                            ${val}
+                            {isVerifyingScreenshot ? (
+                              <>
+                                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Verifying Screenshot...
+                              </>
+                            ) : (
+                              "Verify & Auto-Add Balance"
+                            )}
                           </button>
-                        ))}
-                      </div>
-                    </div>
 
-                    {/* AMOUNT */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center pr-1 pl-0.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount (USD)</label>
-                        <span className="text-[10px] text-slate-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10">
-                          Min: ${(manualGateways.find(g => g.id === selectedMethod)?.minDeposit !== undefined ? manualGateways.find(g => g.id === selectedMethod)?.minDeposit : 2.5).toFixed(2)} USD
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-20px text-blue-500 font-bold pointer-events-none">$</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          className="w-full bg-[#141720] border border-[#1e2336] pl-8.5 pr-4 py-3.5 text-xl font-mono font-semibold text-white rounded-lg outline-none focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-                    </div>
+                          <button
+                            onClick={async () => {
+                              // Skip OCR and submit directly for manual review
+                              setIsVerifyingScreenshot(true);
+                              setDepError(null);
+                              setVerifyResponseMsg('Submitting deposit for manual review...');
+                              const amt = parseFloat(depositAmount);
+                              const methodStr = selectedMethod || 'bkash';
 
-                    {/* USER DEPOSIT TRADING PROOF INPUTS */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 font-sans pt-1">
-                      <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Your Sender Account Details</label>
-                        <input
-                          type="text"
-                          placeholder="Sender No. or Name"
-                          value={senderDetails}
-                          onChange={(e) => setSenderDetails(e.target.value)}
-                          className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-bold"
-                        />
-                      </div>
-                      <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
-                        <input
-                          type="text"
-                          placeholder="TxID or Ref Number"
-                          value={transactionId}
-                          onChange={(e) => setTransactionId(e.target.value)}
-                          className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
-                        />
-                      </div>
-                    </div>
+                              try {
+                                const cached = localStorage.getItem('dih_smm_deposits_v2');
+                                let currentDeps = [];
+                                if (cached) {
+                                  try { currentDeps = JSON.parse(cached); } catch (e) { console.error(e); }
+                                }
+                                const nextDepId = currentDeps.length ? Math.max(...currentDeps.map((d: any) => d.id || 0)) + 1 : 1;
 
-                    {/* DEPOSIT ALERTS */}
-                    {depError && (
-                      <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
-                        <AlertCircle size={15} className="shrink-0" />
-                        {depError}
+                                const newDeposit = {
+                                  id: nextDepId,
+                                  userId: userToUse?.id || 999,
+                                  userEmail: userEmail,
+                                  userName: userName,
+                                  amount: amt,
+                                  method: methodStr,
+                                  sender: senderDetails.trim(),
+                                  txid: transactionId.trim(),
+                                  status: 'pending',
+                                  screenshot: depositScreenshot || undefined,
+                                  aiReason: "Requested manual review directly.",
+                                  date: new Date().toISOString().split('T')[0]
+                                };
+
+                                const updatedDeps = [...currentDeps, newDeposit];
+                                saveDeposits(updatedDeps);
+
+                                setDepositAmount('');
+                                setSenderDetails('');
+                                setTransactionId('');
+                                setDepositScreenshot(null);
+                                setDepositStep('form');
+                                setDepSuccess(`Deposit of $${fmtAmt(amt)} via ${methodStr.toUpperCase()} submitted to pending list! SMM admin will verify manually.`);
+                              } catch (err) {
+                                setDepError('Failed to submit. Please try again.');
+                              } finally {
+                                setIsVerifyingScreenshot(false);
+                                setVerifyResponseMsg(null);
+                              }
+                            }}
+                            disabled={isVerifyingScreenshot}
+                            className="w-full py-2 bg-slate-900 border border-[#1e2336] hover:bg-slate-800 text-slate-400 hover:text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
+                          >
+                            Submit Directly for Manual Review
+                          </button>
+                        </div>
                       </div>
                     )}
-
-                    {depSuccess && (
-                      <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed">
-                        <CheckCircle2 size={15} className="shrink-0" />
-                        {depSuccess}
-                      </div>
-                    )}
-
-                    <button 
-                      onClick={() => handleDeposit()}
-                      className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm tracking-wide rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 active:scale-[0.982]"
-                    >
-                      Add Funds
-                    </button>
 
                     {/* USER DEPOSIT TRANSACTIONS LOG */}
                     <div className="mt-8 border-t border-[#1e2336]/60 pt-6">

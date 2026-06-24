@@ -90,6 +90,9 @@ const LOGS_FILE = path.join(DATA_DIR, 'logs.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const STORE_FILE = path.join(DATA_DIR, 'store.json');
+const SMM_SERVICES_FILE = path.join(DATA_DIR, 'smm-services.json');
+const SMM_ORDERS_FILE = path.join(DATA_DIR, 'smm-orders.json');
+const SMM_DEPOSITS_FILE = path.join(DATA_DIR, 'smm-deposits.json');
 
 const loadData = (file: string, defaultVal: any) => {
   if (!fs.existsSync(file)) return defaultVal;
@@ -280,6 +283,116 @@ async function startServer() {
     return res.json({ balance: 0 });
   });
 
+  app.post("/api/smm/verify-screenshot", async (req, res) => {
+    const { image, txid } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: "screenshot image is required." });
+    }
+    if (!txid) {
+      return res.status(400).json({ error: "typed transaction ID (txid) is required." });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.json({
+        detectedTxId: null,
+        isMatch: false,
+        confidence: 0,
+        reason: "Automatic verification service is offline. Falling back to pending review."
+      });
+    }
+
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const mimeTypeMatch = image.match(/^data:(image\/[a-zA-Z0-9.-]+);base64,/);
+      if (!mimeTypeMatch) {
+        return res.status(400).json({ error: "Invalid image encoding format." });
+      }
+      const mimeType = mimeTypeMatch[1];
+      const base64Data = image.replace(/^data:image\/[a-zA-Z0-9.-]+;base64,/, "");
+
+      const imagePart = {
+        inlineData: {
+          data: base64Data,
+          mimeType: mimeType
+        }
+      };
+
+      const promptPart = {
+        text: `You are an expert payment transaction screenshot OCR and verification system.
+Analyze this payment transaction screenshot. It is a payment confirmation from a mobile financial service (bKash, Nagad, Rocket, Upay, bank transfer, Binance Pay, or USDT Tron network).
+
+Task:
+1. Locate the Transaction ID (TxID), Transaction Hash (TxHash), or reference code in the screenshot.
+   - For bKash: Starts with any letter (usually 10 chars, e.g., 'BL3A59M4FZ', 'CK6B52D9ER').
+   - For Nagad: Starts with numbers (usually 8-10 chars, e.g., '71A2B3C4', '73259841', '71B9N68V').
+   - For Rocket / Upay: Numbers or alphanumeric.
+   - For Binance / Crypto USDT: Long transaction hash.
+2. Compare the extracted ID with the user's typed transaction ID: "${txid}".
+   - Check if they are structurally identical (ignoring spacing, capitalization, case, or small reading typos, or common prefixes/suffixes).
+
+You MUST return a JSON response matching this schema:
+{
+  "detectedTxId": "extracted_txid_string", // Or null if no transaction ID could be found at all
+  "isMatch": true/false, // True if it matches "${txid}" (or is substantially similar), false otherwise
+  "confidence": 0-100, // percentage confidence as integer
+  "reason": "Brief explanation of what was found in the image and whether it matched. CRITICAL: Do NOT use words like 'AI', 'model', 'neural network', 'Gemini', 'OCR', or 'vision'. Write strictly from the perspective of a system automatic scanner."
+}
+
+Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`json or \`\`\`. ONLY return the raw JSON object string.`
+      };
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: { parts: [imagePart, promptPart] }
+      });
+
+      let textResponse = response.text || "";
+      if (response.candidates && response.candidates[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.text) {
+            textResponse = part.text;
+            break;
+          }
+        }
+      }
+
+      let cleanJson = textResponse.trim();
+      if (cleanJson.startsWith("```")) {
+        cleanJson = cleanJson.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+      }
+
+      try {
+        const parsed = JSON.parse(cleanJson);
+        return res.json(parsed);
+      } catch (err) {
+        console.error("Failed to parse Gemini OCR response:", textResponse);
+        return res.json({
+          detectedTxId: null,
+          isMatch: false,
+          confidence: 0,
+          reason: "AI output could not be parsed. Defaulting to manual approval."
+        });
+      }
+    } catch (error: any) {
+      console.error("Gemini OCR error:", error);
+      return res.json({
+        detectedTxId: null,
+        isMatch: false,
+        confidence: 0,
+        reason: "Failed to connect to AI engine. Defaulting to manual approval."
+      });
+    }
+  });
+
   // --- PERSISTENCE ENDPOINTS ---
 
   app.get("/api/admin/logs", (req, res) => {
@@ -331,6 +444,37 @@ async function startServer() {
   app.post("/api/admin/settings", async (req, res) => {
     await saveData(SETTINGS_FILE, req.body);
     res.json({ status: 'ok' });
+  });
+
+  // --- GLOBAL SMM SERVICES, ORDERS, AND DEPOSITS PERSISTENCE ---
+  app.get("/api/smm/services", (req, res) => {
+    const services = loadData(SMM_SERVICES_FILE, []);
+    res.json(services);
+  });
+
+  app.post("/api/smm/services", async (req, res) => {
+    await saveData(SMM_SERVICES_FILE, req.body || []);
+    res.json({ status: "ok" });
+  });
+
+  app.get("/api/smm/orders", (req, res) => {
+    const orders = loadData(SMM_ORDERS_FILE, []);
+    res.json(orders);
+  });
+
+  app.post("/api/smm/orders", async (req, res) => {
+    await saveData(SMM_ORDERS_FILE, req.body || []);
+    res.json({ status: "ok" });
+  });
+
+  app.get("/api/smm/deposits", (req, res) => {
+    const deposits = loadData(SMM_DEPOSITS_FILE, []);
+    res.json(deposits);
+  });
+
+  app.post("/api/smm/deposits", async (req, res) => {
+    await saveData(SMM_DEPOSITS_FILE, req.body || []);
+    res.json({ status: "ok" });
   });
 
   // --- SMM PROVIDER LIVE SERVICES AGGREGATION & FETCH PROXY ---

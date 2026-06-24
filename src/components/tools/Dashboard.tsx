@@ -210,7 +210,9 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
               className={cn(
                 "group relative flex flex-col items-start p-4 md:p-5 bg-white/80 dark:bg-slate-900/40 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-white/5 hover:border-primary/50 transition-all duration-500 text-left overflow-hidden h-full min-h-[140px] md:min-h-[160px] shadow-sm hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1.5 cursor-pointer",
                 isDihMovies && "hover:border-amber-500/50 hover:shadow-amber-500/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-amber-500/[0.02]",
-                isBachelorPoint && "hover:border-rose-500/55 hover:shadow-rose-550/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-rose-500/[0.02]",
+                isBachelorPoint && (settings.bachelorEnableColorTheme !== false
+                  ? "hover:border-rose-500/55 hover:shadow-rose-550/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-rose-500/[0.02]"
+                  : "hover:border-blue-500/55 hover:shadow-blue-550/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-blue-500/[0.02]"),
                 isDihSmm && "hover:border-[#8b5cf6]/50 hover:shadow-[#8b5cf6]/25 dark:bg-gradient-to-b dark:from-slate-900/40 dark:to-violet-500/[0.02]",
                 settings.disabledTools?.includes(tool.id) && "hover:border-rose-500/40 hover:shadow-rose-500/20",
                 settings.upcomingTools?.includes(tool.id) && "hover:border-violet-500/40 hover:shadow-violet-500/20",
@@ -220,9 +222,9 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
             >
               {/* Premium Inner Radiance */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-                <div className={cn("absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50", isBachelorPoint && "via-rose-500/50", isDihSmm && "via-[#8b5cf6]/50")} />
-                <div className={cn("absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50", isBachelorPoint && "via-rose-500/50", isDihSmm && "via-[#8b5cf6]/50")} />
-                <div className={cn("absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.05),transparent_70%)]", isDihMovies && "bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.08),transparent_70%)]", isBachelorPoint && "bg-[radial-gradient(circle_at_50%_0%,rgba(244,63,94,0.08),transparent_70%)]", isDihSmm && "bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.08),transparent_70%)]")} />
+                <div className={cn("absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50", isBachelorPoint && (settings.bachelorEnableColorTheme !== false ? "via-rose-500/50" : "via-blue-500/50"), isDihSmm && "via-[#8b5cf6]/50")} />
+                <div className={cn("absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/50 to-transparent", isDihMovies && "via-amber-500/50", isBachelorPoint && (settings.bachelorEnableColorTheme !== false ? "via-rose-500/50" : "via-blue-500/50"), isDihSmm && "via-[#8b5cf6]/50")} />
+                <div className={cn("absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.05),transparent_70%)]", isDihMovies && "bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.08),transparent_70%)]", isBachelorPoint && (settings.bachelorEnableColorTheme !== false ? "bg-[radial-gradient(circle_at_50%_0%,rgba(244,63,94,0.08),transparent_70%)]" : "bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.08),transparent_70%)]"), isDihSmm && "bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.08),transparent_70%)]")} />
               </div>
 
               {/* Dynamic Shine Streak */}
@@ -231,11 +233,11 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
               </div>
 
               {/* Technical Corner Brackets */}
-              <div className={cn("absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:-translate-x-1 group-hover:-translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : isBachelorPoint ? "border-rose-500/25 group-hover:border-[#ff2b56]/80" : isDihSmm ? "border-violet-500/25 group-hover:border-violet-400/80" : "border-primary/10 group-hover:border-primary/60")} />
-              <div className={cn("absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : isBachelorPoint ? "border-rose-500/25 group-hover:border-[#ff2b56]/80" : isDihSmm ? "border-violet-500/25 group-hover:border-violet-400/80" : "border-primary/10 group-hover:border-primary/60")} />
+              <div className={cn("absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:-translate-x-1 group-hover:-translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : isBachelorPoint ? (settings.bachelorEnableColorTheme !== false ? "border-rose-500/25 group-hover:border-[#ff2b56]/80" : "border-blue-500/25 group-hover:border-blue-400/80") : isDihSmm ? "border-violet-500/25 group-hover:border-violet-400/80" : "border-primary/10 group-hover:border-primary/60")} />
+              <div className={cn("absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:translate-y-1", isDihMovies ? "border-amber-500/20 group-hover:border-amber-400/80" : isBachelorPoint ? (settings.bachelorEnableColorTheme !== false ? "border-rose-500/25 group-hover:border-[#ff2b56]/80" : "border-blue-500/25 group-hover:border-blue-400/80") : isDihSmm ? "border-violet-500/25 group-hover:border-violet-400/80" : "border-primary/10 group-hover:border-primary/60")} />
 
               {/* Edge Light Effect */}
-              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", isDihMovies ? "from-amber-500/5 via-transparent to-transparent" : isBachelorPoint ? "from-rose-500/5 via-transparent to-transparent" : isDihSmm ? "from-violet-500/5 via-transparent to-transparent" : "from-primary/5 via-transparent to-transparent")} />
+              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-700", isDihMovies ? "from-amber-500/5 via-transparent to-transparent" : isBachelorPoint ? (settings.bachelorEnableColorTheme !== false ? "from-rose-500/5 via-transparent to-transparent" : "from-blue-500/5 via-transparent to-transparent") : isDihSmm ? "from-violet-500/5 via-transparent to-transparent" : "from-primary/5 via-transparent to-transparent")} />
 
               {/* Holographic Overlay on Hover */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-1000 pointer-events-none hologram z-0" />
@@ -243,7 +245,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
               {/* Tool Accent Glow */}
               <div className={cn(
                 "absolute -right-6 -top-6 w-24 h-24 blur-[50px] opacity-0 group-hover:opacity-30 transition-opacity duration-700 rounded-full z-0",
-                isDihMovies ? "bg-amber-500" : isBachelorPoint ? "bg-[#ff2b56]" : isDihSmm ? "bg-[#7c3aed]" : tool.color
+                isDihMovies ? "bg-amber-500" : isBachelorPoint ? (settings.bachelorEnableColorTheme !== false ? "bg-[#ff2b56]" : "bg-blue-500") : isDihSmm ? "bg-[#7c3aed]" : tool.color
               )} />
 
               <div className="relative z-10 w-full mb-auto flex flex-col items-start">
@@ -287,7 +289,9 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
                   isDihMovies
                     ? "text-amber-500 dark:text-amber-400 group-hover:text-amber-400 dark:group-hover:text-amber-300"
                     : isBachelorPoint
-                      ? "text-rose-550 dark:text-rose-400 group-hover:text-rose-500 dark:group-hover:text-rose-350"
+                      ? settings.bachelorEnableColorTheme !== false
+                        ? "text-rose-550 dark:text-rose-400 group-hover:text-rose-500 dark:group-hover:text-rose-350"
+                        : "text-blue-550 dark:text-blue-400 group-hover:text-blue-500 dark:group-hover:text-blue-350"
                       : isDihSmm
                         ? "text-violet-550 dark:text-violet-400 group-hover:text-violet-400 dark:group-hover:text-violet-300"
                         : "text-slate-900 dark:text-white group-hover:text-primary"
@@ -329,7 +333,9 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
                   isDihMovies
                     ? "border-amber-500/30 group-hover:bg-amber-500 group-hover:border-amber-500 group-hover:text-slate-950 group-hover:shadow-amber-500/40"
                     : isBachelorPoint
-                      ? "border-rose-500/30 group-hover:bg-[#e5173f] group-hover:border-[#e5173f] group-hover:text-white group-hover:shadow-rose-500/40"
+                      ? settings.bachelorEnableColorTheme !== false
+                        ? "border-rose-500/30 group-hover:bg-[#e5173f] group-hover:border-[#e5173f] group-hover:text-white group-hover:shadow-rose-500/40"
+                        : "border-blue-500/30 group-hover:bg-blue-500 group-hover:border-blue-500 group-hover:text-white group-hover:shadow-blue-500/40"
                       : "border-slate-200 dark:border-white/10 group-hover:bg-primary group-hover:border-primary group-hover:text-white group-hover:shadow-primary/40"
                 )}>
                   <ArrowRight size={13} className="md:w-4 md:h-4 group-hover/btn:translate-x-1 transition-transform duration-500" />
