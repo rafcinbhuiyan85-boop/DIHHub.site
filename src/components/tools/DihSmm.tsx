@@ -84,6 +84,7 @@ const CATEGORIES = [
   'Discord', 
   'Website Traffic', 
   'GAME',
+  'Fb/Insta {OLD/ACC}',
   'Others'
 ];
 
@@ -253,6 +254,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       'Discord', 
       'Website Traffic', 
       'GAME',
+      'Fb/Insta {OLD/ACC}',
       'Others'
     ];
   }, [settings?.smmShortcuts]);
@@ -276,6 +278,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const isDiscord = sName.includes('discord') || sCat.includes('discord');
     const isTraffic = sName.includes('traffic') || sName.includes('website') || sName.includes('visitor') || sName.includes('seo') || sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
     const isGame = sName.includes('game') || sName.includes('hack') || sName.includes('pubg') || sName.includes('free fire') || sName.includes('freefire') || sName.includes('clash') || sName.includes('gaming') || sName.includes('diamonds') || sName.includes('mlbb') || sName.includes('recharge') || sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
+    const isOldAcc = sName.includes('{old/acc}') || sName.includes('old account') || sName.includes('old acc') || sName.includes('acc}') || sCat.includes('{old/acc}') || sCat.includes('old account') || sCat.includes('old acc') || sCat.includes('acc}');
 
     if (plat === 'instagram') return isInstagram;
     if (plat === 'facebook') return isFacebook;
@@ -288,9 +291,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (plat === 'discord') return isDiscord;
     if (plat.includes('traffic') || plat.includes('website')) return isTraffic;
     if (plat === 'game' || plat === 'games' || plat === 'game hacks') return isGame;
+    if (plat === 'fb/insta {old/acc}' || plat.includes('old') || plat.includes('acc') || plat.includes('{old/acc}')) return isOldAcc;
 
     if (plat === 'others') {
-      return !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord && !isTraffic && !isGame;
+      return !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord && !isTraffic && !isGame && !isOldAcc;
     }
 
     return sName.includes(plat) || sCat.includes(plat);
@@ -321,13 +325,16 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (plat === 'game' || plat === 'games' || plat === 'game hacks') {
       return sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
     }
+    if (plat === 'fb/insta {old/acc}' || plat.includes('old') || plat.includes('acc') || plat.includes('{old/acc}')) {
+      return sCat.includes('old') || sCat.includes('acc') || sCat.includes('{old/acc}');
+    }
     
     // Fallback: Dynamically test if any active service inside this category belongs to target platform
     const hasMatchingSvc = activeServices.some(s => s.category === serviceCategory && serviceMatchesPlatform(s, platform));
     if (hasMatchingSvc) return true;
 
     if (plat === 'others') {
-      const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo', 'game', 'hack', 'gaming', 'pubg', 'free fire', 'freefire', 'diamonds', 'mlbb', 'recharge'];
+      const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo', 'game', 'hack', 'gaming', 'pubg', 'free fire', 'freefire', 'diamonds', 'mlbb', 'recharge', 'old', 'acc', '{old/acc}'];
       return !known.some(k => sCat.includes(k));
     }
     
@@ -930,6 +937,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           else if (catLower.includes('discord')) matchedPlat = 'Discord';
           else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) matchedPlat = 'Website Traffic';
           else if (catLower.includes('game') || catLower.includes('hack') || catLower.includes('gaming') || catLower.includes('pubg') || catLower.includes('free fire') || catLower.includes('freefire') || catLower.includes('diamonds') || catLower.includes('mlbb') || catLower.includes('recharge')) matchedPlat = 'GAME';
+          else if (catLower.includes('old') || catLower.includes('acc') || catLower.includes('{old/acc}')) matchedPlat = 'Fb/Insta {OLD/ACC}';
           setOrderActivePlatform(matchedPlat);
 
           const svcsOfCat = activeServices.filter(s => s.category === defaultCat);
@@ -996,6 +1004,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     else if (c.includes('discord')) { icon = '💬'; basePlatformName = 'Discord'; }
     else if (c.includes('traffic') || c.includes('website')) { icon = '🌐'; basePlatformName = 'Website Traffic'; }
     else if (c.includes('game') || c.includes('hack') || c.includes('gaming') || c.includes('pubg') || c.includes('free fire') || c.includes('freefire') || c.includes('diamonds') || c.includes('mlbb') || c.includes('recharge')) { icon = '🎮'; basePlatformName = 'GAME'; }
+    else if (c.includes('old') || c.includes('acc') || c.includes('{old/acc}')) { icon = '🔑'; basePlatformName = 'Fb/Insta {OLD/ACC}'; }
     
     if (basePlatformName) {
       if (cat.trim().toLowerCase() === basePlatformName.toLowerCase()) {
@@ -1078,6 +1087,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       matchedPlat = 'Website Traffic';
     } else if (catLower.includes('game') || catLower.includes('hack') || catLower.includes('gaming') || catLower.includes('pubg') || catLower.includes('free fire') || catLower.includes('freefire') || catLower.includes('diamonds') || catLower.includes('mlbb') || catLower.includes('recharge')) {
       matchedPlat = 'GAME';
+    } else if (catLower.includes('old') || catLower.includes('acc') || catLower.includes('{old/acc}')) {
+      matchedPlat = 'Fb/Insta {OLD/ACC}';
     } else {
       matchedPlat = 'Others';
     }
@@ -1515,7 +1526,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: depositScreenshot,
-          txid: cleanTxId
+          txid: cleanTxId,
+          amount: amt
         })
       });
 

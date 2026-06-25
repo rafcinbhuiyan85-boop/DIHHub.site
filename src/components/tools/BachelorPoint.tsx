@@ -147,8 +147,26 @@ export default function BachelorPoint() {
   // State for delete confirmation to avoid window.confirm in iframe sandbox
   const [bDeletingId, setBDeletingId] = useState<number | null>(null);
 
-  // Load from LS on boot and keep synchronized
+  // Load from Server (or fallback to LS) on boot and keep synchronized
   useEffect(() => {
+    const fetchFromServer = async () => {
+      try {
+        const res = await fetch('/api/bachelor/contents');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.categories) setCategories(data.categories);
+          if (data.contents) {
+            setContents(data.contents);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          }
+        } else {
+          loadFromStorage();
+        }
+      } catch (e) {
+        loadFromStorage();
+      }
+    };
+
     const loadFromStorage = () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -162,18 +180,6 @@ export default function BachelorPoint() {
               return !isDemo;
             });
             setContents(cleaned);
-            if (cleaned.length !== parsed.contents.length) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                categories: parsed.categories || KEY_CATEGORIES,
-                contents: cleaned
-              }));
-              window.dispatchEvent(new Event('bp_storage_update'));
-              try {
-                const bChan = new BroadcastChannel('bp_storage_sync');
-                bChan.postMessage('bp_storage_update');
-                bChan.close();
-              } catch (e) {}
-            }
           }
         } else {
           setContents([]);
@@ -183,16 +189,16 @@ export default function BachelorPoint() {
       }
     };
 
-    loadFromStorage();
-    window.addEventListener('storage', loadFromStorage);
-    window.addEventListener('bp_storage_update', loadFromStorage);
+    fetchFromServer();
+    window.addEventListener('storage', fetchFromServer);
+    window.addEventListener('bp_storage_update', fetchFromServer);
 
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel('bp_storage_sync');
       channel.onmessage = (event) => {
         if (event.data === 'bp_storage_update') {
-          loadFromStorage();
+          fetchFromServer();
         }
       };
     } catch (e) {
@@ -200,8 +206,8 @@ export default function BachelorPoint() {
     }
 
     return () => {
-      window.removeEventListener('storage', loadFromStorage);
-      window.removeEventListener('bp_storage_update', loadFromStorage);
+      window.removeEventListener('storage', fetchFromServer);
+      window.removeEventListener('bp_storage_update', fetchFromServer);
       if (channel) {
         channel.close();
       }
@@ -265,13 +271,24 @@ export default function BachelorPoint() {
     return item.video_url;
   };
 
-  // Save to LS whenever data changes
-  const saveData = (nextCats: Category[], nextItems: ContentItem[]) => {
+  // Save to Server and LS whenever data changes
+  const saveData = async (nextCats: Category[], nextItems: ContentItem[]) => {
+    const fullData = {
+      categories: nextCats,
+      contents: nextItems
+    };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        categories: nextCats,
-        contents: nextItems
-      }));
+      await fetch('/api/bachelor/contents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullData)
+      });
+    } catch (e) {
+      console.error('Failed to sync custom streamer data to server:', e);
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fullData));
       window.dispatchEvent(new Event('bp_storage_update'));
       try {
         const bChan = new BroadcastChannel('bp_storage_sync');
@@ -359,24 +376,52 @@ export default function BachelorPoint() {
       const nextId = Math.max(0, ...contents.map(c => c.id)) + 1;
       let poster_file_key = '';
       let video_file_key = '';
+      let poster_url = '';
+      let video_url = '';
 
       if (fPosterFile) {
         poster_file_key = `poster_${nextId}_${Date.now()}`;
-        await fileStorage.saveFile(poster_file_key, fPosterFile);
+        try {
+          await fileStorage.saveFile(poster_file_key, fPosterFile); // Keep local backup
+        } catch (e) {}
+
+        const formData = new FormData();
+        formData.append('image', fPosterFile);
+        const upRes = await fetch('/api/admin/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          poster_url = upData.url;
+        }
       }
 
       if (fVideoFile) {
         video_file_key = `video_${nextId}_${Date.now()}`;
-        await fileStorage.saveFile(video_file_key, fVideoFile);
+        try {
+          await fileStorage.saveFile(video_file_key, fVideoFile); // Keep local backup
+        } catch (e) {}
+
+        const formData = new FormData();
+        formData.append('video', fVideoFile);
+        const upRes = await fetch('/api/bachelor/upload-video', {
+          method: 'POST',
+          body: formData
+        });
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          video_url = upData.url;
+        }
       }
 
       const newItem: ContentItem = {
         id: nextId,
         title: fTitle.trim(),
         type: fType,
-        video_url: '',
+        video_url: video_url,
         description: fDesc.trim() || 'No description provided.',
-        poster_url: '',
+        poster_url: poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop',
         release_year: parseInt(fYear) || new Date().getFullYear(),
         duration_minutes: parseInt(fDur) || 120,
         category_id: parseInt(fCat) || 3, // Default to Comedy (Bengali Comedy starts here)
@@ -389,7 +434,7 @@ export default function BachelorPoint() {
 
       const updated = [newItem, ...contents];
       setContents(updated);
-      saveData(categories, updated);
+      await saveData(categories, updated);
       showToast(`Added "${fTitle}" successfully!`, 'ok');
 
       // Reset Form

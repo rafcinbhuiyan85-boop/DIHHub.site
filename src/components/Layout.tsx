@@ -444,7 +444,7 @@ export default function Layout({
           
             <div className="flex items-center gap-3 md:gap-6">
             {!(activeTool === 'admin-panel' || activeTool === 'admin-login') && (
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-all active:scale-90">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:block text-slate-500 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-all active:scale-90">
                 <Menu size={20} />
               </button>
             )}
@@ -618,12 +618,12 @@ export default function Layout({
               {/* Home / Dashboard */}
               <button 
                 onClick={() => {
-                  setActiveTool('qr');
+                  setActiveTool('dashboard');
                   setIsSidebarOpen(false);
                 }}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                  activeTool === 'qr' ? "text-amber-400 bg-amber-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                  activeTool === 'dashboard' ? "text-amber-400 bg-amber-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
                 )}
               >
                 <LayoutDashboard size={16} />
@@ -659,21 +659,6 @@ export default function Layout({
               >
                 <Film size={16} className={activeTool === 'dih-movies' ? "text-amber-400 animate-pulse" : "text-amber-500"} />
                 <span className="text-[9px] font-black tracking-widest uppercase">Movies</span>
-              </button>
-
-              {/* Bangla Comedy */}
-              <button 
-                onClick={() => {
-                  setActiveTool('bachelor-point');
-                  setIsSidebarOpen(false);
-                }}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                  activeTool === 'bachelor-point' ? "text-rose-400 bg-rose-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
-                )}
-              >
-                <Tv size={16} className={activeTool === 'bachelor-point' ? "text-rose-400" : "text-rose-500"} />
-                <span className="text-[9px] font-black tracking-widest uppercase">Comedy</span>
               </button>
 
               {/* Toggle Sidebar Drawer */}

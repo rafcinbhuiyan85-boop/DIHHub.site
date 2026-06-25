@@ -442,13 +442,15 @@ async function startServer() {
   });
 
   app.post("/api/smm/verify-screenshot", async (req, res) => {
-    const { image, txid } = req.body;
+    const { image, txid, amount } = req.body;
     if (!image) {
       return res.status(400).json({ error: "screenshot image is required." });
     }
     if (!txid) {
       return res.status(400).json({ error: "typed transaction ID (txid) is required." });
     }
+
+    const cleanTxId = txid.replace(/\s+/g, '').trim();
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -488,28 +490,36 @@ async function startServer() {
         text: `You are an expert payment transaction screenshot OCR and verification system.
 Analyze this payment transaction screenshot. It is a payment confirmation from a mobile financial service (bKash, Nagad, Rocket, Upay, bank transfer, Binance Pay, or USDT Tron network).
 
-Task:
-1. Locate the Transaction ID (TxID), Transaction Hash (TxHash), or reference code in the screenshot.
+Expected values to verify:
+- Expected Transaction ID (TxID): "${cleanTxId}"
+- Expected Payment Amount (or its equivalent in TK/BDT/USD): "${amount || 'Any positive amount'}"
+
+Tasks:
+1. Identify if this image is an authentic and valid payment transaction confirmation or receipt screenshot. If it is a generic photo, unrelated image, or clearly edited/fake template, mark isMatch as false.
+2. Locate the Transaction ID (TxID), Transaction Hash (TxHash), or reference code in the screenshot.
    - For bKash: Starts with any letter (usually 10 chars, e.g., 'BL3A59M4FZ', 'CK6B52D9ER').
    - For Nagad: Starts with numbers (usually 8-10 chars, e.g., '71A2B3C4', '73259841', '71B9N68V').
    - For Rocket / Upay: Numbers or alphanumeric.
    - For Binance / Crypto USDT: Long transaction hash.
-2. Compare the extracted ID with the user's typed transaction ID: "${txid}".
-   - Check if they are structurally identical (ignoring spacing, capitalization, case, or small reading typos, or common prefixes/suffixes).
+   Compare the extracted TxID with the expected TxID: "${cleanTxId}". They must match (ignoring whitespace, small OCR errors, casing).
+3. Locate the transaction amount on the screenshot.
+   - Check if the payment amount in the screenshot is valid and corresponds to the expected amount: "${amount}". Note: the payment might be in BDT (e.g. 1150 BDT, 575 BDT, etc.) whereas the expected amount might be in dollars (e.g. $10, $5, etc.) or in BDT directly. Allow conversion/approximate matching (e.g. if expected is 5, look for BDT 500-600 or 5 directly, or if expected is 575 BDT, look for 575).
+   - If the payment amount does not match or is not found, or is zero, do not approve.
 
 You MUST return a JSON response matching this schema:
 {
-  "detectedTxId": "extracted_txid_string", // Or null if no transaction ID could be found at all
-  "isMatch": true/false, // True if it matches "${txid}" (or is substantially similar), false otherwise
+  "detectedTxId": "extracted_txid_string", // Or null if not found
+  "detectedAmount": "extracted_amount_string", // Or null if not found
+  "isMatch": true/false, // True only if BOTH the transaction ID matches (or is substantially similar with minor OCR typos) AND the payment amount matches/is verified. Otherwise false.
   "confidence": 0-100, // percentage confidence as integer
-  "reason": "Brief explanation of what was found in the image and whether it matched. CRITICAL: Do NOT use words like 'AI', 'model', 'neural network', 'Gemini', 'OCR', or 'vision'. Write strictly from the perspective of a system automatic scanner."
+  "reason": "A direct, precise explanation of why it matched or why it was rejected. Describe what TxID and Amount were found. Write from the perspective of an automatic verification engine."
 }
 
 Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`json or \`\`\`. ONLY return the raw JSON object string.`
       };
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: { parts: [imagePart, promptPart] }
       });
 
@@ -605,8 +615,40 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   // --- GLOBAL SMM SERVICES, ORDERS, AND DEPOSITS PERSISTENCE ---
+  function getInitialSmmServices() {
+    return [
+      // GAME
+      { id: 210, name: "PUBG Mobile UC - Instant Recharge [Player ID]", category: "GAME", price: 1.15, min: 60, max: 8100, desc: "Direct in-game top-up via Player ID.", time: "5-30 minutes", quality: "Premium" },
+      { id: 211, name: "Free Fire Diamonds - Instant Top-Up [UID]", category: "GAME", price: 0.90, min: 100, max: 5600, desc: "Fast Diamond delivery using game UID.", time: "5-15 minutes", quality: "Standard" },
+      { id: 212, name: "Mobile Legends MLBB Diamonds - ID Direct", category: "GAME", price: 1.20, min: 50, max: 6000, desc: "Fast direct top-up MLBB using User ID + Zone ID.", time: "5-30 minutes", quality: "Premium" },
+      { id: 213, name: "Clash of Clans Gems / Gold Pass - Manual Shop", category: "GAME", price: 4.50, min: 1, max: 100, desc: "Get Clash of Clans items loaded directly.", time: "1-4 hours", quality: "VIP" },
+      { id: 214, name: "CS2 / Valorant Private Undetected Cheats (7 Days)", category: "GAME", price: 15.00, min: 1, max: 100, desc: "100% undetected safe weekly key access.", time: "Instant", quality: "VIP" },
+
+      // Fb/Insta {OLD/ACC}
+      { id: 310, name: "Facebook Aged Account - 2018-2020 Active Profile [Real History]", category: "Fb/Insta {OLD/ACC}", price: 8.50, min: 1, max: 50, desc: "Old active personal profile, great for ads/spam-free business setup.", time: "1-3 hours", quality: "Premium" },
+      { id: 311, name: "Instagram Aged Account - 5-10 Years Old [With Posts/Followers]", category: "Fb/Insta {OLD/ACC}", price: 12.00, min: 1, max: 50, desc: "HQ aged Instagram accounts, extremely safe for marketing.", time: "1-3 hours", quality: "Premium" },
+      { id: 312, name: "Facebook Verified Business Manager (BM) - Active Ads", category: "Fb/Insta {OLD/ACC}", price: 25.00, min: 1, max: 10, desc: "Fully verified active BM account ready for massive ads campaigns.", time: "2-6 hours", quality: "VIP" },
+
+      // Instagram
+      { id: 101, name: "Instagram Followers - Organic [Real Active Accounts]", category: "Instagram", price: 0.38, min: 100, max: 100000, desc: "Ultra stable organic-looking active followers. Non drop.", time: "1-6 hours", quality: "Premium" },
+      { id: 102, name: "Instagram Followers - Fast [Direct Server]", category: "Instagram", price: 0.18, min: 100, max: 200000, desc: "Fast instant delivery followers.", time: "0-30 minutes", quality: "Standard" },
+      { id: 103, name: "Instagram Likes - Non Drop [30 Days Refill Button]", category: "Instagram", price: 0.05, min: 50, max: 500000, desc: "Organic-paced secure likes.", time: "0-1 hours", quality: "Standard" },
+
+      // Facebook
+      { id: 110, name: "Facebook Page Likes + Followers [Lifetime Stable]", category: "Facebook", price: 0.65, min: 100, max: 500000, desc: "Stable profile or page likes, permanent warranty.", time: "0-24 hours", quality: "Standard" },
+      { id: 111, name: "Facebook Post Likes - Instant Liquid Speed", category: "Facebook", price: 0.18, min: 50, max: 200000, desc: "Quick reaction boosts on posts, photos and text.", time: "0-6 hours", quality: "Standard" },
+
+      // Website Traffic
+      { id: 190, name: "Website Traffic - Worldwide Cheap [Organic Direct]", category: "Website Traffic", price: 0.08, min: 1000, max: 10000000, desc: "Cheap direct organic clicks.", time: "Instant", quality: "Standard" }
+    ];
+  }
+
   app.get("/api/smm/services", (req, res) => {
-    const services = loadData(SMM_SERVICES_FILE, []);
+    let services = loadData(SMM_SERVICES_FILE, []);
+    if (!Array.isArray(services) || services.length === 0) {
+      services = getInitialSmmServices();
+      saveData(SMM_SERVICES_FILE, services);
+    }
     res.json(services);
   });
 
@@ -1023,7 +1065,40 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       return res.status(400).json({ error: 'No image uploaded' });
     }
     const fileUrl = `/api/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl });
+    res.json({ url: fileUrl, filename: req.file.filename });
+  });
+
+  // --- BACHELOR POINT S-5 BACKEND ---
+  const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
+
+  app.get("/api/bachelor/contents", (req, res) => {
+    const data = loadData(BACHELOR_POINT_FILE, {
+      categories: [
+        { id: 1, name: 'Action' },
+        { id: 2, name: 'Drama' },
+        { id: 3, name: 'Comedy' },
+        { id: 4, name: 'Thriller' },
+        { id: 5, name: 'Romance' },
+        { id: 6, name: 'Horror' },
+        { id: 7, name: 'Sci-Fi' },
+        { id: 8, name: 'Documentary' }
+      ],
+      contents: []
+    });
+    res.json(data);
+  });
+
+  app.post("/api/bachelor/contents", async (req, res) => {
+    await saveData(BACHELOR_POINT_FILE, req.body || { categories: [], contents: [] });
+    res.json({ status: "ok" });
+  });
+
+  app.post("/api/bachelor/upload-video", upload.single('video'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+    const fileUrl = `/api/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl, filename: req.file.filename });
   });
 
   app.post("/api/admin/migration/upload", upload.single('project'), (req, res) => {

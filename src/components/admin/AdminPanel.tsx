@@ -289,7 +289,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   }, [smmServicesList, smmSvcSearch, smmSvcCatFilter]);
 
   const adminUniqueSmmCategoriesOptions = useMemo(() => {
-    const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Others'];
+    const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Fb/Insta {OLD/ACC}', 'Others'];
     const currentCats = smmServicesList.map(s => s.category).filter(Boolean);
     return Array.from(new Set([...defaults, ...currentCats]));
   }, [smmServicesList]);
@@ -947,6 +947,11 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     { id: 213, name: "Clash of Clans Gems / Gold Pass - Manual Shop", category: "GAME", originalPrice: 4.50, min: 1, max: 100, desc: "Get Clash of Clans items loaded directly.", time: "1-4 hours", quality: "VIP" },
     { id: 214, name: "CS2 / Valorant Private Undetected Cheats (7 Days)", category: "GAME", originalPrice: 15.00, min: 1, max: 100, desc: "100% undetected safe weekly key access.", time: "Instant", quality: "VIP" },
 
+    // Fb/Insta {OLD/ACC}
+    { id: 310, name: "Facebook Aged Account - 2018-2020 Active Profile [Real History]", category: "Fb/Insta {OLD/ACC}", originalPrice: 8.50, min: 1, max: 50, desc: "Old active personal profile, great for ads/spam-free business setup.", time: "1-3 hours", quality: "Premium" },
+    { id: 311, name: "Instagram Aged Account - 5-10 Years Old [With Posts/Followers]", category: "Fb/Insta {OLD/ACC}", originalPrice: 12.00, min: 1, max: 50, desc: "HQ aged Instagram accounts, extremely safe for marketing.", time: "1-3 hours", quality: "Premium" },
+    { id: 312, name: "Facebook Verified Business Manager (BM) - Active Ads", category: "Fb/Insta {OLD/ACC}", originalPrice: 25.00, min: 1, max: 10, desc: "Fully verified active BM account ready for massive ads campaigns.", time: "2-6 hours", quality: "VIP" },
+
     // Others
     { id: 201, name: "YouTube Comments Like / Reply Threads", category: "Others", originalPrice: 1.12, min: 10, max: 5000, desc: "Real written comments thread.", time: "0-6 hours", quality: "Premium" },
     { id: 202, name: "Google One 2TB + Gemini Pro Global (1 Month Trial)", category: "Others", originalPrice: 0.45, min: 1, max: 100, desc: "Active invite accounts.", time: "0-6 hours", quality: "VIP" },
@@ -992,8 +997,11 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     if (filterLower === 'game' || filterLower === 'games' || filterLower === 'game hacks') {
       return svcLower.includes('game') || svcLower.includes('hack') || svcLower.includes('pubg') || svcLower.includes('free fire') || svcLower.includes('freefire') || svcLower.includes('gaming') || svcLower.includes('diamonds') || svcLower.includes('mlbb') || svcLower.includes('recharge');
     }
+    if (filterLower === 'fb/insta {old/acc}' || filterLower.includes('old') || filterLower.includes('acc') || filterLower.includes('{old/acc}')) {
+      return svcLower.includes('old') || svcLower.includes('acc') || svcLower.includes('{old/acc}');
+    }
     if (filterLower === 'others') {
-      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web', 'game', 'hack', 'gaming', 'pubg', 'free fire', 'freefire', 'diamonds', 'mlbb', 'recharge'].some(k => svcLower.includes(k));
+      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web', 'game', 'hack', 'gaming', 'pubg', 'free fire', 'freefire', 'diamonds', 'mlbb', 'recharge', 'old', 'acc', '{old/acc}'].some(k => svcLower.includes(k));
       return !isKnown;
     }
     return svcLower === filterLower;
@@ -6758,7 +6766,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           <label className="text-[11px] font-bold text-slate-400">Shortcut Names (comma-separated list)</label>
                           <input
                             type="text"
-                            value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Others"}
+                            value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Fb/Insta {OLD/ACC}, Others"}
                             onChange={(e) => updateSettings({ smmShortcuts: e.target.value })}
                             placeholder="Instagram, Facebook, YouTube, TikTok..."
                             className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium font-mono"
@@ -6773,7 +6781,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             </button>
                             <button
                               type="button"
-                              onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Others" })}
+                              onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Fb/Insta {OLD/ACC}, Others" })}
                               className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
                             >
                               Restore All Standard
@@ -6789,7 +6797,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                             {(() => {
-                              const platforms = (settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Others")
+                              const platforms = (settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Fb/Insta {OLD/ACC}, Others")
                                 .split(',')
                                 .map(s => s.trim())
                                 .filter(Boolean);

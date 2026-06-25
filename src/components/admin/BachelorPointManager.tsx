@@ -124,6 +124,23 @@ export default function BachelorPointManager() {
 
   // Fetch local items on boot and listen to updates
   useEffect(() => {
+    const fetchFromServer = async () => {
+      try {
+        const res = await fetch('/api/bachelor/contents');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.contents) {
+            setContents(data.contents);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          }
+        } else {
+          loadFromStorage();
+        }
+      } catch (e) {
+        loadFromStorage();
+      }
+    };
+
     const loadFromStorage = () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -135,18 +152,6 @@ export default function BachelorPointManager() {
               return !isDemo;
             });
             setContents(cleaned);
-            if (cleaned.length !== parsed.contents.length) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                categories: parsed.categories || KEY_CATEGORIES,
-                contents: cleaned
-              }));
-              window.dispatchEvent(new Event('bp_storage_update'));
-              try {
-                const bChan = new BroadcastChannel('bp_storage_sync');
-                bChan.postMessage('bp_storage_update');
-                bChan.close();
-              } catch (e) {}
-            }
           } else {
             setContents([]);
           }
@@ -158,16 +163,16 @@ export default function BachelorPointManager() {
       }
     };
 
-    loadFromStorage();
-    window.addEventListener('storage', loadFromStorage);
-    window.addEventListener('bp_storage_update', loadFromStorage);
+    fetchFromServer();
+    window.addEventListener('storage', fetchFromServer);
+    window.addEventListener('bp_storage_update', fetchFromServer);
 
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel('bp_storage_sync');
       channel.onmessage = (event) => {
         if (event.data === 'bp_storage_update') {
-          loadFromStorage();
+          fetchFromServer();
         }
       };
     } catch (e) {
@@ -175,8 +180,8 @@ export default function BachelorPointManager() {
     }
 
     return () => {
-      window.removeEventListener('storage', loadFromStorage);
-      window.removeEventListener('bp_storage_update', loadFromStorage);
+      window.removeEventListener('storage', fetchFromServer);
+      window.removeEventListener('bp_storage_update', fetchFromServer);
       if (channel) {
         channel.close();
       }
@@ -251,15 +256,45 @@ export default function BachelorPointManager() {
       const nextId = Math.max(0, ...contents.map(c => c.id)) + 1;
       let poster_file_key = '';
       let video_file_key = '';
+      let poster_url = '';
+      let video_url = '';
 
+      // Upload poster to server
       if (fPosterFile) {
         poster_file_key = `poster_${nextId}_${Date.now()}`;
-        await fileStorage.saveFile(poster_file_key, fPosterFile);
+        try {
+          await fileStorage.saveFile(poster_file_key, fPosterFile); // Keep local copy for fast preview
+        } catch (e) {}
+
+        const formData = new FormData();
+        formData.append('image', fPosterFile);
+        const upRes = await fetch('/api/admin/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          poster_url = upData.url;
+        }
       }
 
+      // Upload video to server
       if (fVideoFile) {
         video_file_key = `video_${nextId}_${Date.now()}`;
-        await fileStorage.saveFile(video_file_key, fVideoFile);
+        try {
+          await fileStorage.saveFile(video_file_key, fVideoFile); // Keep local copy for fast preview
+        } catch (e) {}
+
+        const formData = new FormData();
+        formData.append('video', fVideoFile);
+        const upRes = await fetch('/api/bachelor/upload-video', {
+          method: 'POST',
+          body: formData
+        });
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          video_url = upData.url;
+        }
       }
 
       const newItem: ContentItem = {
@@ -267,8 +302,8 @@ export default function BachelorPointManager() {
         title: fTitle.trim(),
         description: fDesc.trim() || 'No description provided completely.',
         type: fType,
-        poster_url: '',
-        video_url: '',
+        poster_url: poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop',
+        video_url: video_url,
         release_year: parseInt(fYear) || new Date().getFullYear(),
         duration_minutes: parseInt(fDur) || 25,
         category_id: parseInt(fCat) || 3,
@@ -282,7 +317,6 @@ export default function BachelorPointManager() {
       const updated = [newItem, ...contents];
       setContents(updated);
       
-      // Save back to LocalStorage custom data
       const saved = localStorage.getItem(STORAGE_KEY);
       let catData = KEY_CATEGORIES;
       if (saved) {
@@ -291,10 +325,21 @@ export default function BachelorPointManager() {
           if (parsed.categories) catData = parsed.categories;
         } catch(e) {}
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+
+      const fullData = {
         categories: catData,
         contents: updated
-      }));
+      };
+
+      // Save to server
+      await fetch('/api/bachelor/contents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullData)
+      });
+
+      // Save back to LocalStorage custom data
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fullData));
 
       // Dispatch custom storage sync event so the BachelorPoint component updates dynamically if open
       window.dispatchEvent(new Event('storage'));
@@ -305,7 +350,7 @@ export default function BachelorPointManager() {
         bChan.close();
       } catch (e) {}
 
-      triggerToast(`Added "${fTitle}" with fully localized media assets!`, 'ok');
+      triggerToast(`Added "${fTitle}" with fully persistent server-side streaming URLs!`, 'ok');
 
       // Clear Form Fields
       setFTitle('');
@@ -348,10 +393,23 @@ export default function BachelorPointManager() {
         if (parsed.categories) catData = parsed.categories;
       } catch(e) {}
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+
+    const fullData = {
       categories: catData,
       contents: updated
-    }));
+    };
+
+    try {
+      await fetch('/api/bachelor/contents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullData)
+      });
+    } catch (e) {
+      console.error(e);
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fullData));
 
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('bp_storage_update'));
