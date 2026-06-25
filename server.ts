@@ -113,6 +113,156 @@ const saveData = async (file: string, data: any) => {
   }
 };
 
+const refundUserBalance = async (email: string, amount: number) => {
+  if (!email) return;
+  try {
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    if (user) {
+      user.balance = (parseFloat(user.balance) || 0) + amount;
+      await saveData(USERS_FILE, users);
+      console.log(`[Refund] Successfully refunded $${amount.toFixed(2)} to ${email}. New balance: $${user.balance.toFixed(2)}`);
+    } else {
+      console.error(`[Refund] User ${email} not found for refund!`);
+    }
+  } catch (err) {
+    console.error("[Refund] Error refunding user balance:", err);
+  }
+};
+
+const processQueuedOrders = async () => {
+  try {
+    const orders = loadData(SMM_ORDERS_FILE, []);
+    const services = loadData(SMM_SERVICES_FILE, []);
+    const providers = loadData(SMM_PROVIDERS_FILE, []);
+    const settings = loadData(SETTINGS_FILE, {});
+
+    // Find any order that has status 'pending' and isQueued === true
+    const queuedOrders = orders.filter((o: any) => o.status === 'pending' && o.isQueued === true);
+    if (queuedOrders.length === 0) return;
+
+    let modifiedOrders = false;
+    let modifiedProviders = false;
+
+    console.log(`[Queue Processor] Processing ${queuedOrders.length} queued SMM orders...`);
+
+    for (const order of queuedOrders) {
+      // Find the associated service
+      const service = services.find((s: any) => s.id === order.serviceId);
+      if (!service) continue;
+
+      // Find the associated provider
+      const provider = providers.find((p: any) => p.id?.toString() === service.providerId?.toString());
+      if (!provider) continue;
+
+      // Calculate provider cost
+      const origPrice = service.originalPrice || (service.price / (settings.smmPriceMultiplier || 1.3)) || (service.price * 0.7);
+      const providerCost = (order.quantity / 1000) * origPrice;
+
+      // Check if provider has enough balance
+      const providerBalance = parseFloat(provider.balance) || 0;
+      if (providerBalance < providerCost) {
+        console.log(`[Queue Processor] Order #${order.id} skipped. Provider ${provider.name} still has insufficient balance ($${providerBalance.toFixed(2)} vs required $${providerCost.toFixed(4)})`);
+        continue;
+      }
+
+      // We have enough balance! Place the order via Provider API
+      const hasRealApi = provider.apiUrl && provider.apiUrl.trim() !== "" && !provider.apiUrl.toLowerCase().includes("example.com") && provider.apiKey && provider.apiKey.trim() !== "";
+
+      if (hasRealApi) {
+        try {
+          let normalizedUrl = provider.apiUrl.trim();
+          if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+            normalizedUrl = "https://" + normalizedUrl;
+          }
+
+          const params = new URLSearchParams();
+          params.append('key', provider.apiKey.trim());
+          params.append('action', 'add');
+          params.append('service', String(service.providerServiceId || service.id).trim());
+          params.append('link', String(order.link).trim());
+          params.append('quantity', String(order.quantity).trim());
+
+          console.log(`[Queue Processor] Retrying/Placing queued Order #${order.id} on Provider ${provider.name}...`);
+          const response = await axios.post(normalizedUrl, params.toString(), {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+            },
+            timeout: 15000
+          });
+
+          const rawData = response.data;
+          if (rawData && typeof rawData === 'object') {
+            if (rawData.order) {
+              // Success!
+              order.status = 'processing';
+              order.apiOrderId = rawData.order;
+              order.error = undefined;
+              order.isQueued = false;
+              modifiedOrders = true;
+
+              // Deduct from provider balance
+              provider.balance = providerBalance - providerCost;
+              modifiedProviders = true;
+              console.log(`[Queue Processor] Order #${order.id} placed successfully! API Order ID: #${rawData.order}`);
+            } else if (rawData.error) {
+              const errMsg = String(rawData.error).toLowerCase();
+              if (errMsg.includes("balance") || errMsg.includes("funds") || errMsg.includes("money") || errMsg.includes("credit") || errMsg.includes("insufficient")) {
+                console.log(`[Queue Processor] Order #${order.id} placement returned low balance error: ${rawData.error}`);
+              } else {
+                // Critical failure, cancel order & refund DIH user
+                order.status = 'cancelled';
+                order.error = `Provider API error: ${rawData.error}`;
+                order.isQueued = false;
+                modifiedOrders = true;
+                
+                // Refund user balance
+                await refundUserBalance(order.userEmail, order.amount);
+                console.log(`[Queue Processor] Order #${order.id} cancelled. Refunded user ${order.userEmail} $${order.amount.toFixed(2)}`);
+              }
+            }
+          }
+        } catch (err: any) {
+          console.error(`[Queue Processor] Error placing order #${order.id}:`, err.message);
+          let errorText = err.message || '';
+          if (err.response && err.response.data) {
+            const data = err.response.data;
+            if (data && typeof data === 'object' && data.error) {
+              errorText = String(data.error);
+            }
+          }
+          const errMsg = errorText.toLowerCase();
+          if (!errMsg.includes("balance") && !errMsg.includes("funds") && !errMsg.includes("insufficient")) {
+            // Other error - keep queued but log
+            console.log(`[Queue Processor] Temporary error for order #${order.id}. Leaving in queue.`);
+          }
+        }
+      } else {
+        // Mock provider placement (since it's offline/mock)
+        order.status = 'processing';
+        order.apiOrderId = "mock_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+        order.error = undefined;
+        order.isQueued = false;
+        modifiedOrders = true;
+
+        provider.balance = providerBalance - providerCost;
+        modifiedProviders = true;
+        console.log(`[Queue Processor] Mock Order #${order.id} placed successfully!`);
+      }
+    }
+
+    if (modifiedOrders) {
+      await saveData(SMM_ORDERS_FILE, orders);
+    }
+    if (modifiedProviders) {
+      await saveData(SMM_PROVIDERS_FILE, providers);
+    }
+  } catch (error) {
+    console.error("[Queue Processor] Error processing queued orders:", error);
+  }
+};
+
 let app: any;
 
 async function startServer() {
@@ -473,6 +623,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   app.post("/api/smm/orders", async (req, res) => {
     await saveData(SMM_ORDERS_FILE, req.body || []);
     res.json({ status: "ok" });
+    processQueuedOrders().catch(e => console.error("[Queue Processor Error]:", e));
   });
 
   app.get("/api/smm/deposits", (req, res) => {
@@ -493,6 +644,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   app.post("/api/smm/providers", async (req, res) => {
     await saveData(SMM_PROVIDERS_FILE, req.body || []);
     res.json({ status: "ok" });
+    processQueuedOrders().catch(e => console.error("[Queue Processor Error]:", e));
   });
 
   // --- SMM PROVIDER LIVE SERVICES AGGREGATION & FETCH PROXY ---
@@ -764,6 +916,10 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       const rawData = response.data;
       if (rawData && typeof rawData === 'object') {
         if (rawData.error) {
+          const errMsg = String(rawData.error).toLowerCase();
+          if (errMsg.includes("balance") || errMsg.includes("funds") || errMsg.includes("money") || errMsg.includes("credit") || errMsg.includes("insufficient")) {
+            return res.json({ error: rawData.error, isLowBalance: true });
+          }
           return res.status(400).json({ error: rawData.error });
         }
         return res.json(rawData);
@@ -771,6 +927,19 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       return res.json({ response: rawData });
     } catch (err: any) {
       console.error("[SMM Order Proxy] Error sending order to SMM provider:", err.message);
+      let errorText = err.message || '';
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+        if (data && typeof data === 'object' && data.error) {
+          errorText = String(data.error);
+        } else if (typeof data === 'string') {
+          errorText = data;
+        }
+      }
+      const errMsg = errorText.toLowerCase();
+      if (errMsg.includes("balance") || errMsg.includes("funds") || errMsg.includes("money") || errMsg.includes("credit") || errMsg.includes("insufficient")) {
+        return res.json({ error: errorText, isLowBalance: true });
+      }
       return res.status(500).json({ error: `Could not place order on provider panel: ${err.message}` });
     }
   });
@@ -3166,6 +3335,11 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   if (!process.env.VERCEL) {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
+      // Start background queue processing for SMM queued orders
+      console.log("[Queue Processor] Initializing background task (runs every 15s)...");
+      setInterval(() => {
+        processQueuedOrders().catch(err => console.error("[Queue Processor] Error in background task:", err));
+      }, 15000);
     });
   }
 }

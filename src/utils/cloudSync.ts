@@ -183,7 +183,7 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
 
       // Load cloud items first
       cloudItems.forEach((item) => {
-        mergedMap.set(item.id, item);
+        mergedMap.set(String(item.id), item);
       });
 
       // Overlay local items. If local has new or modified items, map them
@@ -193,12 +193,13 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
           if (!item.id) {
             item.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
           }
-          const exists = mergedMap.has(item.id);
+          const strId = String(item.id);
+          const exists = mergedMap.has(strId);
           if (!exists) {
             localHasNew = true;
           }
           // Merge / update
-          mergedMap.set(item.id, { ...mergedMap.get(item.id), ...item });
+          mergedMap.set(strId, { ...mergedMap.get(strId), ...item });
         });
       }
 
@@ -206,9 +207,10 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
 
       // Upload newly merged items to cloud
       for (const item of mergedData) {
-        const cloudItem = cloudItems.find(c => c.id === item.id);
+        const strId = String(item.id);
+        const cloudItem = cloudItems.find(c => String(c.id) === strId);
         if (!cloudItem || JSON.stringify(cloudItem) !== JSON.stringify(item)) {
-          const docRef = doc(firestoreDb, collectionName, item.id);
+          const docRef = doc(firestoreDb, collectionName, strId);
           await setDoc(docRef, item);
         }
       }
@@ -267,12 +269,12 @@ export async function saveToCloud(filePath: string, data: any): Promise<void> {
         cloudIds.push(doc.id);
       });
 
-      const localIds = new Set(data.map(item => item.id).filter(Boolean));
+      const localIds = new Set(data.map(item => item && item.id ? String(item.id) : '').filter(Boolean));
 
       // 1. Delete items from cloud that are NOT in local array anymore
       for (const cid of cloudIds) {
-        if (!localIds.has(cid)) {
-          const docRef = doc(firestoreDb, collectionName, cid);
+        if (!localIds.has(String(cid))) {
+          const docRef = doc(firestoreDb, collectionName, String(cid));
           await deleteDoc(docRef);
           console.log(`🗑️ [CloudSync] Deleted ${cid} from cloud collection: ${collectionName}`);
         }
@@ -281,7 +283,7 @@ export async function saveToCloud(filePath: string, data: any): Promise<void> {
       // 2. Upload/update local items to cloud
       for (const item of data) {
         if (item && item.id) {
-          const docRef = doc(firestoreDb, collectionName, item.id);
+          const docRef = doc(firestoreDb, collectionName, String(item.id));
           await setDoc(docRef, item);
         }
       }

@@ -65,6 +65,8 @@ interface SMMOrder {
   createdAt: string;
   apiOrderId?: string | number;
   error?: string;
+  userEmail?: string;
+  isQueued?: boolean;
 }
 
 const SERVICES: SMMService[] = [];
@@ -81,6 +83,7 @@ const CATEGORIES = [
   'LinkedIn', 
   'Discord', 
   'Website Traffic', 
+  'GAME',
   'Others'
 ];
 
@@ -249,6 +252,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       'LinkedIn', 
       'Discord', 
       'Website Traffic', 
+      'GAME',
       'Others'
     ];
   }, [settings?.smmShortcuts]);
@@ -271,6 +275,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const isLinkedin = sName.includes('linkedin') || sCat.includes('linkedin');
     const isDiscord = sName.includes('discord') || sCat.includes('discord');
     const isTraffic = sName.includes('traffic') || sName.includes('website') || sName.includes('visitor') || sName.includes('seo') || sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
+    const isGame = sName.includes('game') || sName.includes('hack') || sName.includes('pubg') || sName.includes('free fire') || sName.includes('freefire') || sName.includes('clash') || sName.includes('gaming') || sName.includes('diamonds') || sName.includes('mlbb') || sName.includes('recharge') || sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
 
     if (plat === 'instagram') return isInstagram;
     if (plat === 'facebook') return isFacebook;
@@ -282,9 +287,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (plat === 'linkedin') return isLinkedin;
     if (plat === 'discord') return isDiscord;
     if (plat.includes('traffic') || plat.includes('website')) return isTraffic;
+    if (plat === 'game' || plat === 'games' || plat === 'game hacks') return isGame;
 
     if (plat === 'others') {
-      return !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord && !isTraffic;
+      return !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord && !isTraffic && !isGame;
     }
 
     return sName.includes(plat) || sCat.includes(plat);
@@ -312,13 +318,16 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (plat.includes('traffic') || plat.includes('website')) {
       return sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
     }
+    if (plat === 'game' || plat === 'games' || plat === 'game hacks') {
+      return sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
+    }
     
     // Fallback: Dynamically test if any active service inside this category belongs to target platform
     const hasMatchingSvc = activeServices.some(s => s.category === serviceCategory && serviceMatchesPlatform(s, platform));
     if (hasMatchingSvc) return true;
 
     if (plat === 'others') {
-      const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo'];
+      const known = ['instagram', 'facebook', 'fb', 'youtube', 'yt ', 'tiktok', 'twitter', 'x.', 'telegram', 'tg ', 'spotify', 'linkedin', 'discord', 'traffic', 'website', 'visitor', 'seo', 'game', 'hack', 'gaming', 'pubg', 'free fire', 'freefire', 'diamonds', 'mlbb', 'recharge'];
       return !known.some(k => sCat.includes(k));
     }
     
@@ -920,6 +929,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           else if (catLower.includes('linkedin')) matchedPlat = 'LinkedIn';
           else if (catLower.includes('discord')) matchedPlat = 'Discord';
           else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) matchedPlat = 'Website Traffic';
+          else if (catLower.includes('game') || catLower.includes('hack') || catLower.includes('gaming') || catLower.includes('pubg') || catLower.includes('free fire') || catLower.includes('freefire') || catLower.includes('diamonds') || catLower.includes('mlbb') || catLower.includes('recharge')) matchedPlat = 'GAME';
           setOrderActivePlatform(matchedPlat);
 
           const svcsOfCat = activeServices.filter(s => s.category === defaultCat);
@@ -985,6 +995,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     else if (c.includes('linkedin')) { icon = '💼'; basePlatformName = 'LinkedIn'; }
     else if (c.includes('discord')) { icon = '💬'; basePlatformName = 'Discord'; }
     else if (c.includes('traffic') || c.includes('website')) { icon = '🌐'; basePlatformName = 'Website Traffic'; }
+    else if (c.includes('game') || c.includes('hack') || c.includes('gaming') || c.includes('pubg') || c.includes('free fire') || c.includes('freefire') || c.includes('diamonds') || c.includes('mlbb') || c.includes('recharge')) { icon = '🎮'; basePlatformName = 'GAME'; }
     
     if (basePlatformName) {
       if (cat.trim().toLowerCase() === basePlatformName.toLowerCase()) {
@@ -1065,6 +1076,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       matchedPlat = 'Discord';
     } else if (catLower.includes('traffic') || catLower.includes('website') || catLower.includes('visitor') || catLower.includes('seo')) {
       matchedPlat = 'Website Traffic';
+    } else if (catLower.includes('game') || catLower.includes('hack') || catLower.includes('gaming') || catLower.includes('pubg') || catLower.includes('free fire') || catLower.includes('freefire') || catLower.includes('diamonds') || catLower.includes('mlbb') || catLower.includes('recharge')) {
+      matchedPlat = 'GAME';
     } else {
       matchedPlat = 'Others';
     }
@@ -1205,7 +1218,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       status: 'pending',
       startCount: 0,
       remains: qty,
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: new Date().toISOString().split('T')[0],
+      userEmail: userEmail
     };
 
     const updatedOrdersList = [newOrder, ...orders];
@@ -1219,9 +1233,23 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     // SMM Provider Real-Time Placement Proxy
     const provId = selectedService.providerId;
     const prov = providers.find(p => p.id?.toString() === provId?.toString());
+    const providerBalance = prov ? (parseFloat(prov.balance) || 0) : 0;
+    const providerCost = (qty / 1000) * (selectedService.originalPrice || selectedService.price * 0.7);
+    const isProviderLowBalance = prov && providerBalance < providerCost;
     const hasRealApi = prov && prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
 
-    if (hasRealApi) {
+    if (isProviderLowBalance) {
+      // SMM Provider has low balance! Queue it as pending instead of placing live
+      const queuedOrders = updatedOrdersList.map(o => {
+        if (o.id === newOrder.id) {
+          return { ...o, error: `Queued: SMM Provider has insufficient funds. Will auto-retry.`, isQueued: true, status: 'pending' as const };
+        }
+        return o;
+      });
+      saveOrders(queuedOrders);
+      setOrderSuccess(`Order #${newOrder.id} is queued as PENDING because SMM Provider ${prov.name} has insufficient balance. It will be placed automatically once funds are topped up.`);
+      setOrderError(null);
+    } else if (hasRealApi) {
       fetch('/api/admin/smm/place-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1246,6 +1274,17 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             });
             saveOrders(successOrders);
             setOrderSuccess(`Order #${newOrder.id} successfully placed on provider! External Order ID: #${apiData.order}`);
+          } else if (apiData.isLowBalance) {
+            // Insufficient SMM balance reported by external SMM panel! Queue it as pending
+            const queuedOrders = updatedOrdersList.map(o => {
+              if (o.id === newOrder.id) {
+                return { ...o, error: `Queued: SMM Provider reported insufficient funds. Will auto-retry.`, isQueued: true, status: 'pending' as const };
+              }
+              return o;
+            });
+            saveOrders(queuedOrders);
+            setOrderSuccess(`Order #${newOrder.id} is queued as PENDING because the SMM Provider returned an insufficient balance error. It will be placed automatically once funds are topped up.`);
+            setOrderError(null);
           } else if (apiData.error) {
             // Failed. Void order, mark as cancelled, refund balance
             const failedOrders = updatedOrdersList.map(o => {
@@ -1273,16 +1312,29 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           }
         } else {
           const errData = await res.json().catch(() => ({}));
-          const failedOrders = updatedOrdersList.map(o => {
-            if (o.id === newOrder.id) {
-              return { ...o, error: errData.error || 'Server error placing order', status: 'cancelled' as const };
-            }
-            return o;
-          });
-          saveOrders(failedOrders);
-          updateBalance(balance); // Refund
-          setOrderError(`Provider failed to accept order: ${errData.error || 'Connection error'}`);
-          setOrderSuccess(null);
+          if (errData.isLowBalance) {
+            // Queue on HTTP error indicating insufficient funds
+            const queuedOrders = updatedOrdersList.map(o => {
+              if (o.id === newOrder.id) {
+                return { ...o, error: `Queued: SMM Provider has insufficient funds. Will auto-retry.`, isQueued: true, status: 'pending' as const };
+              }
+              return o;
+            });
+            saveOrders(queuedOrders);
+            setOrderSuccess(`Order #${newOrder.id} is queued as PENDING because SMM Provider reported low balance. It will be placed automatically.`);
+            setOrderError(null);
+          } else {
+            const failedOrders = updatedOrdersList.map(o => {
+              if (o.id === newOrder.id) {
+                return { ...o, error: errData.error || 'Server error placing order', status: 'cancelled' as const };
+              }
+              return o;
+            });
+            saveOrders(failedOrders);
+            updateBalance(balance); // Refund
+            setOrderError(`Provider failed to accept order: ${errData.error || 'Connection error'}`);
+            setOrderSuccess(null);
+          }
         }
       })
       .catch((err) => {
@@ -1376,7 +1428,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         status: 'pending',
         startCount: 0,
         remains: qty,
-        createdAt: new Date().toISOString().split('T')[0]
+        createdAt: new Date().toISOString().split('T')[0],
+        userEmail: userEmail
       };
       
       newOrdersList.push(newOrder);
@@ -1424,15 +1477,16 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return;
     }
 
-    if (!senderDetails.trim()) {
-      setDepError('Please enter Sender account details (e.g. your sending mobile number).');
-      return;
-    }
+    // Clean spaces from transactionId and convert to uppercase for standard matching
+    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
 
-    if (!transactionId.trim()) {
+    if (!cleanTxId) {
       setDepError('Please enter the manual Transaction ID (TxID) or Referer Hash.');
       return;
     }
+
+    // Save cleaned version back
+    setTransactionId(cleanTxId);
 
     // Advance to verification screenshot upload step
     setDepositStep('verify');
@@ -1452,6 +1506,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
     const amt = parseFloat(depositAmount);
     const methodStr = selectedMethod || 'bkash';
+    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
 
     try {
       // Call backend API to verify the screenshot using Gemini
@@ -1460,7 +1515,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: depositScreenshot,
-          txid: transactionId.trim()
+          txid: cleanTxId
         })
       });
 
@@ -1496,8 +1551,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         userName: userName,
         amount: amt,
         method: methodStr,
-        sender: senderDetails.trim(),
-        txid: transactionId.trim(),
+        sender: 'N/A',
+        txid: cleanTxId,
         status: status,
         screenshot: depositScreenshot, // Store compressed base64 screenshot
         aiReason: verification.reason,
@@ -1587,15 +1642,26 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
+      // Filter by the currently active logged-in user
+      const belongsToUser = o.userEmail?.toLowerCase() === userEmail?.toLowerCase() || (!o.userEmail && userEmail === 'contact@dihhub.site');
+      if (!belongsToUser) return false;
+
       if (activeFilter === 'all') return true;
       return o.status === activeFilter;
     });
-  }, [orders, activeFilter]);
+  }, [orders, activeFilter, userEmail]);
 
-  const completedCount = useMemo(() => orders.filter(o => o.status === 'completed').length, [orders]);
-  const pendingCount = useMemo(() => orders.filter(o => o.status === 'pending').length, [orders]);
-  const processingCount = useMemo(() => orders.filter(o => o.status === 'processing').length, [orders]);
-  const totalSpent = useMemo(() => orders.reduce((sum, o) => sum + o.amount, 0), [orders]);
+  const recentUserOrders = useMemo(() => {
+    return orders
+      .filter(o => o.userEmail?.toLowerCase() === userEmail?.toLowerCase() || (!o.userEmail && userEmail === 'contact@dihhub.site'))
+      .slice(0, 5);
+  }, [orders, userEmail]);
+
+  const userOrdersCount = useMemo(() => orders.filter(o => o.userEmail?.toLowerCase() === userEmail?.toLowerCase()).length, [orders, userEmail]);
+  const completedCount = useMemo(() => orders.filter(o => o.status === 'completed' && o.userEmail?.toLowerCase() === userEmail?.toLowerCase()).length, [orders, userEmail]);
+  const pendingCount = useMemo(() => orders.filter(o => o.status === 'pending' && o.userEmail?.toLowerCase() === userEmail?.toLowerCase()).length, [orders, userEmail]);
+  const processingCount = useMemo(() => orders.filter(o => o.status === 'processing' && o.userEmail?.toLowerCase() === userEmail?.toLowerCase()).length, [orders, userEmail]);
+  const totalSpent = useMemo(() => orders.filter(o => o.userEmail?.toLowerCase() === userEmail?.toLowerCase()).reduce((sum, o) => sum + o.amount, 0), [orders, userEmail]);
 
   // Method Classes helper
   const getMethodClass = (method: string) => {
@@ -1905,7 +1971,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         <Activity size={15} className={isColorTheme ? "text-blue-500" : "text-slate-400"} />
                       </div>
                     </div>
-                    <div className="text-2xl font-bold font-mono text-white">{orders.length}</div>
+                    <div className="text-2xl font-bold font-mono text-white">{userOrdersCount}</div>
                     <div className="text-[11px] text-slate-500 mt-1">0 orders today</div>
                   </div>
 
@@ -1980,7 +2046,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1e2336]/60">
-                        {orders.slice(0, 5).map(o => (
+                        {recentUserOrders.map(o => (
                           <tr key={o.id} className="hover:bg-white/[0.02] transition-colors">
                             <td className="px-4.5 py-3 font-mono text-[11px] text-slate-400">#{o.id}</td>
                             <td className="px-4.5 py-3 text-[13px] font-semibold text-slate-200">{o.serviceName}</td>
@@ -2887,27 +2953,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         </div>
 
                         {/* USER DEPOSIT TRADING PROOF INPUTS */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 font-sans pt-1">
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Your Sender Account Details</label>
-                            <input
-                              type="text"
-                              placeholder="Sender No. or Name"
-                              value={senderDetails}
-                              onChange={(e) => setSenderDetails(e.target.value)}
-                              className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-bold"
-                            />
-                          </div>
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
-                            <input
-                              type="text"
-                              placeholder="TxID or Ref Number"
-                              value={transactionId}
-                              onChange={(e) => setTransactionId(e.target.value)}
-                              className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
-                            />
-                          </div>
+                        <div className="space-y-1.5 text-left font-sans pt-1">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
+                          <input
+                            type="text"
+                            placeholder="Enter Transaction ID (TxID) or Ref Number"
+                            value={transactionId}
+                            onChange={(e) => setTransactionId(e.target.value)}
+                            className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
+                          />
                         </div>
 
                         {/* DEPOSIT ALERTS */}
@@ -3067,8 +3121,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   userName: userName,
                                   amount: amt,
                                   method: methodStr,
-                                  sender: senderDetails.trim(),
-                                  txid: transactionId.trim(),
+                                  sender: 'N/A',
+                                  txid: transactionId.replace(/\s+/g, '').trim(),
                                   status: 'pending',
                                   screenshot: depositScreenshot || undefined,
                                   aiReason: "Requested manual review directly.",

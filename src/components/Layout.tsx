@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
@@ -52,7 +52,13 @@ export default function Layout({
   onLogout 
 }: LayoutProps) {
   const { settings } = useAppSettings();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dih_theme');
+      return saved !== 'light';
+    }
+    return true;
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
@@ -529,7 +535,7 @@ export default function Layout({
 
         <div className={cn(
           "flex-1 overflow-y-auto scroll-smooth flex flex-col justify-between",
-          isFullScreenMode ? "p-0" : "p-3 md:p-4 lg:p-6"
+          (isFullScreenMode || activeTool === 'dih-smm') ? "p-0 pb-0" : "p-3 md:p-4 lg:p-6 pb-24 md:pb-6"
         )}>
           <div className="flex-1">
             <AnimatePresence mode="wait">
@@ -570,9 +576,9 @@ export default function Layout({
                   </a>
                 </div>
 
-                {/* Disclaimer Content */}
+                {/* Disclaimer Content - Warm, Professional and Human-written */}
                 <p className="text-[10.5px] text-slate-400/90 dark:text-slate-500 max-w-3xl leading-relaxed font-medium">
-                  DIH Hub (Digital Innovation House Hub) is an independent self-service utility platform. All tools, generation services, and data conversions (including pass-thru video protocols, system bypass modes, and automated biometrics) are intended solely for legitimate educational and private use. We neither host, reshare, nor retain recordings, sensitive media, or copyrighted contents on our servers. The operator bears full compliance and ownership obligations under local and international statutes. For official support, inquiries, or legal concerns, please write to us directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub&body=Dear%20DIH%20Hub%20Support%20Team%2C%0A%0AI%20am%20reaching%20out%20to%20you%20regarding%20the%2520following%2520inquiry%3A%0A%0A%5BPlease%20type%20your%20message%20here%5D%0A%0AThank%20you%2C%0A%5BYour%20Name%5D" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a>.
+                  Hey there! DIH Hub is an independent, personal toolbox built and maintained by Rafcin. This platform is a passion project created to host hand-crafted web utilities, media experiments, and security tools for educational, development, and day-to-day productivity. Since this is a personal workspace, we don't host, upload, or own any of the media, files, or external streams processed through these pages. We’re just here to make cool tools and keep things running smoothly. Got an idea, a question, or just want to chat? Reach out to me directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub&body=Dear%20DIH%20Hub%20Support%20Team%2C%0A%0AI%20am%20reaching%20out%20to%20you%20regarding%20the%2520following%2520inquiry%3A%0A%0A%5BPlease%20type%20your%20message%20here%5D%0A%0AThank%20you%2C%0A%5BYour%20Name%5D" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a> — let's build a more useful web together!
                 </p>
 
                 {/* Subtle Divider */}
@@ -581,7 +587,7 @@ export default function Layout({
                 {/* Meta Rows */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-[10px]">
                   <p className="font-bold text-slate-400/60 dark:text-slate-600 uppercase tracking-widest">
-                    © {new Date().getFullYear()} DIH HUB (DIGITAL INNOVATION HOUSE HUB) • CORE ARCHITECTURE SECURED
+                    © {new Date().getFullYear()} DIH HUB (DIGITAL INNOVATION HOUSE HUB)
                   </p>
                   <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>
                   <div className="flex items-center gap-2">
@@ -603,6 +609,87 @@ export default function Layout({
             </footer>
           )}
         </div>
+
+        {/* Premium Translucent Mobile Bottom Bar Navigation */}
+        {!isFullScreenMode && (
+          <div className="md:hidden fixed bottom-4 left-4 right-4 z-40">
+            <div className="bg-slate-900/85 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-200/15 dark:border-white/5 rounded-2xl py-2 px-3 shadow-[0_10px_30px_rgba(0,0,0,0.4)] flex items-center justify-around">
+              
+              {/* Home / Dashboard */}
+              <button 
+                onClick={() => {
+                  setActiveTool('qr');
+                  setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                  activeTool === 'qr' ? "text-amber-400 bg-amber-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                <LayoutDashboard size={16} />
+                <span className="text-[9px] font-black tracking-widest uppercase">Home</span>
+              </button>
+
+              {/* SMM Panel */}
+              <button 
+                onClick={() => {
+                  setActiveTool('dih-smm');
+                  setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                  activeTool === 'dih-smm' ? "text-violet-400 bg-violet-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                <Zap size={16} className={activeTool === 'dih-smm' ? "text-violet-400 animate-pulse" : "text-violet-500"} />
+                <span className="text-[9px] font-black tracking-widest uppercase">SMM</span>
+              </button>
+
+              {/* Movies */}
+              <button 
+                onClick={() => {
+                  setActiveTool('dih-movies');
+                  changeSector('movie');
+                  setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                  activeTool === 'dih-movies' ? "text-amber-500 bg-amber-500/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                <Film size={16} className={activeTool === 'dih-movies' ? "text-amber-400 animate-pulse" : "text-amber-500"} />
+                <span className="text-[9px] font-black tracking-widest uppercase">Movies</span>
+              </button>
+
+              {/* Bangla Comedy */}
+              <button 
+                onClick={() => {
+                  setActiveTool('bachelor-point');
+                  setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                  activeTool === 'bachelor-point' ? "text-rose-400 bg-rose-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                <Tv size={16} className={activeTool === 'bachelor-point' ? "text-rose-400" : "text-rose-500"} />
+                <span className="text-[9px] font-black tracking-widest uppercase">Comedy</span>
+              </button>
+
+              {/* Toggle Sidebar Drawer */}
+              <button 
+                onClick={() => {
+                  setIsSidebarOpen(true);
+                }}
+                className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl text-slate-400 active:scale-95 transition-all cursor-pointer"
+              >
+                <Menu size={16} />
+                <span className="text-[9px] font-black tracking-widest uppercase">More</span>
+              </button>
+
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

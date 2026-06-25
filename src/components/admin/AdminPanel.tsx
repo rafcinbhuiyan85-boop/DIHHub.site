@@ -289,7 +289,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   }, [smmServicesList, smmSvcSearch, smmSvcCatFilter]);
 
   const adminUniqueSmmCategoriesOptions = useMemo(() => {
-    const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others'];
+    const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Others'];
     const currentCats = smmServicesList.map(s => s.category).filter(Boolean);
     return Array.from(new Set([...defaults, ...currentCats]));
   }, [smmServicesList]);
@@ -940,6 +940,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     { id: 191, name: "Website Traffic - USA Geotargeted Organic", category: "Website Traffic", originalPrice: 0.35, min: 1000, max: 5000000, desc: "100% US IP organic views.", time: "0-24 hours", quality: "Premium" },
     { id: 192, name: "Website Traffic - Google Organic Search Ref", category: "Website Traffic", originalPrice: 0.45, min: 1000, max: 1000000, desc: "Custom search organic hits with high session durations.", time: "2-12 hours", quality: "Premium" },
 
+    // GAME
+    { id: 210, name: "PUBG Mobile UC - Instant Recharge [Player ID]", category: "GAME", originalPrice: 1.15, min: 60, max: 8100, desc: "Direct in-game top-up via Player ID.", time: "5-30 minutes", quality: "Premium" },
+    { id: 211, name: "Free Fire Diamonds - Instant Top-Up [UID]", category: "GAME", originalPrice: 0.90, min: 100, max: 5600, desc: "Fast Diamond delivery using game UID.", time: "5-15 minutes", quality: "Standard" },
+    { id: 212, name: "Mobile Legends MLBB Diamonds - ID Direct", category: "GAME", originalPrice: 1.20, min: 50, max: 6000, desc: "Fast direct top-up MLBB using User ID + Zone ID.", time: "5-30 minutes", quality: "Premium" },
+    { id: 213, name: "Clash of Clans Gems / Gold Pass - Manual Shop", category: "GAME", originalPrice: 4.50, min: 1, max: 100, desc: "Get Clash of Clans items loaded directly.", time: "1-4 hours", quality: "VIP" },
+    { id: 214, name: "CS2 / Valorant Private Undetected Cheats (7 Days)", category: "GAME", originalPrice: 15.00, min: 1, max: 100, desc: "100% undetected safe weekly key access.", time: "Instant", quality: "VIP" },
+
     // Others
     { id: 201, name: "YouTube Comments Like / Reply Threads", category: "Others", originalPrice: 1.12, min: 10, max: 5000, desc: "Real written comments thread.", time: "0-6 hours", quality: "Premium" },
     { id: 202, name: "Google One 2TB + Gemini Pro Global (1 Month Trial)", category: "Others", originalPrice: 0.45, min: 1, max: 100, desc: "Active invite accounts.", time: "0-6 hours", quality: "VIP" },
@@ -982,8 +989,11 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     if (filterLower === 'website traffic') {
       return svcLower.includes('website') || svcLower.includes('traffic') || svcLower.includes('web');
     }
+    if (filterLower === 'game' || filterLower === 'games' || filterLower === 'game hacks') {
+      return svcLower.includes('game') || svcLower.includes('hack') || svcLower.includes('pubg') || svcLower.includes('free fire') || svcLower.includes('freefire') || svcLower.includes('gaming') || svcLower.includes('diamonds') || svcLower.includes('mlbb') || svcLower.includes('recharge');
+    }
     if (filterLower === 'others') {
-      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcLower.includes(k));
+      const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web', 'game', 'hack', 'gaming', 'pubg', 'free fire', 'freefire', 'diamonds', 'mlbb', 'recharge'].some(k => svcLower.includes(k));
       return !isKnown;
     }
     return svcLower === filterLower;
@@ -6748,7 +6758,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           <label className="text-[11px] font-bold text-slate-400">Shortcut Names (comma-separated list)</label>
                           <input
                             type="text"
-                            value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others"}
+                            value={settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Others"}
                             onChange={(e) => updateSettings({ smmShortcuts: e.target.value })}
                             placeholder="Instagram, Facebook, YouTube, TikTok..."
                             className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium font-mono"
@@ -6763,7 +6773,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             </button>
                             <button
                               type="button"
-                              onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others" })}
+                              onClick={() => updateSettings({ smmShortcuts: "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Others" })}
                               className="bg-[#141720] hover:bg-[#1a1f2c] border border-slate-800 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer"
                             >
                               Restore All Standard
@@ -6779,7 +6789,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                             {(() => {
-                              const platforms = (settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, Others")
+                              const platforms = (settings.smmShortcuts !== undefined ? settings.smmShortcuts : "Instagram, Facebook, YouTube, TikTok, Twitter/X, Telegram, Spotify, LinkedIn, Discord, Website Traffic, GAME, Others")
                                 .split(',')
                                 .map(s => s.trim())
                                 .filter(Boolean);
@@ -7316,7 +7326,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             />
                             <datalist id="admin-smm-categories">
                               {Array.from(new Set([
-                                'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others',
+                                'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Others',
                                 ...smmServicesList.map(s => s.category)
                               ])).filter(Boolean).map(c => (
                                 <option key={c} value={c}>{c}</option>
