@@ -5,7 +5,8 @@ import {
   AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu,
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
-  Send, Globe, Music, MessageSquare, Video, Zap, FileText
+  Send, Globe, Music, MessageSquare, Video, Zap, FileText,
+  Gamepad2, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -229,20 +230,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   // Dynamic categories configured from admin dashboard
   const mappedCategories = useMemo(() => {
-    if (settings.smmShortcuts && typeof settings.smmShortcuts === 'string') {
-      try {
-        const custom = settings.smmShortcuts.split(',').map(s => s.trim()).filter(Boolean);
-        if (custom.length > 0) {
-          if (!custom.includes('All')) {
-            custom.unshift('All');
-          }
-          return custom;
-        }
-      } catch (e) {
-        // Fallback
-      }
-    }
-    return [
+    let list = [
       'All', 
       'Instagram', 
       'Facebook', 
@@ -258,6 +246,46 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       'Fb/Insta {OLD/ACC}',
       'Others'
     ];
+
+    if (settings.smmShortcuts && typeof settings.smmShortcuts === 'string') {
+      try {
+        const custom = settings.smmShortcuts.split(',').map(s => s.trim()).filter(Boolean);
+        if (custom.length > 0) {
+          if (!custom.includes('All')) {
+            custom.unshift('All');
+          }
+          list = custom;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    // ALWAYS ensure GAME and Fb/Insta {OLD/ACC} are in the list for SMM shortcuts
+    // to satisfy user request even if they have old saved shortcuts
+    const normalized = list.map(item => item.toLowerCase());
+    
+    // Add GAME if missing
+    if (!normalized.includes('game') && !normalized.includes('games')) {
+      const othersIdx = list.findIndex(item => item.toLowerCase() === 'others');
+      if (othersIdx !== -1) {
+        list.splice(othersIdx, 0, 'GAME');
+      } else {
+        list.push('GAME');
+      }
+    }
+
+    // Add Fb/Insta {OLD/ACC} if missing
+    if (!normalized.includes('fb/insta {old/acc}') && !normalized.includes('fb/insta [old/acc]')) {
+      const othersIdx = list.findIndex(item => item.toLowerCase() === 'others');
+      if (othersIdx !== -1) {
+        list.splice(othersIdx, 0, 'Fb/Insta {OLD/ACC}');
+      } else {
+        list.push('Fb/Insta {OLD/ACC}');
+      }
+    }
+
+    return list;
   }, [settings?.smmShortcuts]);
 
   const serviceMatchesPlatform = (s: any, platform: string) => {
@@ -882,6 +910,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (c.includes('linkedin')) return <Linkedin size={13} className="text-blue-600" />;
     if (c.includes('discord')) return <MessageSquare size={13} className="text-indigo-400" />;
     if (c.includes('traffic') || c.includes('website')) return <Globe size={13} className="text-emerald-400" />;
+    if (c.includes('game') || c.includes('gaming') || c.includes('pubg') || c.includes('free fire')) return <Gamepad2 size={13} className="text-amber-500" />;
+    if (c.includes('old/acc') || c.includes('old') || c.includes('acc') || c.includes('aged')) return <ShieldCheck size={13} className="text-cyan-400" />;
     return <Layers size={13} className="text-slate-400" />;
   };
 

@@ -275,6 +275,51 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // --- REAL-TIME SERVERLESS SYNC MIDDLEWARE ---
+  const lastSyncTimes: Record<string, number> = {};
+  const SYNC_THROTTLE_MS = 5000; // 5 seconds throttle
+
+  async function syncIfNeeded(file: string, defaultVal: any) {
+    const now = Date.now();
+    const lastSync = lastSyncTimes[file] || 0;
+    if (now - lastSync > SYNC_THROTTLE_MS) {
+      try {
+        await syncFileWithCloud(file, defaultVal);
+        lastSyncTimes[file] = now;
+      } catch (e) {
+        console.error(`Failed to sync ${file} in middleware:`, e);
+      }
+    }
+  }
+
+  app.use(async (req: any, res: any, next: any) => {
+    if (process.env.VERCEL) {
+      const p = req.path || '';
+      try {
+        if (p.startsWith('/api/admin/settings') || p.startsWith('/api/settings')) {
+          await syncIfNeeded(SETTINGS_FILE, {});
+        } else if (p.startsWith('/api/user') || p.startsWith('/api/auth') || p.includes('balance') || p.includes('login') || p.includes('register')) {
+          await syncIfNeeded(USERS_FILE, []);
+        } else if (p.startsWith('/api/smm')) {
+          await Promise.all([
+            syncIfNeeded(USERS_FILE, []),
+            syncIfNeeded(SMM_SERVICES_FILE, []),
+            syncIfNeeded(SMM_ORDERS_FILE, []),
+            syncIfNeeded(SMM_DEPOSITS_FILE, []),
+            syncIfNeeded(SMM_PROVIDERS_FILE, [])
+          ]);
+        } else if (p.startsWith('/api/store') || p.startsWith('/api/apk')) {
+          await syncIfNeeded(STORE_FILE, []);
+        } else if (p.startsWith('/api/bachelor')) {
+          await syncIfNeeded(BACHELOR_POINT_FILE, { categories: [], contents: [] });
+        }
+      } catch (err) {
+        console.error('Error in Real-Time Serverless Sync Middleware:', err);
+      }
+    }
+    next();
+  });
+
   // --- Resilient Cloud Database Recovery on Startup ---
   console.log("🔄 [CloudSync] Initiating startup cloud database synchronization...");
   try {
