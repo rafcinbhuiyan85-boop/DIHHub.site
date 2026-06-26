@@ -52,13 +52,8 @@ export default function Layout({
   onLogout 
 }: LayoutProps) {
   const { settings } = useAppSettings();
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('dih_theme');
-      return saved !== 'light';
-    }
-    return true;
-  });
+  const isDarkMode = true;
+  const setIsDarkMode = (val?: any) => {};
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
@@ -120,12 +115,8 @@ export default function Layout({
   }, [settings.primaryColor, settings.accentColor]);
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+    document.documentElement.classList.add('dark');
+  }, []);
 
   // Sync balance if user logged in
   const [balance, setBalance] = useState<number>(0);
@@ -179,9 +170,9 @@ export default function Layout({
   ];
 
   return (
-    <div className="min-h-screen flex text-slate-900 dark:text-slate-100 selection:bg-primary/30 overflow-x-hidden relative">
+    <div className="min-h-screen flex text-slate-100 selection:bg-primary/30 overflow-x-hidden relative">
       {/* Premium Infrastructure Layers */}
-      <div className="fixed inset-0 bg-white dark:bg-[#02040a] -z-50 transition-colors duration-700" />
+      <div className="fixed inset-0 bg-[#02040a] -z-50" />
       
       {/* Subtle Depth Gradient */}
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(59,130,246,0.05),transparent_80%)] -z-45" />
@@ -205,9 +196,8 @@ export default function Layout({
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-30 w-56 bg-white/70 dark:bg-slate-950/70 border-r border-slate-200 dark:border-white/5 transition-all duration-500 md:translate-x-0 group overflow-hidden shadow-2xl",
+        "fixed inset-y-0 left-0 z-30 w-56 bg-slate-950/80 border-r border-white/5 transition-all duration-500 md:translate-x-0 group overflow-hidden shadow-2xl",
         (shouldHideSidebar || !isSidebarOpen) ? "-translate-x-full md:-translate-x-full" : "translate-x-0",
         (shouldHideSidebar || !isSidebarOpen) && "md:w-0",
         settings.enableGlassmorphism && "backdrop-blur-3xl",
@@ -430,13 +420,13 @@ export default function Layout({
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-950/50 transition-all duration-500",
+        "flex-1 flex flex-col min-w-0 bg-slate-950/40 transition-all duration-500 pb-20 md:pb-0",
         (!shouldHideSidebar && isSidebarOpen) ? "md:ml-56" : "ml-0",
         settings.enableGlassmorphism && "backdrop-blur-3xl"
       )}>
         {!isFullScreenMode && (
         <header className={cn(
-          "h-12 md:h-14 flex items-center justify-between px-4 md:px-6 border-b border-slate-200 dark:border-white/5 bg-white/20 dark:bg-slate-950/20 sticky top-0 z-10 transition-all group/header",
+          "h-12 md:h-14 flex items-center justify-between px-4 md:px-6 border-b border-white/5 bg-slate-950/20 sticky top-0 z-10 transition-all group/header",
           settings.enableGlassmorphism && "backdrop-blur-3xl"
         )}>
           {/* Technical Progress Bar */}
@@ -444,12 +434,12 @@ export default function Layout({
           
             <div className="flex items-center gap-3 md:gap-6">
             {!(activeTool === 'admin-panel' || activeTool === 'admin-login') && (
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:block text-slate-500 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-all active:scale-90">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hidden md:block text-slate-500 p-2 hover:bg-white/10 rounded-lg transition-all active:scale-90">
                 <Menu size={20} />
               </button>
             )}
             <div>
-              <h1 className="text-sm xs:text-base md:text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-600 to-slate-900 dark:from-white dark:via-slate-400 dark:to-white truncate sm:overflow-visible sm:whitespace-normal max-w-[180px] xs:max-w-xs sm:max-w-none">
+              <h1 className="text-sm xs:text-base md:text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-300 to-white truncate sm:overflow-visible sm:whitespace-normal max-w-[180px] xs:max-w-xs sm:max-w-none">
                 {settings.toolLabels?.[activeTool]?.toUpperCase() || navItems.find(i => i.id === activeTool)?.label?.toUpperCase() || (activeTool === 'nid' ? 'NID CARD MAKER' : 'ADMIN SETTINGS')}
               </h1>
             </div>

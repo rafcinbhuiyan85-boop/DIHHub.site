@@ -276,25 +276,23 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // --- Resilient Cloud Database Recovery on Startup ---
-  (async () => {
-    console.log("🔄 [CloudSync] Initiating startup cloud database synchronization...");
-    try {
-      await syncFileWithCloud(USERS_FILE, []);
-      await syncFileWithCloud(SETTINGS_FILE, {});
-      await syncFileWithCloud(STORE_FILE, []);
-      await syncFileWithCloud(LOGS_FILE, []);
-      await syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []);
-      await syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {});
-      await syncFileWithCloud(SMM_SERVICES_FILE, []);
-      await syncFileWithCloud(SMM_ORDERS_FILE, []);
-      await syncFileWithCloud(SMM_DEPOSITS_FILE, []);
-      await syncFileWithCloud(SMM_PROVIDERS_FILE, []);
-      await syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] });
-      console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
-    } catch (err) {
-      console.error("⚠️ [CloudSync] Error in background startup database synchronization:", err);
-    }
-  })();
+  console.log("🔄 [CloudSync] Initiating startup cloud database synchronization...");
+  try {
+    await syncFileWithCloud(USERS_FILE, []);
+    await syncFileWithCloud(SETTINGS_FILE, {});
+    await syncFileWithCloud(STORE_FILE, []);
+    await syncFileWithCloud(LOGS_FILE, []);
+    await syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []);
+    await syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {});
+    await syncFileWithCloud(SMM_SERVICES_FILE, []);
+    await syncFileWithCloud(SMM_ORDERS_FILE, []);
+    await syncFileWithCloud(SMM_DEPOSITS_FILE, []);
+    await syncFileWithCloud(SMM_PROVIDERS_FILE, []);
+    await syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] });
+    console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
+  } catch (err) {
+    console.error("⚠️ [CloudSync] Error in startup database synchronization:", err);
+  }
 
   // --- USER & AUTH ENDPOINTS ---
 

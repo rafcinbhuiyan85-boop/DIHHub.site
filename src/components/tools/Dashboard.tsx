@@ -83,7 +83,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
 
   const filteredDisplayStats = displayStats.filter(stat => {
     const lbl = stat.label.toLowerCase();
-    return !lbl.includes('daily user') && !lbl.includes('uptime') && !lbl.includes('live user');
+    return !lbl.includes('daily user') && !lbl.includes('uptime') && !lbl.includes('live user') && !lbl.includes('total user');
   });
 
   const unfilteredVisibleTools = tools.filter(t => {
