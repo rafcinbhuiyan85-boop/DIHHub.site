@@ -535,7 +535,7 @@ export default function Layout({
 
         <div className={cn(
           "flex-1 overflow-y-auto scroll-smooth flex flex-col justify-between",
-          (isFullScreenMode || activeTool === 'dih-smm') ? "p-0 pb-0" : "p-3 md:p-4 lg:p-6 pb-24 md:pb-6"
+          (isFullScreenMode || activeTool === 'dih-smm') ? "p-0 pb-0 overflow-hidden h-[calc(100vh-48px)] md:h-[calc(100vh-56px)]" : "p-3 md:p-4 lg:p-6 pb-24 md:pb-6"
         )}>
           <div className="flex-1">
             <AnimatePresence mode="wait">

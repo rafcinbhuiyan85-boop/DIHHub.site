@@ -94,6 +94,7 @@ const SMM_SERVICES_FILE = path.join(DATA_DIR, 'smm-services.json');
 const SMM_ORDERS_FILE = path.join(DATA_DIR, 'smm-orders.json');
 const SMM_DEPOSITS_FILE = path.join(DATA_DIR, 'smm-deposits.json');
 const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
+const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
 
 const loadData = (file: string, defaultVal: any) => {
   if (!fs.existsSync(file)) return defaultVal;
@@ -288,6 +289,7 @@ async function startServer() {
       await syncFileWithCloud(SMM_ORDERS_FILE, []);
       await syncFileWithCloud(SMM_DEPOSITS_FILE, []);
       await syncFileWithCloud(SMM_PROVIDERS_FILE, []);
+      await syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] });
       console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
     } catch (err) {
       console.error("⚠️ [CloudSync] Error in background startup database synchronization:", err);
@@ -1069,7 +1071,6 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   // --- BACHELOR POINT S-5 BACKEND ---
-  const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
 
   app.get("/api/bachelor/contents", (req, res) => {
     const data = loadData(BACHELOR_POINT_FILE, {

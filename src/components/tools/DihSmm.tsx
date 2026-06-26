@@ -1710,7 +1710,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   return (
     <div className={cn(
-      "flex h-screen overflow-x-hidden overflow-y-hidden w-full text-[#e2e8f0] font-sans antialiased select-none",
+      "flex h-full overflow-x-hidden overflow-y-hidden w-full text-[#e2e8f0] font-sans antialiased select-none",
       isColorTheme ? "bg-[#0d0f14]" : "bg-slate-950"
     )}>
       <div className="flex flex-1 min-w-0 w-full h-full overflow-hidden relative">

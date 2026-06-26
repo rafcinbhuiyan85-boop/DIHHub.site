@@ -66,6 +66,7 @@ function getCollectionName(filePath: string): string {
   if (base === 'smm-orders.json') return 'dih_v3_smm_orders';
   if (base === 'smm-deposits.json') return 'dih_v3_smm_deposits';
   if (base === 'smm-providers.json') return 'dih_v3_smm_providers';
+  if (base === 'bachelor-point.json') return 'dih_v3_bachelor_point';
   return 'dih_v3_unknown';
 }
 
@@ -82,7 +83,7 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
   if (!firestoreDb) return loadLocalData(filePath, defaultVal);
 
   const collectionName = getCollectionName(filePath);
-  const isSingleDoc = collectionName === 'dih_v3_settings';
+  const isSingleDoc = collectionName === 'dih_v3_settings' || collectionName === 'dih_v3_bachelor_point' || collectionName === 'dih_v3_hostinger';
   
   try {
     const localData = loadLocalData(filePath, defaultVal);
@@ -123,31 +124,10 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
           }
         }
 
-        // If local is empty or older, we use cloud. Otherwise we use local and upload to cloud
-        if (!localData || Object.keys(localData).length === 0) {
-          console.log(`📥 [CloudSync] Restored ${collectionName} settings from Cloud!`);
-          saveLocalData(filePath, cloudData);
-          return cloudData;
-        } else {
-          // Merge siteData into localData to ensure external controls are respected on startup
-          if (siteData) {
-            if (siteData.liveVisibility !== undefined) {
-              localData.enableLiveUserCounter = !!siteData.liveVisibility;
-            }
-            if (siteData.disabledTools !== undefined) {
-              localData.disabledTools = siteData.disabledTools;
-            }
-            if (siteData.upcomingTools !== undefined) {
-              localData.upcomingTools = siteData.upcomingTools;
-            }
-            if (siteData.visibleTools !== undefined) {
-              localData.visibleTools = siteData.visibleTools;
-            }
-          }
-          // Sync local to cloud
-          await setDoc(docRef, localData);
-          return localData;
-        }
+        // ALWAYS PREFER CLOUD ON STARTUP TO AVOID OVERWRITING FROM CONTAINER EPHEMERAL FILESYSTEM!
+        console.log(`📥 [CloudSync] Restored single doc ${collectionName} settings from Cloud!`);
+        saveLocalData(filePath, cloudData);
+        return cloudData;
       } else if (localData && Object.keys(localData).length > 0) {
         if (siteData) {
           if (siteData.liveVisibility !== undefined) {
@@ -178,47 +158,25 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
         cloudItems.push({ id: doc.id, ...doc.data() });
       });
 
-      // Merge arrays using 'id'
-      const mergedMap = new Map<string, any>();
-
-      // Load cloud items first
-      cloudItems.forEach((item) => {
-        mergedMap.set(String(item.id), item);
-      });
-
-      // Overlay local items. If local has new or modified items, map them
-      let localHasNew = false;
-      if (Array.isArray(localData)) {
-        localData.forEach((item) => {
+      // ALWAYS PREFER CLOUD ON STARTUP TO AVOID OVERWRITING FROM CONTAINER EPHEMERAL FILESYSTEM!
+      if (cloudItems.length > 0) {
+        console.log(`📥 [CloudSync] Restored ${collectionName} from Cloud (count: ${cloudItems.length})`);
+        saveLocalData(filePath, cloudItems);
+        return cloudItems;
+      } else if (Array.isArray(localData) && localData.length > 0) {
+        // Upload initial local data to cloud if cloud is empty
+        console.log(`📤 [CloudSync] Seeding empty Cloud ${collectionName} with local data (count: ${localData.length})`);
+        for (const item of localData) {
           if (!item.id) {
             item.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
           }
           const strId = String(item.id);
-          const exists = mergedMap.has(strId);
-          if (!exists) {
-            localHasNew = true;
-          }
-          // Merge / update
-          mergedMap.set(strId, { ...mergedMap.get(strId), ...item });
-        });
-      }
-
-      const mergedData = Array.from(mergedMap.values());
-
-      // Upload newly merged items to cloud
-      for (const item of mergedData) {
-        const strId = String(item.id);
-        const cloudItem = cloudItems.find(c => String(c.id) === strId);
-        if (!cloudItem || JSON.stringify(cloudItem) !== JSON.stringify(item)) {
           const docRef = doc(firestoreDb, collectionName, strId);
           await setDoc(docRef, item);
         }
+        return localData;
       }
-
-      // Save the complete merged data locally
-      saveLocalData(filePath, mergedData);
-      console.log(`✅ [CloudSync] Completed sync for ${collectionName}. Record count: ${mergedData.length}`);
-      return mergedData;
+      return localData;
     }
   } catch (error) {
     console.error(`❌ [CloudSync] Detailed error syncing ${collectionName}:`, error);
