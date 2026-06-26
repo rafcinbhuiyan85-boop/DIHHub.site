@@ -321,22 +321,30 @@ async function startServer() {
   });
 
   // --- Resilient Cloud Database Recovery on Startup ---
-  console.log("🔄 [CloudSync] Initiating startup cloud database synchronization...");
-  try {
-    await syncFileWithCloud(USERS_FILE, []);
-    await syncFileWithCloud(SETTINGS_FILE, {});
-    await syncFileWithCloud(STORE_FILE, []);
-    await syncFileWithCloud(LOGS_FILE, []);
-    await syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []);
-    await syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {});
-    await syncFileWithCloud(SMM_SERVICES_FILE, []);
-    await syncFileWithCloud(SMM_ORDERS_FILE, []);
-    await syncFileWithCloud(SMM_DEPOSITS_FILE, []);
-    await syncFileWithCloud(SMM_PROVIDERS_FILE, []);
-    await syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] });
-    console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
-  } catch (err) {
-    console.error("⚠️ [CloudSync] Error in startup database synchronization:", err);
+  if (!process.env.VERCEL) {
+    (async () => {
+      console.log("🔄 [CloudSync] Initiating startup cloud database synchronization in background...");
+      try {
+        await Promise.all([
+          syncFileWithCloud(USERS_FILE, []),
+          syncFileWithCloud(SETTINGS_FILE, {}),
+          syncFileWithCloud(STORE_FILE, []),
+          syncFileWithCloud(LOGS_FILE, []),
+          syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []),
+          syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {}),
+          syncFileWithCloud(SMM_SERVICES_FILE, []),
+          syncFileWithCloud(SMM_ORDERS_FILE, []),
+          syncFileWithCloud(SMM_DEPOSITS_FILE, []),
+          syncFileWithCloud(SMM_PROVIDERS_FILE, []),
+          syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] })
+        ]);
+        console.log("🚀 [CloudSync] Background startup databases synchronized and persistent fallback loaded successfully.");
+      } catch (err) {
+        console.error("⚠️ [CloudSync] Error in background startup database synchronization:", err);
+      }
+    })();
+  } else {
+    console.log("ℹ️ [CloudSync] Vercel environment detected. Relying on on-demand sync middleware to minimize cold-start latency.");
   }
 
   // --- USER & AUTH ENDPOINTS ---

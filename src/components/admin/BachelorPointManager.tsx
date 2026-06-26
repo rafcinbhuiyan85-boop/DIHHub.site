@@ -117,6 +117,8 @@ export default function BachelorPointManager() {
   // Local File Uploads
   const [fPosterFile, setFPosterFile] = useState<File | null>(null);
   const [fVideoFile, setFVideoFile] = useState<File | null>(null);
+  const [fPosterUrl, setFPosterUrl] = useState('');
+  const [fVideoUrl, setFVideoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
 
@@ -246,8 +248,8 @@ export default function BachelorPointManager() {
       return;
     }
 
-    if (!fVideoFile) {
-      triggerToast('Please select a video file from your device.', 'err');
+    if (!fVideoFile && !fVideoUrl.trim()) {
+      triggerToast('Please select a video file or enter a direct video streaming URL.', 'err');
       return;
     }
 
@@ -256,10 +258,10 @@ export default function BachelorPointManager() {
       const nextId = Math.max(0, ...contents.map(c => c.id)) + 1;
       let poster_file_key = '';
       let video_file_key = '';
-      let poster_url = '';
-      let video_url = '';
+      let poster_url = fPosterUrl.trim();
+      let video_url = fVideoUrl.trim();
 
-      // Upload poster to server
+      // Upload poster to server if file chosen
       if (fPosterFile) {
         poster_file_key = `poster_${nextId}_${Date.now()}`;
         try {
@@ -278,7 +280,7 @@ export default function BachelorPointManager() {
         }
       }
 
-      // Upload video to server
+      // Upload video to server if file chosen
       if (fVideoFile) {
         video_file_key = `video_${nextId}_${Date.now()}`;
         try {
@@ -360,6 +362,8 @@ export default function BachelorPointManager() {
       setFFeat(false);
       setFPosterFile(null);
       setFVideoFile(null);
+      setFPosterUrl('');
+      setFVideoUrl('');
       setViewMode('list');
 
     } catch (err) {
@@ -583,10 +587,19 @@ export default function BachelorPointManager() {
             />
           </div>
 
-          {/* LOCAL FILE UPLOADER FOR THUMBNAIL */}
+          {/* POSTER URL INPUT OR LOCAL FILE UPLOADER */}
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Poster Thumbnail (Optional)</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Poster Thumbnail</label>
+            <div className="space-y-3">
+              <input 
+                type="text" 
+                placeholder="Direct Image URL (Optional fallback, e.g. https://example.com/poster.jpg)"
+                value={fPosterUrl}
+                onChange={(e) => setFPosterUrl(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-[#12121a] border border-slate-800 rounded-xl text-xs outline-none focus:border-[#e5173f]/80 text-white font-semibold transition"
+              />
+              <div className="text-[8px] text-slate-500 font-extrabold uppercase text-center tracking-wider">- OR Choose Local Device File -</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div 
                 className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
                 onClick={() => {
@@ -643,61 +656,72 @@ export default function BachelorPointManager() {
                 )}
               </div>
             </div>
+            </div>
           </div>
 
-          {/* LOCAL FILE UPLOADER FOR VIDEO */}
+          {/* VIDEO URL INPUT OR LOCAL FILE UPLOADER */}
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Video Stream File *</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div 
-                className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'video/*';
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) setFVideoFile(file);
-                  };
-                  input.click();
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files[0];
-                  if (file && file.type.startsWith('video/')) {
-                    setFVideoFile(file);
-                  } else {
-                    triggerToast('Please upload a video file (MP4/WebM)', 'err');
-                  }
-                }}
-              >
-                <Video size={24} className="text-slate-500 mb-2" />
-                <span className="text-[11px] font-extrabold text-white">Choose Video from Device</span>
-                <span className="text-[9px] text-slate-500 font-bold mt-1 uppercase">or drag and drop video here</span>
-              </div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Video Stream (URL or File) *</label>
+            <div className="space-y-3">
+              <input 
+                type="text" 
+                placeholder="Direct Streaming URL (HLS .m3u8, MP4, YouTube embed, etc.)"
+                value={fVideoUrl}
+                onChange={(e) => setFVideoUrl(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-[#12121a] border border-slate-800 rounded-xl text-xs outline-none focus:border-[#e5173f]/80 text-white font-semibold transition"
+              />
+              <div className="text-[8px] text-slate-500 font-extrabold uppercase text-center tracking-wider">- OR Choose Local Device File -</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  className="border-2 border-dashed border-slate-850 hover:border-[#e5173f]/50 bg-[#12121a]/30 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] relative select-none"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'video/*';
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) setFVideoFile(file);
+                    };
+                    input.click();
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('video/')) {
+                      setFVideoFile(file);
+                    } else {
+                      triggerToast('Please upload a video file (MP4/WebM)', 'err');
+                    }
+                  }}
+                >
+                  <Video size={24} className="text-slate-500 mb-2" />
+                  <span className="text-[11px] font-extrabold text-white">Choose Video from Device</span>
+                  <span className="text-[9px] text-slate-500 font-bold mt-1 uppercase">or drag and drop video here</span>
+                </div>
 
-              <div className="bg-[#12121a]/60 border border-slate-900 rounded-2xl p-4 flex items-center justify-center min-h-[140px]">
-                {fVideoFile ? (
-                  <div className="w-full">
-                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                      <Check size={12} /> Video File Selected
+                <div className="bg-[#12121a]/60 border border-slate-900 rounded-2xl p-4 flex items-center justify-center min-h-[140px]">
+                  {fVideoFile ? (
+                    <div className="w-full">
+                      <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                        <Check size={12} /> Video File Selected
+                      </div>
+                      <div className="text-xs font-bold text-white truncate mt-1">{fVideoFile.name}</div>
+                      <div className="text-[10px] text-slate-500 font-black mt-0.5 uppercase">{(fVideoFile.size / 1024 / 1024).toFixed(2)} MB</div>
+                      <button 
+                        type="button" 
+                        onClick={() => setFVideoFile(null)}
+                        className="text-[9px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-widest mt-2.5 flex items-center gap-1"
+                      >
+                        <X size={10} /> Clear selection
+                      </button>
                     </div>
-                    <div className="text-xs font-bold text-white truncate mt-1">{fVideoFile.name}</div>
-                    <div className="text-[10px] text-slate-500 font-black mt-0.5 uppercase">{(fVideoFile.size / 1024 / 1024).toFixed(2)} MB</div>
-                    <button 
-                      type="button" 
-                      onClick={() => setFVideoFile(null)}
-                      className="text-[9px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-widest mt-2.5 flex items-center gap-1"
-                    >
-                      <X size={10} /> Clear selection
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-[#8888a8] text-[9px] font-bold uppercase tracking-wider">
-                    No video file uploaded yet.
-                  </div>
-                )}
+                  ) : (
+                    <div className="text-center py-4 text-[#8888a8] text-[9px] font-bold uppercase tracking-wider">
+                      No video file uploaded yet.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

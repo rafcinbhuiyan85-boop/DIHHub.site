@@ -167,7 +167,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [isCopiedHtmlCode, setIsCopiedHtmlCode] = useState(false);
 
   // SMM Management States
-  const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'users' | 'deposits' | 'settings' | 'providers' | 'gateways'>('dashboard');
+  const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'manual-services' | 'users' | 'deposits' | 'settings' | 'providers' | 'gateways'>('dashboard');
   const [smmOrders, setSmmOrders] = useState<any[]>([]);
   const [smmUsers, setSmmUsers] = useState<any[]>([]);
   const [smmDeposits, setSmmDeposits] = useState<any[]>([]);
@@ -5309,6 +5309,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                     {[
                       { id: 'orders', label: 'Orders', icon: Package, count: smmOrders.filter(o => o.status === 'pending').length },
                       { id: 'services', label: 'Services', icon: Layers },
+                      { id: 'manual-services', label: 'Manual Services', icon: Star },
                       { id: 'users', label: 'Users', icon: Users },
                       { id: 'deposits', label: 'Deposits', icon: DollarSign, count: smmDeposits.filter(d => d.status === 'pending').length, countColor: 'bg-amber-500/15 text-amber-500' }
                     ].map(nav => {
@@ -5385,7 +5386,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   <div>
                     <span className="text-[9px] tracking-widest font-black uppercase text-slate-500">DIH SMM PRO SUITE</span>
                     <h2 className="text-xl font-bold flex items-center gap-2 text-white capitalize mt-0.5">
-                      {smmSubTab === 'dashboard' ? 'Dashboard Summary' : smmSubTab === 'orders' ? 'Customer Orders' : smmSubTab === 'services' ? 'Services Catalogue' : smmSubTab === 'users' ? 'User Directory' : smmSubTab === 'deposits' ? 'Deposits Pipeline' : smmSubTab === 'providers' ? 'SMM API Providers' : smmSubTab === 'gateways' ? 'Manual Payment Gateways' : 'Global Settings'}
+                      {smmSubTab === 'dashboard' ? 'Dashboard Summary' : smmSubTab === 'orders' ? 'Customer Orders' : smmSubTab === 'services' ? 'Services Catalogue' : smmSubTab === 'manual-services' ? 'Manual SMM Services' : smmSubTab === 'users' ? 'User Directory' : smmSubTab === 'deposits' ? 'Deposits Pipeline' : smmSubTab === 'providers' ? 'SMM API Providers' : smmSubTab === 'gateways' ? 'Manual Payment Gateways' : 'Global Settings'}
                     </h2>
                   </div>
                   
@@ -6926,6 +6927,140 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                     </div>
                   </div>
                 )}
+
+                {smmSubTab === 'manual-services' && (() => {
+                  const filteredManualSvcs = smmServicesList.filter(s => 
+                    s.category === 'GAME' || s.category === 'Fb/Insta {OLD/ACC}'
+                  );
+
+                  return (
+                    <div className="space-y-6">
+                      <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-in fade-in duration-200">
+                        <div>
+                          <span className="text-[10px] font-black uppercase text-blue-500 tracking-wider font-mono">Manual Services Hub</span>
+                          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight mt-1">Manual SMM Services (GAME & Fb/Insta)</h3>
+                          <p className="text-xs text-slate-500 font-medium mt-1">
+                            Add and manage manual services specifically for <strong>GAME</strong> and <strong>Fb/Insta {'{'}OLD/ACC{'}'}</strong>. These services will display under their respective client shortcuts.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSmmFormName('');
+                            setSmmFormCategory('GAME');
+                            setSmmFormQuality('Premium');
+                            setSmmFormPrice('1.00');
+                            setSmmFormMin('10');
+                            setSmmFormMax('10000');
+                            setSmmFormDesc('');
+                            setSmmFormTime('5-30 minutes');
+                            setSmmFormRefill(true);
+                            setSmmFormSvcProviderId('manual');
+                            setSmmFormSvcProviderServiceId('');
+                            setSmmModalTitle('Add Manual Service');
+                            setSmmModalType('add-service');
+                            setIsSmmModalOpen(true);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-blue-505 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] uppercase tracking-wider transition active:scale-95 shadow-lg shadow-blue-500/10 flex items-center gap-2"
+                        >
+                          <Plus size={14} /> Add Manual Service
+                        </button>
+                      </div>
+
+                      <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl overflow-hidden">
+                        <div className="px-5 py-4 border-b border-slate-800 bg-[#090a0f]">
+                          <h4 className="text-xs font-bold uppercase text-slate-400">Manual SMM Services Catalogue ({filteredManualSvcs.length})</h4>
+                        </div>
+
+                        {filteredManualSvcs.length === 0 ? (
+                          <div className="p-10 text-center space-y-2">
+                            <span className="text-slate-600 text-2xl font-black block">Empty Catalog</span>
+                            <p className="text-xs text-slate-500 max-w-sm mx-auto">No manual SMM services exist yet for GAME or Fb/Insta {'{'}OLD/ACC{'}'}. Click "Add Manual Service" above to add your first one!</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-800/60 overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[600px]">
+                              <thead>
+                                <tr className="bg-[#08090d] text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-800">
+                                  <th className="px-5 py-3">ID</th>
+                                  <th className="px-5 py-3">Name</th>
+                                  <th className="px-5 py-3">Category</th>
+                                  <th className="px-5 py-3">Price / K</th>
+                                  <th className="px-5 py-3">Min / Max</th>
+                                  <th className="px-5 py-3">Delivery Speed</th>
+                                  <th className="px-5 py-3 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-800/65 text-xs text-slate-300 font-sans">
+                                {filteredManualSvcs.map((svc) => (
+                                  <tr key={svc.id} className="hover:bg-slate-900/30 transition-colors">
+                                    <td className="px-5 py-3.5 font-bold font-mono text-slate-500">{svc.id}</td>
+                                    <td className="px-5 py-3.5">
+                                      <div className="space-y-0.5">
+                                        <div className="font-bold text-slate-200">{svc.name}</div>
+                                        {svc.desc && <div className="text-[10px] text-slate-500 truncate max-w-xs">{svc.desc}</div>}
+                                      </div>
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                      <span className={cn(
+                                        "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase",
+                                        svc.category === 'GAME' ? "bg-amber-500/10 text-amber-500 border border-amber-500/25" : "bg-purple-500/10 text-purple-400 border border-purple-500/25"
+                                      )}>
+                                        {svc.category}
+                                      </span>
+                                    </td>
+                                    <td className="px-5 py-3.5 font-extrabold text-emerald-400 font-mono">${parseFloat(svc.price).toFixed(2)}</td>
+                                    <td className="px-5 py-3.5 font-bold text-slate-400 font-mono">{svc.min} / {svc.max}</td>
+                                    <td className="px-5 py-3.5 font-bold text-slate-400">{svc.time || 'Instant'}</td>
+                                    <td className="px-5 py-3.5 text-right">
+                                      <div className="flex justify-end gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedSmmItem(svc);
+                                            setSmmFormName(svc.name || '');
+                                            setSmmFormCategory(svc.category || 'GAME');
+                                            setSmmFormQuality(svc.quality || 'Premium');
+                                            setSmmFormPrice((svc.price || '0').toString());
+                                            setSmmFormMin((svc.min || '100').toString());
+                                            setSmmFormMax((svc.max || '1000').toString());
+                                            setSmmFormDesc(svc.desc || '');
+                                            setSmmFormTime(svc.time || '5-30 minutes');
+                                            setSmmFormRefill(svc.refill !== false);
+                                            setSmmFormSvcProviderId(svc.providerId || 'manual');
+                                            setSmmFormSvcProviderServiceId(svc.providerServiceId || '');
+                                            setSmmModalTitle(`Edit SMM Service: #${svc.id}`);
+                                            setSmmModalType('edit-service');
+                                            setIsSmmModalOpen(true);
+                                          }}
+                                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                                        >
+                                          <Edit2 size={12} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (confirm(`Are you sure you want to delete manual service #${svc.id}?`)) {
+                                              handleDeleteSmmService(svc.id);
+                                              setSmmToast({ message: `Successfully deleted manual service #${svc.id}`, type: 'warning' });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg bg-red-950/10 hover:bg-red-650 border border-red-900/30 text-red-500 hover:text-white transition cursor-pointer"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -7334,7 +7469,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             />
                             <datalist id="admin-smm-categories">
                               {Array.from(new Set([
-                                'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Others',
+                                'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Fb/Insta {OLD/ACC}', 'Others',
                                 ...smmServicesList.map(s => s.category)
                               ])).filter(Boolean).map(c => (
                                 <option key={c} value={c}>{c}</option>
