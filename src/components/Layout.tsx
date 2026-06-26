@@ -611,73 +611,73 @@ export default function Layout({
             </footer>
           )}
         </div>
-
-        {/* Premium Translucent Mobile Bottom Bar Navigation */}
-        {!isFullScreenMode && (
-          <div className="md:hidden fixed bottom-4 left-4 right-4 z-40">
-            <div className="bg-slate-900/85 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-200/15 dark:border-white/5 rounded-2xl py-2 px-3 shadow-[0_10px_30px_rgba(0,0,0,0.4)] flex items-center justify-around">
-              
-              {/* Home / Dashboard */}
-              <button 
-                onClick={() => {
-                  setActiveTool('dashboard');
-                  setIsSidebarOpen(false);
-                }}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                  activeTool === 'dashboard' ? "text-amber-400 bg-amber-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
-                )}
-              >
-                <LayoutDashboard size={16} />
-                <span className="text-[9px] font-black tracking-widest uppercase">Home</span>
-              </button>
-
-              {/* SMM Panel */}
-              <button 
-                onClick={() => {
-                  setActiveTool('dih-smm');
-                  setIsSidebarOpen(false);
-                }}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                  activeTool === 'dih-smm' ? "text-violet-400 bg-violet-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
-                )}
-              >
-                <Zap size={16} className={activeTool === 'dih-smm' ? "text-violet-400 animate-pulse" : "text-violet-500"} />
-                <span className="text-[9px] font-black tracking-widest uppercase">SMM</span>
-              </button>
-
-              {/* Movies */}
-              <button 
-                onClick={() => {
-                  setActiveTool('dih-movies');
-                  changeSector('movie');
-                  setIsSidebarOpen(false);
-                }}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                  activeTool === 'dih-movies' ? "text-amber-500 bg-amber-500/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
-                )}
-              >
-                <Film size={16} className={activeTool === 'dih-movies' ? "text-amber-400 animate-pulse" : "text-amber-500"} />
-                <span className="text-[9px] font-black tracking-widest uppercase">Movies</span>
-              </button>
-
-              {/* Toggle Sidebar Drawer */}
-              <button 
-                onClick={() => {
-                  setIsSidebarOpen(true);
-                }}
-                className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl text-slate-400 active:scale-95 transition-all cursor-pointer"
-              >
-                <Menu size={16} />
-                <span className="text-[9px] font-black tracking-widest uppercase">More</span>
-              </button>
-
-            </div>
-          </div>
-        )}
       </main>
+
+      {/* Premium Translucent Mobile Bottom Bar Navigation */}
+      {!isFullScreenMode && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+          <div className="bg-slate-900/95 dark:bg-slate-950/95 border-t border-slate-250/15 dark:border-white/5 backdrop-blur-2xl py-3 px-3 shadow-[0_-5px_25px_rgba(0,0,0,0.5)] flex items-center justify-around pb-safe">
+            
+            {/* Home / Dashboard */}
+            <button 
+              onClick={() => {
+                setActiveTool('dashboard');
+                setIsSidebarOpen(false);
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                activeTool === 'dashboard' ? "text-amber-400 bg-amber-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <LayoutDashboard size={16} />
+              <span className="text-[9px] font-black tracking-widest uppercase">Home</span>
+            </button>
+
+            {/* SMM Panel */}
+            <button 
+              onClick={() => {
+                setActiveTool('dih-smm');
+                setIsSidebarOpen(false);
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                activeTool === 'dih-smm' ? "text-violet-400 bg-violet-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <Zap size={16} className={activeTool === 'dih-smm' ? "text-violet-400 animate-pulse" : "text-violet-500"} />
+              <span className="text-[9px] font-black tracking-widest uppercase">SMM</span>
+            </button>
+
+            {/* Movies */}
+            <button 
+              onClick={() => {
+                setActiveTool('dih-movies');
+                changeSector('movie');
+                setIsSidebarOpen(false);
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
+                activeTool === 'dih-movies' ? "text-amber-500 bg-amber-500/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <Film size={16} className={activeTool === 'dih-movies' ? "text-amber-400 animate-pulse" : "text-amber-500"} />
+              <span className="text-[9px] font-black tracking-widest uppercase">Movies</span>
+            </button>
+
+            {/* Toggle Sidebar Drawer */}
+            <button 
+              onClick={() => {
+                setIsSidebarOpen(true);
+              }}
+              className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl text-slate-400 active:scale-95 transition-all cursor-pointer"
+            >
+              <Menu size={16} />
+              <span className="text-[9px] font-black tracking-widest uppercase">More</span>
+            </button>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
