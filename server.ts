@@ -444,7 +444,17 @@ async function startServer() {
   });
 
   app.post("/api/smm/verify-screenshot", async (req, res) => {
-    const { image, txid, amount } = req.body;
+    const { 
+      image, 
+      txid, 
+      amount, 
+      gatewayId, 
+      gatewayTitle, 
+      gatewayType, 
+      gatewayNumber, 
+      expectedBdt 
+    } = req.body;
+
     if (!image) {
       return res.status(400).json({ error: "screenshot image is required." });
     }
@@ -453,6 +463,11 @@ async function startServer() {
     }
 
     const cleanTxId = txid.replace(/\s+/g, '').trim();
+    const cleanGatewayId = gatewayId || 'bkash';
+    const cleanGatewayTitle = gatewayTitle || 'bKash Wallet';
+    const cleanGatewayType = gatewayType || 'Personal';
+    const cleanGatewayNumber = gatewayNumber || '';
+    const cleanExpectedBdt = expectedBdt ? parseFloat(expectedBdt).toFixed(2) : (parseFloat(amount || 0) * 120).toFixed(2);
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -493,28 +508,40 @@ async function startServer() {
 Analyze this payment transaction screenshot. It is a payment confirmation from a mobile financial service (bKash, Nagad, Rocket, Upay, bank transfer, Binance Pay, or USDT Tron network).
 
 Expected values to verify:
+- Expected Method / Gateway: "${cleanGatewayId}" (${cleanGatewayTitle})
+- Expected Receiver Wallet Number: "${cleanGatewayNumber}"
+- Expected Receiver Wallet Type: "${cleanGatewayType}"
 - Expected Transaction ID (TxID): "${cleanTxId}"
-- Expected Payment Amount (or its equivalent in TK/BDT/USD): "${amount || 'Any positive amount'}"
+- Expected Principal Amount: ৳${cleanExpectedBdt} BDT (Equivalent to $${amount} USD)
 
-Tasks:
-1. Identify if this image is an authentic and valid payment transaction confirmation or receipt screenshot. If it is a generic photo, unrelated image, or clearly edited/fake template, mark isMatch as false.
-2. Locate the Transaction ID (TxID), Transaction Hash (TxHash), or reference code in the screenshot.
-   - For bKash: Starts with any letter (usually 10 chars, e.g., 'BL3A59M4FZ', 'CK6B52D9ER').
-   - For Nagad: Starts with numbers (usually 8-10 chars, e.g., '71A2B3C4', '73259841', '71B9N68V').
-   - For Rocket / Upay: Numbers or alphanumeric.
-   - For Binance / Crypto USDT: Long transaction hash.
-   Compare the extracted TxID with the expected TxID: "${cleanTxId}". They must match (ignoring whitespace, small OCR errors, casing).
-3. Locate the transaction amount on the screenshot.
-   - Check if the payment amount in the screenshot is valid and corresponds to the expected amount: "${amount}". Note: the payment might be in BDT (e.g. 1150 BDT, 575 BDT, etc.) whereas the expected amount might be in dollars (e.g. $10, $5, etc.) or in BDT directly. Allow conversion/approximate matching (e.g. if expected is 5, look for BDT 500-600 or 5 directly, or if expected is 575 BDT, look for 575).
-   - If the payment amount does not match or is not found, or is zero, do not approve.
+Tasks & Verification Rules:
+1. **Authenticity:** Identify if this image is an authentic and valid payment transaction confirmation or receipt screenshot. If it is a generic photo, unrelated image, or clearly edited/fake template, mark isMatch as false.
+2. **Receiver Account Verification:**
+   - Locate the recipient/receiver/receiver's number/agent/merchant account in the screenshot.
+   - It MUST match the expected receiver number "${cleanGatewayNumber}". Compare the significant digits (ignoring country code prefixes like +88, 88, or leading 0 variations, spacing, or hyphens). If it does not match or cannot be found, mark isMatch as false.
+3. **Wallet Type & Transaction Mode Matching:**
+   - If expected wallet type is "Personal" (case-insensitive): The transaction type in the screenshot MUST be "Send Money" (or "সেন্ড মানি" in Bengali, or "Transfer").
+   - If expected wallet type is "Merchant" (case-insensitive): The transaction type in the screenshot MUST be "Payment" or "Merchant Pay" or "Cash Out" (or "পেমেন্ট" or "ক্যাশ আউট" in Bengali).
+   - If the user sent via the incorrect transaction type (e.g., they did Send Money instead of Cash Out for Merchant, or vice versa), this is a critical discrepancy. Verify this strictly based on the screenshot details and mark isMatch as false if they used the wrong method.
+4. **Amount & Fee Verification:**
+   - Locate the transaction amount in the screenshot (usually labeled "Amount", "পরিমাণ", "Total", "সর্বমোট", etc.).
+   - The principal sent amount must match the expected BDT amount: ৳${cleanExpectedBdt} BDT (or equivalent).
+   - Be aware that a small transaction fee (e.g., 5 BDT, 10 BDT, or a cashout percentage) may be added to or deducted from the balance on the screenshot. The principal amount or total amount paid should match ৳${cleanExpectedBdt} BDT.
+   - If the amount is not found, or is significantly different (excluding fee variations), mark isMatch as false.
+5. **Transaction ID Verification:**
+   - Locate the Transaction ID (TxID, TxHash, or transaction reference) in the screenshot.
+   - Compare the extracted TxID with the expected TxID: "${cleanTxId}". They must match (ignoring whitespace, small OCR typos, or letter casing).
+   - If the Transaction ID does not match, mark isMatch as false.
 
 You MUST return a JSON response matching this schema:
 {
   "detectedTxId": "extracted_txid_string", // Or null if not found
   "detectedAmount": "extracted_amount_string", // Or null if not found
-  "isMatch": true/false, // True only if BOTH the transaction ID matches (or is substantially similar with minor OCR typos) AND the payment amount matches/is verified. Otherwise false.
+  "detectedReceiver": "extracted_receiver_string", // Or null if not found
+  "detectedMode": "extracted_transaction_mode_string", // e.g., "Send Money", "Payment", "Cash Out", or null
+  "isMatch": true/false, // True ONLY if ALL criteria (Transaction ID, Receiver Account Number, Transaction Mode matching Wallet Type, and Payment Amount) are verified. Otherwise false.
   "confidence": 0-100, // percentage confidence as integer
-  "reason": "A direct, precise explanation of why it matched or why it was rejected. Describe what TxID and Amount were found. Write from the perspective of an automatic verification engine."
+  "reason": "A direct, precise explanation of why it matched or why it was rejected. Explicitly describe what TxID, receiver, mode, and amount were found and how they matched the requirements."
 }
 
 Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`json or \`\`\`. ONLY return the raw JSON object string.`
@@ -2573,7 +2600,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         headers: { 'API-KEY': apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cus_name: userName, cus_email: userEmail, amount: localAmt,
-          metadata: { order_id: orderId, user_id: userId, usd_amount: parseFloat(amount), currency: currency },
+          metadata: { order_id: orderId, user_id: userId, user_email: userEmail, usd_amount: parseFloat(amount), currency: currency },
           success_url: `${siteUrl}/payment/success?order=${orderId}`,
           cancel_url:  `${siteUrl}/payment/cancel`,
           webhook_url: `${siteUrl}/api/payment/webhook`,
@@ -2607,29 +2634,65 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       if (d.status === 'COMPLETED') {
         const meta      = typeof d.metadata === 'string' ? JSON.parse(d.metadata) : d.metadata;
         const userId    = meta?.user_id;
+        const userEmail = meta?.user_email || '';
         const usdAmount = parseFloat(meta?.usd_amount || 0);
         const orderId   = meta?.order_id;
         
-        console.log(`✅ Payment confirmed! Order:${orderId} User:${userId} Amount:$${usdAmount}`);
+        console.log(`✅ Payment confirmed! Order:${orderId} User:${userId} Email:${userEmail} Amount:$${usdAmount}`);
         
         // ── CREDIT USER BALANCE HERE ──────────────────────────────────────────
         const users = loadData(USERS_FILE, []);
-        const userIndex = users.findIndex((u: any) => u.id === userId);
+        const userIndex = users.findIndex((u: any) => 
+          (u.id && String(u.id) === String(userId)) || 
+          (u.email && String(u.email).toLowerCase() === String(userId).toLowerCase()) ||
+          (u.email && String(u.email).toLowerCase() === String(userEmail).toLowerCase())
+        );
+
         if (userIndex !== -1) {
-            users[userIndex].balance = (users[userIndex].balance || 0) + usdAmount;
+            const actualUser = users[userIndex];
+            actualUser.balance = (parseFloat(actualUser.balance) || 0) + usdAmount;
+            
             // Also log the transaction
             const logs = loadData(LOGS_FILE, []);
             logs.unshift({
                 id: Date.now().toString(),
                 timestamp: new Date().toISOString(),
-                userId: userId,
+                userId: actualUser.id || '999',
                 event: 'payment_success',
                 amount: usdAmount,
                 orderId: orderId,
-                txId: txId
+                txId: txId,
+                gateway: 'DesiPayBD (Automatic)'
             });
-            saveData(USERS_FILE, users);
-            saveData(LOGS_FILE, logs.slice(0, 1000));
+            await saveData(USERS_FILE, users);
+            await saveData(LOGS_FILE, logs.slice(0, 1000));
+
+            // Create SMM Deposit record if applicable
+            try {
+              const smmDeps = loadData(SMM_DEPOSITS_FILE, []);
+              const nextDepId = smmDeps.length ? Math.max(...smmDeps.map((d: any) => d.id || 0)) + 1 : 1;
+              smmDeps.push({
+                id: nextDepId,
+                userId: actualUser.id || 999,
+                userEmail: actualUser.email || userEmail,
+                userName: actualUser.name || 'User',
+                amount: usdAmount,
+                method: 'DesiPayBD (Automatic)',
+                sender: 'N/A',
+                txid: txId,
+                status: 'approved',
+                screenshot: '',
+                aiReason: 'Automatic instant checkout success.',
+                detectedTxId: txId,
+                date: new Date().toISOString().split('T')[0]
+              });
+              await saveData(SMM_DEPOSITS_FILE, smmDeps);
+              console.log(`[DesiPayBD] Created SMM Deposit entry for SMM Tool. User: ${actualUser.email}, Amt: $${usdAmount}`);
+            } catch (smmErr) {
+              console.error("[DesiPayBD] Failed to create SMM deposit record:", smmErr);
+            }
+        } else {
+            console.error(`[DesiPayBD Webhook] User not found matching userId: ${userId} or userEmail: ${userEmail}`);
         }
         // ─────────────────────────────────────────────────────────────────────
         return res.json({ success: true });

@@ -193,7 +193,7 @@ export async function saveToCloud(filePath: string, data: any): Promise<void> {
   if (!firestoreDb) return;
 
   const collectionName = getCollectionName(filePath);
-  const isSingleDoc = collectionName === 'dih_v3_settings';
+  const isSingleDoc = collectionName === 'dih_v3_settings' || collectionName === 'dih_v3_bachelor_point' || collectionName === 'dih_v3_hostinger';
 
   try {
     if (isSingleDoc) {
@@ -201,23 +201,25 @@ export async function saveToCloud(filePath: string, data: any): Promise<void> {
       await setDoc(docRef, data);
 
       // Direct mirroring to site/settings in Firestore to allow compatibility with external toggle controls
-      const siteDocRef = doc(firestoreDb, 'site', 'settings');
-      const siteUpdates: Record<string, any> = {};
-      if (data.enableLiveUserCounter !== undefined) {
-        siteUpdates.liveVisibility = !!data.enableLiveUserCounter;
+      if (collectionName === 'dih_v3_settings') {
+        const siteDocRef = doc(firestoreDb, 'site', 'settings');
+        const siteUpdates: Record<string, any> = {};
+        if (data.enableLiveUserCounter !== undefined) {
+          siteUpdates.liveVisibility = !!data.enableLiveUserCounter;
+        }
+        if (data.disabledTools !== undefined) {
+          siteUpdates.disabledTools = data.disabledTools;
+        }
+        if (data.upcomingTools !== undefined) {
+          siteUpdates.upcomingTools = data.upcomingTools;
+        }
+        if (data.visibleTools !== undefined) {
+          siteUpdates.visibleTools = data.visibleTools;
+        }
+        
+        await setDoc(siteDocRef, siteUpdates, { merge: true });
+        console.log('✅ [CloudSync] Site settings synchronized successfully to site/settings in Firestore.');
       }
-      if (data.disabledTools !== undefined) {
-        siteUpdates.disabledTools = data.disabledTools;
-      }
-      if (data.upcomingTools !== undefined) {
-        siteUpdates.upcomingTools = data.upcomingTools;
-      }
-      if (data.visibleTools !== undefined) {
-        siteUpdates.visibleTools = data.visibleTools;
-      }
-      
-      await setDoc(siteDocRef, siteUpdates, { merge: true });
-      console.log('✅ [CloudSync] Site settings synchronized successfully to site/settings in Firestore.');
     } else if (Array.isArray(data)) {
       // Syncing an array. First, get list of current cloud items to determine deletions
       const colRef = collection(firestoreDb, collectionName);

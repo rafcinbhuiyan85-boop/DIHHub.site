@@ -5,7 +5,7 @@ import {
   AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu,
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
-  Send, Globe, Music, MessageSquare, Video
+  Send, Globe, Music, MessageSquare, Video, Zap, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -159,6 +159,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [massOrderText, setMassOrderText] = useState<string>('');
 
   // Deposit Form States
+  const [depositType, setDepositType] = useState<'automatic' | 'manual'>('automatic');
   const [selectedMethod, setSelectedMethod] = useState<'bkash' | 'nagad' | 'rocket' | 'card' | 'crypto' | 'upay' | 'binance' | 'usdt'>('bkash');
   const [depositAmount, setDepositAmount] = useState<string>('');
   const [senderDetails, setSenderDetails] = useState<string>('');
@@ -1470,7 +1471,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }, 6000);
   };
 
-  const handleInitiateDeposit = () => {
+  const handleInitiateDeposit = async () => {
     setDepError(null);
     setDepSuccess(null);
 
@@ -1485,6 +1486,38 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const minLimit = activeGate && activeGate.minDeposit !== undefined ? activeGate.minDeposit : 2.5;
     if (amt < minLimit) {
       setDepError(`Deposit amount must be at least $${minLimit.toFixed(2)} for ${activeGate?.title || 'this gateway'}.`);
+      return;
+    }
+
+    if (depositType === 'automatic') {
+      // Automatic Instant Credit Payment via DesiPayBD / TukTakPay
+      setVerifyResponseMsg('Initializing automated payment gateway...');
+      try {
+        const res = await fetch('/api/payment/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amt,
+            userEmail: userEmail,
+            userName: userName,
+            userId: userToUse?.id || ''
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.payment_url) {
+          setDepSuccess('🎉 Secure payment link created! Redirecting you to checkout page...');
+          setTimeout(() => {
+            window.location.href = data.payment_url;
+          }, 1500);
+        } else {
+          setDepError(data.message || 'Failed to initialize automatic payment gateway. Please use Manual payment instead.');
+        }
+      } catch (err: any) {
+        console.error("Payment create error:", err);
+        setDepError('Could not connect to payment gateway. Please use Manual payment instead.');
+      } finally {
+        setVerifyResponseMsg(null);
+      }
       return;
     }
 
@@ -1519,6 +1552,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const methodStr = selectedMethod || 'bkash';
     const cleanTxId = transactionId.replace(/\s+/g, '').trim();
 
+    const activeGate = manualGateways.find(g => g.id === selectedMethod);
+    const expectedBdt = amt * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120);
+
     try {
       // Call backend API to verify the screenshot using Gemini
       const res = await fetch('/api/smm/verify-screenshot', {
@@ -1527,7 +1563,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         body: JSON.stringify({
           image: depositScreenshot,
           txid: cleanTxId,
-          amount: amt
+          amount: amt,
+          gatewayId: activeGate?.id || methodStr,
+          gatewayTitle: activeGate?.title || methodStr,
+          gatewayType: activeGate?.type || 'Personal',
+          gatewayNumber: activeGate?.numberOrAddress || '',
+          expectedBdt: expectedBdt
         })
       });
 
@@ -2832,6 +2873,47 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                   <div className="p-5.5 space-y-5.5">
                     {depositStep === 'form' ? (
                       <>
+                        {/* DEPOSIT MODE SELECTOR */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Deposit Mode</label>
+                          <div className="grid grid-cols-2 p-1 bg-slate-950 border border-[#1e2336] rounded-xl font-sans">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDepositType('automatic');
+                                setDepError(null);
+                                setDepSuccess(null);
+                              }}
+                              className={cn(
+                                "py-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer",
+                                depositType === 'automatic'
+                                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10"
+                                  : "text-slate-400 hover:text-white"
+                              )}
+                            >
+                              <Zap size={13} className={depositType === 'automatic' ? "text-amber-300 animate-pulse" : "text-slate-500"} />
+                              <span>Automatic Instant</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDepositType('manual');
+                                setDepError(null);
+                                setDepSuccess(null);
+                              }}
+                              className={cn(
+                                "py-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer",
+                                depositType === 'manual'
+                                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10"
+                                  : "text-slate-400 hover:text-white"
+                              )}
+                            >
+                              <FileText size={13} className={depositType === 'manual' ? "text-white" : "text-slate-500"} />
+                              <span>Manual Proof</span>
+                            </button>
+                          </div>
+                        </div>
+
                         {/* METHODS */}
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Payment Method</label>
@@ -2868,57 +2950,69 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           )}
                         </div>
 
-                        {/* SELECTED METHOD DETAILS */}
-                        {(() => {
-                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                          if (!activeGate) return null;
-                          return (
-                            <div className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] space-y-2.5 font-sans animate-in fade-in duration-200">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="font-extrabold text-white text-[11px] uppercase tracking-wide">Wallet details:</span>
-                                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-black text-[9px] uppercase">{activeGate.type || 'Personal'}</span>
-                              </div>
-
-                              <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-lg p-3 flex justify-between items-center font-mono text-xs">
-                                <span className="text-slate-400">Account:</span>
-                                <span className="text-white font-extrabold select-all flex items-center gap-1.5">
-                                  {activeGate.numberOrAddress}
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(activeGate.numberOrAddress);
-                                      alert('Account details copied to clipboard!');
-                                    }}
-                                    className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/5 px-1.5 py-0.5 rounded font-sans cursor-pointer active:scale-95 transition-all"
-                                  >
-                                    Copy
-                                  </button>
-                                </span>
-                              </div>
-
-                              <div className="text-[11px] text-slate-400 italic leading-relaxed bg-[#0c0e14]/40 border border-[#1e2336]/30 p-2 rounded">
-                                <span className="font-bold text-blue-400 not-italic block mb-0.5 text-[10px] uppercase">Instruction:</span>
-                                {activeGate.instructions}
-                              </div>
-
-                              {/* BD Mobile Payments Conversion UI */}
-                              {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) && (
-                                <div className="bg-amber-500/5 border border-amber-500/15 text-amber-400 p-3 rounded-lg text-xs space-y-1 mt-2 font-sans">
-                                  <div className="flex justify-between items-center font-bold">
-                                    <span>Exchange Rate:</span>
-                                    <span>1 USD = ৳{settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120} BDT</span>
-                                  </div>
-                                  {parseFloat(depositAmount) > 0 && (
-                                    <div className="flex justify-between items-center font-black text-[13px] border-t border-amber-500/10 pt-1.5 mt-1.5">
-                                      <span>Total to Send:</span>
-                                      <span>৳{((parseFloat(depositAmount) || 0) * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120)).toFixed(2)} BDT</span>
-                                    </div>
-                                  )}
+                        {/* SELECTED METHOD DETAILS (Manual only) */}
+                        {depositType === 'manual' ? (
+                          (() => {
+                            const activeGate = manualGateways.find(g => g.id === selectedMethod);
+                            if (!activeGate) return null;
+                            return (
+                              <div className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] space-y-2.5 font-sans animate-in fade-in duration-200">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="font-extrabold text-white text-[11px] uppercase tracking-wide">Wallet details:</span>
+                                  <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-black text-[9px] uppercase">{activeGate.type || 'Personal'}</span>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+
+                                <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-lg p-3 flex justify-between items-center font-mono text-xs">
+                                  <span className="text-slate-400">Account:</span>
+                                  <span className="text-white font-extrabold select-all flex items-center gap-1.5">
+                                    {activeGate.numberOrAddress}
+                                    <button 
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(activeGate.numberOrAddress);
+                                        alert('Account details copied to clipboard!');
+                                      }}
+                                      className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/5 px-1.5 py-0.5 rounded font-sans cursor-pointer active:scale-95 transition-all"
+                                    >
+                                      Copy
+                                    </button>
+                                  </span>
+                                </div>
+
+                                <div className="text-[11px] text-slate-400 italic leading-relaxed bg-[#0c0e14]/40 border border-[#1e2336]/30 p-2 rounded">
+                                  <span className="font-bold text-blue-400 not-italic block mb-0.5 text-[10px] uppercase">Instruction:</span>
+                                  {activeGate.instructions}
+                                </div>
+
+                                {/* BD Mobile Payments Conversion UI */}
+                                {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) && (
+                                  <div className="bg-amber-500/5 border border-amber-500/15 text-amber-400 p-3 rounded-lg text-xs space-y-1 mt-2 font-sans">
+                                    <div className="flex justify-between items-center font-bold">
+                                      <span>Exchange Rate:</span>
+                                      <span>1 USD = ৳{settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120} BDT</span>
+                                    </div>
+                                    {parseFloat(depositAmount) > 0 && (
+                                      <div className="flex justify-between items-center font-black text-[13px] border-t border-amber-500/10 pt-1.5 mt-1.5">
+                                        <span>Total to Send:</span>
+                                        <span>৳{((parseFloat(depositAmount) || 0) * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120)).toFixed(2)} BDT</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div className="p-4 rounded-xl border border-emerald-500/10 bg-emerald-500/[0.02] text-xs font-sans text-emerald-400 space-y-1.5 animate-in fade-in duration-200">
+                            <span className="font-extrabold block text-white uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                              <Zap size={11} className="text-amber-300 animate-pulse" />
+                              ⚡ INSTANT AUTOMATIC PAYMENT
+                            </span>
+                            <p className="leading-relaxed text-slate-400 text-[11px]">
+                              You will be redirected to the secure <strong className="text-emerald-400">DesiPayBD / TukTakPay</strong> payment gateway to complete your transfer via bKash, Nagad, Rocket, or Upay. Once completed, your balance will be credited instantly!
+                            </p>
+                          </div>
+                        )}
 
                         {/* QUICK SELECT */}
                         <div className="space-y-2">
@@ -2964,17 +3058,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           </div>
                         </div>
 
-                        {/* USER DEPOSIT TRADING PROOF INPUTS */}
-                        <div className="space-y-1.5 text-left font-sans pt-1">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
-                          <input
-                            type="text"
-                            placeholder="Enter Transaction ID (TxID) or Ref Number"
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
-                          />
-                        </div>
+                        {/* USER DEPOSIT TRADING PROOF INPUTS (Manual Only) */}
+                        {depositType === 'manual' && (
+                          <div className="space-y-1.5 text-left font-sans pt-1 animate-in fade-in duration-200">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
+                            <input
+                              type="text"
+                              placeholder="Enter Transaction ID (TxID) or Ref Number"
+                              value={transactionId}
+                              onChange={(e) => setTransactionId(e.target.value)}
+                              className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
+                            />
+                          </div>
+                        )}
 
                         {/* DEPOSIT ALERTS */}
                         {depError && (
@@ -2993,9 +3089,17 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                         <button 
                           onClick={() => handleInitiateDeposit()}
-                          className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm tracking-wide rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 active:scale-[0.982]"
+                          disabled={isVerifyingScreenshot}
+                          className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm tracking-wide rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-2"
                         >
-                          Add Funds
+                          {depositType === 'automatic' ? (
+                            <>
+                              <Zap size={15} className="text-amber-300 animate-pulse" />
+                              <span>⚡ Pay Instantly with DesiPayBD</span>
+                            </>
+                          ) : (
+                            <span>Proceed to Upload Screenshot</span>
+                          )}
                         </button>
                       </>
                     ) : (
