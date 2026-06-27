@@ -676,7 +676,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
     res.status(201).json({ status: 'ok' });
   });
 
-  app.get("/api/admin/settings", (req, res) => {
+  app.get("/api/admin/settings", async (req, res) => {
     const settings = loadData(SETTINGS_FILE, {
       downloaderApis: [
         'https://cobalt.hyrax.ink/api/json',
@@ -686,6 +686,69 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
         'https://cobalt.prod.f-it-is.com/api/json'
       ]
     });
+
+    // Auto-migrate old gateway values to the user's requested new details
+    let changed = false;
+    if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways)) {
+      settings.smmManualGateways = settings.smmManualGateways.map((g: any) => {
+        if (g.id === 'bkash' && (g.numberOrAddress === '+8801700000000' || g.title !== 'bKash Merchant' || g.minDeposit !== 5)) {
+          g.numberOrAddress = '+8801835313433';
+          g.title = 'bKash Merchant';
+          g.type = 'Merchant';
+          g.minDeposit = 5;
+          g.instructions = 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).';
+          changed = true;
+        }
+        if (g.id === 'nagad' && (g.numberOrAddress === '+8801900000000' || g.minDeposit !== 5)) {
+          g.numberOrAddress = '+8801602469609';
+          g.minDeposit = 5;
+          g.instructions = 'Send money to our Personal Nagad wallet, and put TxID above.';
+          changed = true;
+        }
+        if (g.id === 'upay' && g.enabled !== false) {
+          g.enabled = false;
+          changed = true;
+        }
+        if (g.id === 'rocket' && g.enabled !== false) {
+          g.enabled = false;
+          changed = true;
+        }
+        if (g.id === 'card' && (g.numberOrAddress === 'support@dihsmm.com' || g.numberOrAddress === 'support@dihhub.site' || g.minDeposit !== 20)) {
+          g.numberOrAddress = 'contact@dihhub.site';
+          g.minDeposit = 20;
+          g.instructions = 'Submit request with the desired funding amount. Support will deliver a credit card payment checkout link.';
+          changed = true;
+        }
+        if (g.id === 'binance' && g.numberOrAddress === '44520912') {
+          g.numberOrAddress = '495331860';
+          changed = true;
+        }
+        if (g.id === 'usdt' && g.numberOrAddress === 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq') {
+          g.numberOrAddress = '0x09cb303036f305407df1e74614fbd894b988cdd4';
+          g.title = 'USDT (BSC - BEP20)';
+          g.type = 'BSC Address';
+          g.instructions = 'Send the exact USDT amount via BSC (BNB Smart Chain / BEP20) Network. Paste TxHash / TxID once done.';
+          changed = true;
+        }
+        return g;
+      });
+    } else {
+      settings.smmManualGateways = [
+        { id: 'bkash', title: 'bKash Merchant', numberOrAddress: '+8801835313433', type: 'Merchant', instructions: 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).', enabled: true, minDeposit: 5 },
+        { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801602469609', type: 'Personal', instructions: 'Send money to our Personal Nagad wallet, and put TxID above.', enabled: true, minDeposit: 5 },
+        { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: false, minDeposit: 2.5 },
+        { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: false, minDeposit: 2.5 },
+        { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'contact@dihhub.site', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a credit card payment checkout link.', enabled: true, minDeposit: 20 },
+        { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '495331860', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
+        { id: 'usdt', title: 'USDT (BSC - BEP20)', numberOrAddress: '0x09cb303036f305407df1e74614fbd894b988cdd4', type: 'BSC Address', instructions: 'Send the exact USDT amount via BSC (BNB Smart Chain / BEP20) Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
+      ];
+      changed = true;
+    }
+
+    if (changed) {
+      await saveData(SETTINGS_FILE, settings);
+    }
+
     res.json(settings);
   });
 

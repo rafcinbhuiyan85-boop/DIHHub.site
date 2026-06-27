@@ -632,13 +632,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           }
         } else {
           const defaultGateways = [
-            { id: 'bkash', title: 'bKash Wallet', numberOrAddress: '+8801700000000', type: 'Personal', instructions: 'Send money as standard Personal Transfer (Send Money), and then submit your Transaction ID (TxID).', enabled: true, minDeposit: 2.5 },
-            { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801900000000', type: 'Personal', instructions: 'Send money via Cash In or Send Money to our Nagad wallet, and put TxID above.', enabled: true, minDeposit: 2.5 },
-            { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: true, minDeposit: 2.5 },
-            { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: true, minDeposit: 2.5 },
-            { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'support@dihsmm.com', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a direct credit card payment checkout link.', enabled: true, minDeposit: 2.5 },
-            { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '44520912', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
-            { id: 'usdt', title: 'USDT (TRC-20)', numberOrAddress: 'TYxTr54asT90pL1aWeXv2QpZs7eM89d1Cq', type: 'TRC-20 Address', instructions: 'Send the exact USDT amount via Tron Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
+            { id: 'bkash', title: 'bKash Merchant', numberOrAddress: '+8801835313433', type: 'Merchant', instructions: 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).', enabled: true, minDeposit: 5 },
+            { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801602469609', type: 'Personal', instructions: 'Send money to our Personal Nagad wallet, and put TxID above.', enabled: true, minDeposit: 5 },
+            { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: false, minDeposit: 2.5 },
+            { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: false, minDeposit: 2.5 },
+            { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'contact@dihhub.site', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a credit card payment checkout link.', enabled: true, minDeposit: 20 },
+            { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '495331860', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
+            { id: 'usdt', title: 'USDT (BSC - BEP20)', numberOrAddress: '0x09cb303036f305407df1e74614fbd894b988cdd4', type: 'BSC Address', instructions: 'Send the exact USDT amount via BSC (BNB Smart Chain / BEP20) Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
           ];
           setSmmManualGateways(defaultGateways);
           localStorage.setItem('dih_smm_manual_gateways_v2', JSON.stringify(defaultGateways));
@@ -7459,22 +7459,18 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Category</label>
-                            <input
-                              type="text"
-                              list="admin-smm-categories"
+                            <select
                               value={smmFormCategory}
                               onChange={(e) => setSmmFormCategory(e.target.value)}
-                              placeholder="e.g. Spotify, Discord, Instagram"
-                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 font-medium"
-                            />
-                            <datalist id="admin-smm-categories">
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 cursor-pointer font-medium"
+                            >
                               {Array.from(new Set([
-                                'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Fb/Insta {OLD/ACC}', 'Others',
+                                'GAME', 'Fb/Insta {OLD/ACC}', 'Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'Others',
                                 ...smmServicesList.map(s => s.category)
                               ])).filter(Boolean).map(c => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
-                            </datalist>
+                            </select>
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Quality Class</label>

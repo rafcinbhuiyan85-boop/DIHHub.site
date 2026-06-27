@@ -509,15 +509,17 @@ export default function Layout({
                 </div>
               </div>
             ) : (
-              <button 
-                onClick={onAuthClick}
-                className="relative overflow-hidden group/login px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 dark:from-amber-600 dark:via-yellow-400 dark:to-amber-500 text-slate-950 dark:text-slate-950 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg shadow-amber-500/20 dark:shadow-amber-500/10 border border-amber-400/35 flex items-center gap-1.5"
-              >
-                {/* Visual glare shine animation */}
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/login:translate-x-full transition-transform duration-1000" />
-                <User size={13} className="text-slate-950 group-hover/login:scale-110 transition-transform" />
-                <span>Member Access</span>
-              </button>
+              activeTool === 'dashboard' && (
+                <button 
+                  onClick={onAuthClick}
+                  className="relative overflow-hidden group/login px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 dark:from-amber-600 dark:via-yellow-400 dark:to-amber-500 text-slate-950 dark:text-slate-950 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg shadow-amber-500/20 dark:shadow-amber-500/10 border border-amber-400/35 flex items-center gap-1.5"
+                >
+                  {/* Visual glare shine animation */}
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/login:translate-x-full transition-transform duration-1000" />
+                  <User size={13} className="text-slate-950 group-hover/login:scale-110 transition-transform" />
+                  <span>Member Access</span>
+                </button>
+              )
             )}
           </div>
         </header>
