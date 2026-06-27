@@ -502,24 +502,27 @@ export default function ApkStore() {
                                 logo: (
                                   <svg viewBox="0 0 100 100" className="w-14 h-14 pointer-events-none rounded-3xl shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <rect width="100" height="100" rx="22" fill="#E2125A"/>
-                                    {/* Back Wing */}
-                                    <path d="M65 52 L55 68 L45 20 Z" fill="#FFFFFF" fillOpacity="0.75"/>
-                                    {/* Head */}
-                                    <path d="M72 42 L80 40 L74 46 Z" fill="#FFFFFF" fillOpacity="1"/>
-                                    {/* Neck */}
-                                    <path d="M72 42 L74 46 L65 52 Z" fill="#FFFFFF" fillOpacity="0.95"/>
-                                    {/* Chest */}
-                                    <path d="M65 52 L74 46 L68 62 Z" fill="#FFFFFF" fillOpacity="0.85"/>
-                                    {/* Front Wing */}
-                                    <path d="M65 52 L58 25 L68 62 Z" fill="#FFFFFF" fillOpacity="0.9"/>
-                                    {/* Center Body */}
-                                    <path d="M65 52 L68 62 L55 68 Z" fill="#FFFFFF" fillOpacity="0.95"/>
-                                    {/* Lower Belly */}
-                                    <path d="M55 68 L68 62 L52 75 Z" fill="#FFFFFF" fillOpacity="0.85"/>
-                                    {/* Tail */}
-                                    <path d="M55 68 L52 75 L20 75 Z" fill="#FFFFFF" fillOpacity="0.8"/>
-                                    {/* Tail Fold */}
-                                    <path d="M35 38 L55 68 L20 75 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                    <g transform="translate(9, 3) scale(0.82)">
+                                      {/* Back Wing */}
+                                      <path d="M65 52 L55 68 L45 20 Z" fill="#FFFFFF" fillOpacity="0.75"/>
+                                      {/* Head */}
+                                      <path d="M72 42 L80 40 L74 46 Z" fill="#FFFFFF" fillOpacity="1"/>
+                                      {/* Neck */}
+                                      <path d="M72 42 L74 46 L65 52 Z" fill="#FFFFFF" fillOpacity="0.95"/>
+                                      {/* Chest */}
+                                      <path d="M65 52 L74 46 L68 62 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+                                      {/* Front Wing */}
+                                      <path d="M65 52 L58 25 L68 62 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                      {/* Center Body */}
+                                      <path d="M65 52 L68 62 L55 68 Z" fill="#FFFFFF" fillOpacity="0.95"/>
+                                      {/* Lower Belly */}
+                                      <path d="M55 68 L68 62 L52 75 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+                                      {/* Tail */}
+                                      <path d="M55 68 L52 75 L20 75 Z" fill="#FFFFFF" fillOpacity="0.8"/>
+                                      {/* Tail Fold */}
+                                      <path d="M35 38 L55 68 L20 75 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                    </g>
+                                    <text x="50" y="85" textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="900" fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="-0.02em">bKash</text>
                                   </svg>
                                 )
                               },
@@ -537,14 +540,17 @@ export default function ApkStore() {
                                       </linearGradient>
                                     </defs>
                                     <rect width="100" height="100" rx="22" fill="url(#nagadGradApk)"/>
-                                    <circle cx="50" cy="50" r="28" fill="#FFFFFF" fillOpacity="0.15"/>
-                                    <circle cx="52" cy="33" r="4.5" fill="#FFFFFF"/>
-                                    <path d="M48 38 L54 44 L50 56 L55 68 L50 71 L45 58 L41 48 L47 38 Z" fill="#FFFFFF"/>
-                                    <path d="M54 36 C59 36 62 42 59 47 C56 50 51 50 49 45 Z" fill="#FFFFFF" fillOpacity="0.9"/>
-                                    <path d="M44 52 L36 51 L39 48 L46 49 Z" fill="#FFFFFF" fillOpacity="0.85"/>
-                                    <path d="M25 52 L75 52" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
-                                    <path d="M71 52 L73 47 L75 52 L73 57 L71 52 Z" fill="#FFFFFF"/>
-                                    <rect x="34" y="52" width="4.5" height="6.5" rx="1" fill="#FFFFFF"/>
+                                    <g transform="translate(9, 3) scale(0.82)">
+                                      <circle cx="50" cy="50" r="28" fill="#FFFFFF" fillOpacity="0.15"/>
+                                      <circle cx="52" cy="33" r="4.5" fill="#FFFFFF"/>
+                                      <path d="M48 38 L54 44 L50 56 L55 68 L50 71 L45 58 L41 48 L47 38 Z" fill="#FFFFFF"/>
+                                      <path d="M54 36 C59 36 62 42 59 47 C56 50 51 50 49 45 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+                                      <path d="M44 52 L36 51 L39 48 L46 49 Z" fill="#FFFFFF" fillOpacity="0.85"/>
+                                      <path d="M25 52 L75 52" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
+                                      <path d="M71 52 L73 47 L75 52 L73 57 L71 52 Z" fill="#FFFFFF"/>
+                                      <rect x="34" y="52" width="4.5" height="6.5" rx="1" fill="#FFFFFF"/>
+                                    </g>
+                                    <text x="50" y="85" textAnchor="middle" fill="#FFFFFF" fontSize="15" fontWeight="900" fontFamily="system-ui, -apple-system, 'Noto Sans Bengali', sans-serif">নগদ</text>
                                   </svg>
                                 )
                               }
