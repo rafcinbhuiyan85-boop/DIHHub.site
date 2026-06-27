@@ -168,6 +168,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   // SMM Management States
   const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'manual-services' | 'users' | 'deposits' | 'settings' | 'providers' | 'gateways'>('dashboard');
+  const [smmManualCategoryFilter, setSmmManualCategoryFilter] = useState<'ALL' | 'GAME' | 'Fb/Insta {OLD/ACC}'>('ALL');
   const [smmOrders, setSmmOrders] = useState<any[]>([]);
   const [smmUsers, setSmmUsers] = useState<any[]>([]);
   const [smmDeposits, setSmmDeposits] = useState<any[]>([]);
@@ -650,6 +651,19 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     const interval = setInterval(loadSmmData, 10000);
     return () => clearInterval(interval);
   }, [settings.smmDefaultBalance, auth.currentUser?.email, activeTab]);
+
+  useEffect(() => {
+    if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways) && settings.smmManualGateways.length > 0) {
+      setSmmManualGateways(prev => {
+        const prevStr = JSON.stringify(prev);
+        const nextStr = JSON.stringify(settings.smmManualGateways);
+        if (prevStr !== nextStr) {
+          return settings.smmManualGateways;
+        }
+        return prev;
+      });
+    }
+  }, [settings.smmManualGateways]);
 
   const handleApproveSmmDeposit = (depId: number) => {
     let matchedEmail = '';
@@ -6929,9 +6943,11 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                 )}
 
                 {smmSubTab === 'manual-services' && (() => {
-                  const filteredManualSvcs = smmServicesList.filter(s => 
-                    s.category === 'GAME' || s.category === 'Fb/Insta {OLD/ACC}'
-                  );
+                  const filteredManualSvcs = smmServicesList.filter(s => {
+                    if (smmManualCategoryFilter === 'GAME') return s.category === 'GAME';
+                    if (smmManualCategoryFilter === 'Fb/Insta {OLD/ACC}') return s.category === 'Fb/Insta {OLD/ACC}';
+                    return s.category === 'GAME' || s.category === 'Fb/Insta {OLD/ACC}';
+                  });
 
                   return (
                     <div className="space-y-6">
@@ -6947,7 +6963,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                           type="button"
                           onClick={() => {
                             setSmmFormName('');
-                            setSmmFormCategory('GAME');
+                            setSmmFormCategory(smmManualCategoryFilter === 'ALL' ? 'GAME' : smmManualCategoryFilter);
                             setSmmFormQuality('Premium');
                             setSmmFormPrice('1.00');
                             setSmmFormMin('10');
@@ -6961,15 +6977,61 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             setSmmModalType('add-service');
                             setIsSmmModalOpen(true);
                           }}
-                          className="px-4 py-2 rounded-xl bg-blue-505 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] uppercase tracking-wider transition active:scale-95 shadow-lg shadow-blue-500/10 flex items-center gap-2"
+                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] uppercase tracking-wider transition active:scale-95 shadow-lg shadow-blue-500/10 flex items-center gap-2 cursor-pointer"
                         >
                           <Plus size={14} /> Add Manual Service
                         </button>
                       </div>
 
+                      {/* Premium Category Switcher */}
+                      <div className="flex flex-wrap items-center gap-2 bg-[#0d0f14]/80 p-2.5 rounded-2xl border border-slate-850/60">
+                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest px-2.5">Category View:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSmmManualCategoryFilter('ALL')}
+                            className={cn(
+                              "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                              smmManualCategoryFilter === 'ALL'
+                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/15"
+                                : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-850 border border-slate-850"
+                            )}
+                          >
+                            All Manual ({smmServicesList.filter(s => s.category === 'GAME' || s.category === 'Fb/Insta {OLD/ACC}').length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSmmManualCategoryFilter('GAME')}
+                            className={cn(
+                              "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                              smmManualCategoryFilter === 'GAME'
+                                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/15"
+                                : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-850 border border-slate-850"
+                            )}
+                          >
+                            GAME ONLY ({smmServicesList.filter(s => s.category === 'GAME').length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSmmManualCategoryFilter('Fb/Insta {OLD/ACC}')}
+                            className={cn(
+                              "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                              smmManualCategoryFilter === 'Fb/Insta {OLD/ACC}'
+                                ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/15"
+                                : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-850 border border-slate-850"
+                            )}
+                          >
+                            Fb/Insta {'{'}OLD/ACC{'}'} ({smmServicesList.filter(s => s.category === 'Fb/Insta {OLD/ACC}').length})
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-800 bg-[#090a0f]">
+                        <div className="px-5 py-4 border-b border-slate-800 bg-[#090a0f] flex justify-between items-center">
                           <h4 className="text-xs font-bold uppercase text-slate-400">Manual SMM Services Catalogue ({filteredManualSvcs.length})</h4>
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">
+                            Showing: {smmManualCategoryFilter}
+                          </span>
                         </div>
 
                         {filteredManualSvcs.length === 0 ? (

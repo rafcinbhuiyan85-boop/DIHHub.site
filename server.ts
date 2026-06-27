@@ -677,6 +677,11 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   app.get("/api/admin/settings", async (req, res) => {
+    try {
+      await syncFileWithCloud(SETTINGS_FILE, {});
+    } catch (e) {
+      console.error('Failed to sync settings from cloud on GET:', e);
+    }
     const settings = loadData(SETTINGS_FILE, {
       downloaderApis: [
         'https://cobalt.hyrax.ink/api/json',
@@ -687,11 +692,11 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       ]
     });
 
-    // Auto-migrate old gateway values to the user's requested new details
+    // Auto-migrate old gateway values to the user's requested new details if they are still the old defaults
     let changed = false;
     if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways)) {
       settings.smmManualGateways = settings.smmManualGateways.map((g: any) => {
-        if (g.id === 'bkash' && (g.numberOrAddress === '+8801700000000' || g.title !== 'bKash Merchant' || g.minDeposit !== 5)) {
+        if (g.id === 'bkash' && g.numberOrAddress === '+8801700000000') {
           g.numberOrAddress = '+8801835313433';
           g.title = 'bKash Merchant';
           g.type = 'Merchant';
@@ -699,21 +704,13 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
           g.instructions = 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).';
           changed = true;
         }
-        if (g.id === 'nagad' && (g.numberOrAddress === '+8801900000000' || g.minDeposit !== 5)) {
+        if (g.id === 'nagad' && g.numberOrAddress === '+8801900000000') {
           g.numberOrAddress = '+8801602469609';
           g.minDeposit = 5;
           g.instructions = 'Send money to our Personal Nagad wallet, and put TxID above.';
           changed = true;
         }
-        if (g.id === 'upay' && g.enabled !== false) {
-          g.enabled = false;
-          changed = true;
-        }
-        if (g.id === 'rocket' && g.enabled !== false) {
-          g.enabled = false;
-          changed = true;
-        }
-        if (g.id === 'card' && (g.numberOrAddress === 'support@dihsmm.com' || g.numberOrAddress === 'support@dihhub.site' || g.minDeposit !== 20)) {
+        if (g.id === 'card' && (g.numberOrAddress === 'support@dihsmm.com' || g.numberOrAddress === 'support@dihhub.site')) {
           g.numberOrAddress = 'contact@dihhub.site';
           g.minDeposit = 20;
           g.instructions = 'Submit request with the desired funding amount. Support will deliver a credit card payment checkout link.';

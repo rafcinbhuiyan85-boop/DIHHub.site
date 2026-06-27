@@ -581,7 +581,7 @@ export default function Layout({
                 {/* Meta Rows */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-[10px]">
                   <p className="font-bold text-slate-400/60 dark:text-slate-600 uppercase tracking-widest">
-                    © {new Date().getFullYear()} DIH HUB (DIGITAL INNOVATION HOUSE HUB)
+                    © 2024 DIH HUB (DIGITAL INNOVATION HOUSE HUB). ALL RIGHTS RESERVED
                   </p>
                   <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>
                   <div className="flex items-center gap-2">
@@ -617,11 +617,13 @@ export default function Layout({
                 setIsSidebarOpen(false);
               }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                activeTool === 'dashboard' ? "text-amber-400 bg-amber-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                "flex flex-col items-center justify-center gap-1 transition-all py-1.5 px-3.5 rounded-xl cursor-pointer active:scale-95",
+                activeTool === 'dashboard' 
+                  ? "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-500/20 scale-105" 
+                  : "text-slate-400 hover:text-slate-200"
               )}
             >
-              <LayoutDashboard size={16} />
+              <LayoutDashboard size={16} className={activeTool === 'dashboard' ? 'text-slate-950' : 'text-amber-500'} />
               <span className="text-[9px] font-black tracking-widest uppercase">Home</span>
             </button>
 
@@ -632,11 +634,13 @@ export default function Layout({
                 setIsSidebarOpen(false);
               }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                activeTool === 'dih-smm' ? "text-violet-400 bg-violet-400/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                "flex flex-col items-center justify-center gap-1 transition-all py-1.5 px-3.5 rounded-xl cursor-pointer active:scale-95",
+                activeTool === 'dih-smm' 
+                  ? "bg-gradient-to-r from-[#7c3aed] via-[#8b5cf6] to-[#0ea5e9] text-white font-black shadow-lg shadow-purple-500/25 scale-105" 
+                  : "text-slate-400 hover:text-slate-200"
               )}
             >
-              <Zap size={16} className={activeTool === 'dih-smm' ? "text-violet-400 animate-pulse" : "text-violet-500"} />
+              <Zap size={16} className={activeTool === 'dih-smm' ? "text-white animate-pulse" : "text-violet-500"} />
               <span className="text-[9px] font-black tracking-widest uppercase">SMM</span>
             </button>
 
@@ -648,11 +652,13 @@ export default function Layout({
                 setIsSidebarOpen(false);
               }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-all py-1 px-2.5 rounded-xl cursor-pointer active:scale-95",
-                activeTool === 'dih-movies' ? "text-amber-500 bg-amber-500/10 scale-105 font-bold" : "text-slate-400 hover:text-slate-200"
+                "flex flex-col items-center justify-center gap-1 transition-all py-1.5 px-3.5 rounded-xl cursor-pointer active:scale-95",
+                activeTool === 'dih-movies' 
+                  ? "bg-gradient-to-r from-[#f59e0b] via-[#fbbf24] to-[#f97316] text-slate-950 font-black shadow-lg shadow-amber-500/25 scale-105" 
+                  : "text-slate-400 hover:text-slate-200"
               )}
             >
-              <Film size={16} className={activeTool === 'dih-movies' ? "text-amber-400 animate-pulse" : "text-amber-500"} />
+              <Film size={16} className={activeTool === 'dih-movies' ? "text-slate-950" : "text-amber-500"} />
               <span className="text-[9px] font-black tracking-widest uppercase">Movies</span>
             </button>
 
