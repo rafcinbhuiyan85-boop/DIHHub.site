@@ -5,12 +5,31 @@ import { useAppSettings } from '@/src/hooks/useAppSettings';
 export function MoviesNavbar({ currentPath, onNavigate }: { currentPath: string; onNavigate: (path: string) => void }) {
   const { settings } = useAppSettings();
   const [scrolled, setScrolled] = useState(false);
+  const [sector, setSector] = useState<'movie' | 'tv' | 'anime'>(() => {
+    const saved = localStorage.getItem('dih_movies_sector');
+    return (saved === 'movie' || saved === 'tv' || saved === 'anime') ? (saved as any) : 'movie';
+  });
   
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll, { passive:true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    const handleSectorChanged = () => {
+      const saved = localStorage.getItem('dih_movies_sector');
+      if (saved === 'movie' || saved === 'tv' || saved === 'anime') {
+        setSector(saved as any);
+      }
+    };
+    window.addEventListener('dih-movies-sector-changed', handleSectorChanged);
+    return () => {
+      window.removeEventListener('dih-movies-sector-changed', handleSectorChanged);
+    };
+  }, []);
+
+  const actionGenreId = sector === 'tv' ? '10759' : sector === 'anime' ? '16' : '28';
 
   return (
     <nav style={{ 
@@ -38,7 +57,7 @@ export function MoviesNavbar({ currentPath, onNavigate }: { currentPath: string;
         <div className="flex items-center gap-1 sm:gap-2">
           {[
             { href: '/', icon: <Home size={13} />, label: 'Home' }, 
-            { href: '/genre/28', icon: <Flame size={13} />, label: 'Action' }
+            { href: `/genre/${actionGenreId}`, icon: <Flame size={13} />, label: 'Action' }
           ].map(({ href, icon, label }) => {
             const isActive = currentPath === href;
             return (

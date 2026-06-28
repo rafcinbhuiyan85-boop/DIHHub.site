@@ -365,7 +365,9 @@ export default function Layout({
                             key={sub.id}
                             onClick={(e) => {
                               e.stopPropagation();
+                              setActiveTool('dih-movies');
                               changeSector(sub.id);
+                              if (window.innerWidth < 768) setIsSidebarOpen(false);
                             }}
                             className={cn(
                               "w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 relative overflow-hidden group/subitem",

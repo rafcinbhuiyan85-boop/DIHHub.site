@@ -3563,13 +3563,18 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         if (fs.existsSync(indexHtmlPath)) {
           let html = fs.readFileSync(indexHtmlPath, 'utf8');
           const settings = loadData(SETTINGS_FILE, {});
-          const faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+          let faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+          if (faviconUrl && !faviconUrl.startsWith('/') && !faviconUrl.startsWith('http') && !faviconUrl.startsWith('data:')) {
+            faviconUrl = '/' + faviconUrl;
+          }
           const appName = settings.appName || 'DihHub';
 
           // Dynamically override title and favicons
-          html = html.replace(/DihHub \| Official/g, `${appName} | Official`);
-          html = html.replace(/\/favicon\.png\?v=5/g, faviconUrl);
-          html = html.replace(/\/favicon\.ico\?v=5/g, faviconUrl);
+          html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${appName} | Official</title>`);
+          html = html.replace(/(<link\s+[^>]*rel="(?:shortcut\s+)?icon"[^>]*href=")([^"]*)("[^>]*>)/gi, `$1${faviconUrl}$3`);
+          html = html.replace(/(<link\s+[^>]*href=")([^"]*)("[^>]*rel="(?:shortcut\s+)?icon"[^>]*>)/gi, `$1${faviconUrl}$3`);
+          html = html.replace(/(<link\s+[^>]*rel="apple-touch-icon"[^>]*href=")([^"]*)("[^>]*>)/gi, `$1${faviconUrl}$3`);
+          html = html.replace(/(<link\s+[^>]*href=")([^"]*)("[^>]*rel="apple-touch-icon"[^>]*>)/gi, `$1${faviconUrl}$3`);
 
           res.setHeader('Content-Type', 'text/html');
           res.send(html);
