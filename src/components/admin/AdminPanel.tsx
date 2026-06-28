@@ -164,6 +164,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   // Real-time Firebase maintenance states
   const [maintenanceModeLive, setMaintenanceModeLive] = useState<boolean | null>(null);
   const [maintenanceConnectionStatus, setMaintenanceConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [dbConnectionError, setDbConnectionError] = useState<string | null>(null);
   const [isCopiedHtmlCode, setIsCopiedHtmlCode] = useState(false);
 
   // SMM Management States
@@ -1741,13 +1742,36 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
   // Secondary firestore subscription hook for real-time maintenance and live-visibility status
   useEffect(() => {
     let unsub: (() => void) | undefined;
+    let unsubFallback: (() => void) | undefined;
     setMaintenanceConnectionStatus('connecting');
+    setDbConnectionError(null);
+
+    const startFallbackSubscription = () => {
+      const fallbackRef = doc(db, 'maintenance', 'config');
+      if (unsubFallback) unsubFallback();
+      unsubFallback = onSnapshot(fallbackRef, (fbSnapshot) => {
+        setMaintenanceConnectionStatus('connected');
+        setDbConnectionError(null);
+        if (fbSnapshot.exists()) {
+          const fbData = fbSnapshot.data();
+          setMaintenanceModeLive(fbData.maintenanceMode === true || fbData.maintenance === true);
+        } else {
+          setMaintenanceModeLive(false);
+        }
+      }, (fbError) => {
+        console.error("Firebase fallback database subscription failed:", fbError);
+        setMaintenanceConnectionStatus('error');
+        setDbConnectionError(`Fallback DB Error: ${fbError.message}`);
+      });
+    };
 
     try {
       // Since our main 'db' import is now fully connected to the user's real Firestore 'dih-hub'
       // we can listen directly to the 'site/settings' document shown in the user's database.
       const docRef = doc(db, 'site', 'settings');
       unsub = onSnapshot(docRef, (snapshot) => {
+        setMaintenanceConnectionStatus('connected');
+        setDbConnectionError(null);
         if (snapshot.exists()) {
           const data = snapshot.data();
           // The user's field shown in Firestore is 'maintenance: false'
@@ -1759,28 +1783,21 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
           }
         } else {
           // Fallback to maintenance/config if site/settings doesn't exist yet
-          const fallbackRef = doc(db, 'maintenance', 'config');
-          onSnapshot(fallbackRef, (fbSnapshot) => {
-            if (fbSnapshot.exists()) {
-              const fbData = fbSnapshot.data();
-              setMaintenanceModeLive(fbData.maintenanceMode === true || fbData.maintenance === true);
-            } else {
-              setMaintenanceModeLive(false);
-            }
-          });
+          startFallbackSubscription();
         }
-        setMaintenanceConnectionStatus('connected');
       }, (error) => {
-        console.error("Firebase main database subscription failed:", error);
-        setMaintenanceConnectionStatus('error');
+        console.warn("Firebase main database subscription failed, trying fallback...", error);
+        // On error of the main collection (e.g. permission denied or missing), attempt fallback gracefully
+        startFallbackSubscription();
       });
     } catch (err) {
-      console.error("Initiation of maintenance snapshot failed:", err);
-      setMaintenanceConnectionStatus('error');
+      console.error("Initiation of maintenance snapshot failed, trying fallback...", err);
+      startFallbackSubscription();
     }
 
     return () => {
       if (unsub) unsub();
+      if (unsubFallback) unsubFallback();
     };
   }, []);
 
@@ -5026,7 +5043,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   <h2 className="text-2xl font-bold mb-1">Firebase Realtime Maintenance</h2>
                   <p className="text-xs text-slate-500">Enable, disable, and monitor global website status on your real Firestore.</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-end gap-1">
                   <div className={cn(
                     "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-bold uppercase",
                     maintenanceConnectionStatus === 'connected' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
@@ -5042,6 +5059,11 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                     {maintenanceConnectionStatus === 'connected' ? "DB Connected" :
                      maintenanceConnectionStatus === 'connecting' ? "Connecting DB..." : "DB Connection Error"}
                   </div>
+                  {dbConnectionError && (
+                    <span className="text-[10px] text-rose-400 font-mono text-right max-w-[250px] truncate" title={dbConnectionError}>
+                      {dbConnectionError}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -5122,7 +5144,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   <div className="space-y-4 text-xs font-mono">
                     <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl space-y-1">
                       <div className="text-[10px] text-slate-600 uppercase font-black">Project Identifier</div>
-                      <div className="text-slate-300 truncate font-semibold">dih-hub</div>
+                      <div className="text-slate-300 truncate font-semibold">{(db as any).app?.options?.projectId || "dih-hub"}</div>
                     </div>
                     <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl space-y-1">
                       <div className="text-[10px] text-slate-600 uppercase font-black">Target Location</div>
@@ -5135,6 +5157,55 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   </div>
                 </div>
               </div>
+
+              {/* Troubleshooting connection issues if error occurs */}
+              {dbConnectionError && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
+                      <ShieldAlert size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-amber-400">Firebase সংযোগ সংক্রান্ত সমাধান (Troubleshooting Guide)</h3>
+                      <p className="text-xs text-slate-400">যদি আপনি "Missing or insufficient permissions" এর মতো এরর দেখতে পান, তবে নিচের ৩টি ধাপ সম্পন্ন করুন:</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div className="p-4 bg-slate-950/60 border border-slate-800/60 rounded-2xl space-y-2">
+                      <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest">ধাপ ১: Firestore Database তৈরি করুন</div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        আপনার Firebase কনসোলে (প্রজেক্ট ID: <strong className="font-mono text-white">{(db as any).app?.options?.projectId || "daddy-here-33965"}</strong>) যান। 
+                        বাম পাশের মেনু থেকে <strong>Firestore Database</strong> সিলেক্ট করুন। যদি এটি তৈরি করা না থাকে, তবে <strong>"Create Database"</strong>-এ ক্লিক করে ডেটাবেজটি তৈরি করে নিন (Start in Test Mode বা Production Mode)।
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-slate-950/60 border border-slate-800/60 rounded-2xl space-y-2">
+                      <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest">ধাপ ২: সিকিউরিটি রুলস আপডেট</div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        ডেটাবেজটি তৈরি থাকলে, আমাদের তৈরি করা সিকিউরিটি রুলসগুলো অটোমেটিক ডেটাবেজে কাজ শুরু করবে। নতুন ডেটাবেজ তৈরির পর বা রুলস পরিবর্তনের পর গুগল সার্ভারে রুলস সম্পূর্ণ আপডেট হতে <strong>১ থেকে ৩ মিনিট</strong> পর্যন্ত সময় লাগতে পারে। কিছুক্ষণ পর পেজটি রিলোড দিন।
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-slate-950/60 border border-slate-800/60 rounded-2xl space-y-2">
+                      <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest">ধাপ ৩: ডেটাবেজ সেটিংস যাচাইকরণ</div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        নিশ্চিত করুন যে আপনার প্রজেক্টের ফায়ারস্টোর ডেটাবেজটি <strong className="font-mono text-white">(default)</strong> মোডে তৈরি করা হয়েছে। কোনো কাস্টম নামে ডেটাবেজ তৈরি করা হয়ে থাকলে সেটি ডিফল্ট হিসেবে না পাওয়ার কারণেও পারমিশন এরর আসতে পারে।
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-amber-500/10 text-xs text-slate-400">
+                    <span>প্রজেক্ট আইডি: <strong className="font-mono text-amber-400">{(db as any).app?.options?.projectId || "daddy-here-33965"}</strong></span>
+                    <button 
+                      onClick={() => window.location.reload()} 
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 rounded-xl font-bold transition-all active:scale-95"
+                    >
+                      <RefreshCcw size={12} /> রিফ্রেশ করুন
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Integration snippet instructions */}
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5">

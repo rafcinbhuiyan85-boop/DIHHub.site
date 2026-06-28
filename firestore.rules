@@ -1,11 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global Safety Net
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // Helper functions
     function isSignedIn() {
       return request.auth != null;
@@ -34,17 +29,10 @@ service cloud.firestore {
     }
 
     match /templates/{templateId} {
-      allow read: if true; // Public access to templates
-      
-      allow create: if isValidId(templateId) && 
-                      isValidTemplate(request.resource.data) &&
-                      request.resource.data.id == templateId;
-                      
-      allow update: if isValidTemplate(request.resource.data) &&
-                      request.resource.data.id == templateId &&
-                      request.resource.data.id == resource.data.id;
-                      
-      allow delete: if true;
+      allow read, write: if true;
+    }
+    match /templates/{document=**} {
+      allow read, write: if true;
     }
     
     // Simple admin check collection
@@ -57,9 +45,14 @@ service cloud.firestore {
     match /site/{docId} {
       allow read, write: if true;
     }
+    match /site/{document=**} {
+      allow read, write: if true;
+    }
     match /maintenance/{docId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
+    }
+    match /maintenance/{document=**} {
+      allow read, write: if true;
     }
     match /dih_v3_settings/{docId} {
       allow read, write: if true;
