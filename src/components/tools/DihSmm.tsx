@@ -723,27 +723,18 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         logo: (
           <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="100" height="100" rx="22" fill="#E2125A"/>
-            <g transform="translate(9, 3) scale(0.82)">
-              {/* Back Wing */}
-              <path d="M65 52 L55 68 L45 20 Z" fill="#FFFFFF" fillOpacity="0.75"/>
-              {/* Head */}
-              <path d="M72 42 L80 40 L74 46 Z" fill="#FFFFFF" fillOpacity="1"/>
-              {/* Neck */}
-              <path d="M72 42 L74 46 L65 52 Z" fill="#FFFFFF" fillOpacity="0.95"/>
-              {/* Chest */}
-              <path d="M65 52 L74 46 L68 62 Z" fill="#FFFFFF" fillOpacity="0.85"/>
-              {/* Front Wing */}
-              <path d="M65 52 L58 25 L68 62 Z" fill="#FFFFFF" fillOpacity="0.9"/>
-              {/* Center Body */}
-              <path d="M65 52 L68 62 L55 68 Z" fill="#FFFFFF" fillOpacity="0.95"/>
-              {/* Lower Belly */}
-              <path d="M55 68 L68 62 L52 75 Z" fill="#FFFFFF" fillOpacity="0.85"/>
-              {/* Tail */}
-              <path d="M55 68 L52 75 L20 75 Z" fill="#FFFFFF" fillOpacity="0.8"/>
-              {/* Tail Fold */}
-              <path d="M35 38 L55 68 L20 75 Z" fill="#FFFFFF" fillOpacity="0.9"/>
+            <g transform="translate(10, 8) scale(0.8)">
+              {/* Authentic bKash origami bird */}
+              <path d="M 45 42 L 20 54 L 38 72 Z" fill="#FFFFFF" fillOpacity="0.9" />
+              <path d="M 45 42 L 38 72 L 58 78 Z" fill="#FFFFFF" />
+              <path d="M 45 42 L 58 78 L 65 52 Z" fill="#FFFFFF" fillOpacity="0.95" />
+              <path d="M 45 42 L 65 52 L 58 22 L 45 42 Z" fill="#FFFFFF" fillOpacity="0.85" />
+              <path d="M 65 52 L 85 45 L 75 35 Z" fill="#FFFFFF" />
+              <path d="M 85 45 L 82 48 L 75 35 Z" fill="#FFFFFF" fillOpacity="0.9" />
+              <path d="M 45 42 L 58 22 L 35 38 Z" fill="#FFFFFF" fillOpacity="0.75" />
+              <path d="M 38 72 L 20 75 L 58 78 Z" fill="#FFFFFF" fillOpacity="0.85" />
             </g>
-            <text x="50" y="85" textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="900" fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="-0.02em">bKash</text>
+            <text x="50" y="86" textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="bold" fontFamily="Georgia, serif" letterSpacing="0.02em">bKash</text>
           </svg>
         ),
         colorClass: selectedMethod === 'bkash'
@@ -757,24 +748,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         logo: (
           <svg viewBox="0 0 100 100" className="w-full h-full pointer-events-none" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="nagadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#F2351E" />
-                <stop offset="60%" stopColor="#FA5A1E" />
-                <stop offset="100%" stopColor="#FF8B24" />
+              <linearGradient id="nagadRealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#F15A22" />
+                <stop offset="100%" stopColor="#D8232A" />
               </linearGradient>
             </defs>
-            <rect width="100" height="100" rx="22" fill="url(#nagadGrad)"/>
-            <g transform="translate(9, 3) scale(0.82)">
-              <circle cx="50" cy="50" r="28" fill="#FFFFFF" fillOpacity="0.15"/>
-              <circle cx="52" cy="33" r="4.5" fill="#FFFFFF"/>
-              <path d="M48 38 L54 44 L50 56 L55 68 L50 71 L45 58 L41 48 L47 38 Z" fill="#FFFFFF"/>
-              <path d="M54 36 C59 36 62 42 59 47 C56 50 51 50 49 45 Z" fill="#FFFFFF" fillOpacity="0.9"/>
-              <path d="M44 52 L36 51 L39 48 L46 49 Z" fill="#FFFFFF" fillOpacity="0.85"/>
-              <path d="M25 52 L75 52" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M71 52 L73 47 L75 52 L73 57 L71 52 Z" fill="#FFFFFF"/>
-              <rect x="34" y="52" width="4.5" height="6.5" rx="1" fill="#FFFFFF"/>
+            <rect width="100" height="100" rx="22" fill="url(#nagadRealGrad)"/>
+            <g transform="translate(10, 8) scale(0.8)">
+              {/* Authentic Nagad hand/sun swirl with silhouette */}
+              <path d="M40,20 C55,10 75,18 80,35 C85,50 78,65 65,72 C50,80 30,75 22,60 C15,48 18,32 30,22 C40,15 55,18 62,28 C68,36 65,48 55,52 C48,55 38,50 36,42 C34,35 38,28 45,26 C50,25 55,28 56,32 C57,36 55,40 50,41" stroke="#FFFFFF" strokeWidth="6.5" strokeLinecap="round" fill="none" />
+              <path d="M48,34 C50,34 52,36 52,38 C52,40 50,42 48,42 C46,42 44,40 44,38 C44,36 46,34 48,34" fill="#FFFFFF" />
+              <path d="M46,43 L52,41 L53,50 L47,51 Z" fill="#FFFFFF" />
+              <path d="M47,51 L43,62 L46,63 L49,53 L51,53 L54,62 L57,61 L53,51 Z" fill="#FFFFFF" />
+              <path d="M42,43 L55,43" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="41" cy="45" r="2" fill="#FFFFFF" />
             </g>
-            <text x="50" y="85" textAnchor="middle" fill="#FFFFFF" fontSize="15" fontWeight="900" fontFamily="system-ui, -apple-system, 'Noto Sans Bengali', sans-serif">নগদ</text>
+            <text x="50" y="87" textAnchor="middle" fill="#FFFFFF" fontSize="15" fontWeight="900" fontFamily="system-ui, -apple-system, 'Noto Sans Bengali', sans-serif">নগদ</text>
           </svg>
         ),
         colorClass: selectedMethod === 'nagad'

@@ -190,14 +190,14 @@ export default function Layout({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-20 md:hidden"
+            className="fixed inset-0 bg-black/50 z-[55] md:hidden"
             onClick={() => setIsSidebarOpen(false)}
            />
         )}
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-30 w-56 bg-slate-950/80 border-r border-white/5 transition-all duration-500 md:translate-x-0 group overflow-hidden shadow-2xl",
+        "fixed inset-y-0 left-0 z-[60] w-56 bg-slate-950/80 border-r border-white/5 transition-all duration-500 md:translate-x-0 group overflow-hidden shadow-2xl",
         (shouldHideSidebar || !isSidebarOpen) ? "-translate-x-full md:-translate-x-full" : "translate-x-0",
         (shouldHideSidebar || !isSidebarOpen) && "md:w-0",
         settings.enableGlassmorphism && "backdrop-blur-3xl",
@@ -410,7 +410,7 @@ export default function Layout({
             })}
             {/* Admin Area */}
           </nav>
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="p-3 pb-6 md:pb-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
             <p className="text-[8px] text-center text-slate-500 font-bold tracking-tight px-3 leading-relaxed opacity-60">
               {settings.footerText.toUpperCase()}
             </p>
@@ -550,7 +550,7 @@ export default function Layout({
           </div>
 
           {!isFullScreenMode && (
-            <footer className="mt-20 pt-10 border-t border-slate-100 dark:border-slate-900 pb-10 text-center max-w-7xl mx-auto px-4 w-full">
+            <footer className="mt-20 pt-10 border-t border-slate-100 dark:border-slate-900 pb-28 md:pb-10 text-center max-w-7xl mx-auto px-4 w-full">
               <div className="flex flex-col items-center gap-4">
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   {/* Disclaimer Badge */}
@@ -580,7 +580,7 @@ export default function Layout({
 
                 {/* Meta Rows */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-[10px]">
-                  <p className="font-bold text-slate-400/60 dark:text-slate-600 uppercase tracking-widest">
+                  <p className="font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">
                     © 2024 DIH HUB (DIGITAL INNOVATION HOUSE HUB). ALL RIGHTS RESERVED
                   </p>
                   <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>

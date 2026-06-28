@@ -261,22 +261,39 @@ export default function BachelorPointManager() {
       let poster_url = fPosterUrl.trim();
       let video_url = fVideoUrl.trim();
 
-      // Upload poster to server if file chosen
+      // Convert and compress poster image to base64
       if (fPosterFile) {
         poster_file_key = `poster_${nextId}_${Date.now()}`;
         try {
           await fileStorage.saveFile(poster_file_key, fPosterFile); // Keep local copy for fast preview
         } catch (e) {}
 
-        const formData = new FormData();
-        formData.append('image', fPosterFile);
-        const upRes = await fetch('/api/admin/upload-image', {
-          method: 'POST',
-          body: formData
-        });
-        if (upRes.ok) {
-          const upData = await upRes.json();
-          poster_url = upData.url;
+        try {
+          poster_url = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const max_width = 480;
+                const scale = max_width / img.width;
+                canvas.width = max_width;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  resolve(canvas.toDataURL('image/jpeg', 0.7));
+                } else {
+                  resolve(e.target?.result as string);
+                }
+              };
+              img.src = e.target?.result as string;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(fPosterFile);
+          });
+        } catch (err) {
+          console.error("Failed to compress thumbnail to Base64:", err);
         }
       }
 
@@ -302,7 +319,7 @@ export default function BachelorPointManager() {
       const newItem: ContentItem = {
         id: nextId,
         title: fTitle.trim(),
-        description: fDesc.trim() || 'No description provided completely.',
+        description: fDesc.trim(),
         type: fType,
         poster_url: poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop',
         video_url: video_url,

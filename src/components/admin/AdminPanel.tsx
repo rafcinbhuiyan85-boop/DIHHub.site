@@ -166,6 +166,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [maintenanceConnectionStatus, setMaintenanceConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [dbConnectionError, setDbConnectionError] = useState<string | null>(null);
   const [isCopiedHtmlCode, setIsCopiedHtmlCode] = useState(false);
+  const [isCopiedRules, setIsCopiedRules] = useState(false);
 
   // SMM Management States
   const [smmSubTab, setSmmSubTab] = useState<'dashboard' | 'orders' | 'services' | 'manual-services' | 'users' | 'deposits' | 'settings' | 'providers' | 'gateways'>('dashboard');
@@ -5160,14 +5161,14 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
               {/* Troubleshooting connection issues if error occurs */}
               {dbConnectionError && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
                       <ShieldAlert size={20} />
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-amber-400">Firebase সংযোগ সংক্রান্ত সমাধান (Troubleshooting Guide)</h3>
-                      <p className="text-xs text-slate-400">যদি আপনি "Missing or insufficient permissions" এর মতো এরর দেখতে পান, তবে নিচের ৩টি ধাপ সম্পন্ন করুন:</p>
+                      <p className="text-xs text-slate-400">যদি আপনি "Missing or insufficient permissions" এর মতো এরর দেখতে পান, তবে নিচের ধাপগুলো সম্পন্ন করুন:</p>
                     </div>
                   </div>
                   
@@ -5181,9 +5182,9 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                     </div>
 
                     <div className="p-4 bg-slate-950/60 border border-slate-800/60 rounded-2xl space-y-2">
-                      <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest">ধাপ ২: সিকিউরিটি রুলস আপডেট</div>
+                      <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest">ধাপ ২: সিকিউরিটি রুলস (Rules) পেস্ট করুন</div>
                       <p className="text-xs text-slate-300 leading-relaxed">
-                        ডেটাবেজটি তৈরি থাকলে, আমাদের তৈরি করা সিকিউরিটি রুলসগুলো অটোমেটিক ডেটাবেজে কাজ শুরু করবে। নতুন ডেটাবেজ তৈরির পর বা রুলস পরিবর্তনের পর গুগল সার্ভারে রুলস সম্পূর্ণ আপডেট হতে <strong>১ থেকে ৩ মিনিট</strong> পর্যন্ত সময় লাগতে পারে। কিছুক্ষণ পর পেজটি রিলোড দিন।
+                        ডেটাবেজ তৈরির পর, ফায়ারবেস কনসোলের <strong>"Rules"</strong> ট্যাবে যান। নিচে দেওয়া বাটনটিতে ক্লিক করে রুলস কপি করুন এবং কনসোলের এডিটর বক্সে আগের সব লেখা মুছে দিয়ে পেস্ট করে <strong>"Publish"</strong> বাটনে ক্লিক করুন।
                       </p>
                     </div>
 
@@ -5193,6 +5194,38 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                         নিশ্চিত করুন যে আপনার প্রজেক্টের ফায়ারস্টোর ডেটাবেজটি <strong className="font-mono text-white">(default)</strong> মোডে তৈরি করা হয়েছে। কোনো কাস্টম নামে ডেটাবেজ তৈরি করা হয়ে থাকলে সেটি ডিফল্ট হিসেবে না পাওয়ার কারণেও পারমিশন এরর আসতে পারে।
                       </p>
                     </div>
+                  </div>
+
+                  {/* Copyable Rules Area */}
+                  <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs border-b border-slate-900 pb-2">
+                      <span className="font-bold text-slate-400 font-mono">firestore.rules</span>
+                      <button
+                        onClick={() => {
+                          const rulesText = `rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}`;
+                          navigator.clipboard.writeText(rulesText);
+                          setIsCopiedRules(true);
+                          setTimeout(() => setIsCopiedRules(false), 2000);
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95"
+                      >
+                        {isCopiedRules ? (
+                          <>✔ Copied!</>
+                        ) : (
+                          <>Copy Open Rules</>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="text-[10px] font-mono text-slate-400 leading-tight overflow-x-auto select-all max-h-[80px]">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+                    </pre>
                   </div>
                   
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-amber-500/10 text-xs text-slate-400">
