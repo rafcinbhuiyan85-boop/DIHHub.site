@@ -29,7 +29,7 @@ export function MoviesNavbar({ currentPath, onNavigate }: { currentPath: string;
     };
   }, []);
 
-  const actionGenreId = sector === 'tv' ? '10759' : sector === 'anime' ? '16' : '28';
+  const actionGenreId = sector === 'tv' ? '10759' : sector === 'anime' ? '16,10759' : '28';
 
   return (
     <nav style={{ 

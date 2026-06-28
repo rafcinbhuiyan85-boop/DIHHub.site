@@ -344,6 +344,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormGatewayInstructions, setSmmFormGatewayInstructions] = useState('');
   const [smmFormGatewayEnabled, setSmmFormGatewayEnabled] = useState(true);
   const [smmFormGatewayMinDeposit, setSmmFormGatewayMinDeposit] = useState<number>(2.5);
+  const [smmFormGatewayLogoUrl, setSmmFormGatewayLogoUrl] = useState('');
 
   const saveSmmServices = async (services: any[]) => {
     setSmmServicesList(services);
@@ -396,7 +397,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         const resSvcs = await fetch('/api/smm/services');
         if (resSvcs.ok) {
           const svcs = await resSvcs.json();
-          if (Array.isArray(svcs) && svcs.length > 0) {
+          if (Array.isArray(svcs)) {
             localStorage.setItem('dih_smm_services_v2', JSON.stringify(svcs));
             setSmmServicesList(svcs);
           }
@@ -509,9 +510,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         .then(serverUsers => {
           if (Array.isArray(serverUsers)) {
             const mappedServerUsers = serverUsers.map((su: any) => {
-              const localBalKey = `dih_smm_balance_${su.email}`;
-              const cachedBal = localStorage.getItem(localBalKey);
-              const balanceToUse = cachedBal ? parseFloat(cachedBal) : (su.balance || 0.00);
+              // Server is absolute source of truth. We only fallback to localStorage if server returns undefined/null.
+              const balanceToUse = su.balance !== undefined ? su.balance : 0.00;
               return {
                 id: su.id,
                 name: su.name,
@@ -528,18 +528,14 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
               }
             });
 
-            // Ensure real balances get applied
             const final = merged.map((u: any) => {
               if (u.id === 999 || u.email === auth.currentUser?.email) {
+                // If it is the current logged-in user, stay fully synchronized
                 const myKey = `dih_smm_balance_${u.email}`;
-                const realMyBal = parseFloat(localStorage.getItem(myKey) || localStorage.getItem('dih_smm_balance') || '0.00');
+                const realMyBal = u.balance !== undefined ? u.balance : parseFloat(localStorage.getItem(myKey) || localStorage.getItem('dih_smm_balance') || '0.00');
                 return { ...u, balance: realMyBal, email: auth.currentUser?.email || u.email };
               }
-              const specificKey = `dih_smm_balance_${u.email}`;
-              const specBal = localStorage.getItem(specificKey);
-              if (specBal) {
-                return { ...u, balance: parseFloat(specBal) };
-              }
+              // Other users' balances are authoritatively from the server!
               return u;
             });
 
@@ -1289,7 +1285,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           type: smmFormGatewayType,
           instructions: smmFormGatewayInstructions,
           enabled: smmFormGatewayEnabled,
-          minDeposit: smmFormGatewayMinDeposit
+          minDeposit: smmFormGatewayMinDeposit,
+          logoUrl: smmFormGatewayLogoUrl
         };
       }
       return g;
@@ -6768,6 +6765,7 @@ service cloud.firestore {
                                     setSmmFormGatewayInstructions(gate.instructions || '');
                                     setSmmFormGatewayEnabled(gate.enabled !== false);
                                     setSmmFormGatewayMinDeposit(gate.minDeposit !== undefined ? gate.minDeposit : 2.5);
+                                    setSmmFormGatewayLogoUrl(gate.logoUrl || '');
                                     setSmmModalTitle(`Edit Gateway: ${gate.title}`);
                                     setSmmModalType('edit-gateway');
                                     setIsSmmModalOpen(true);
@@ -7935,6 +7933,28 @@ service cloud.firestore {
                               onChange={(e) => setSmmFormGatewayTitle(e.target.value)}
                               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 mt-1 font-bold"
                             />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">Custom Gateway Logo URL (Image/Icon)</span>
+                            <div className="flex gap-3 items-center">
+                              <input
+                                type="text"
+                                value={smmFormGatewayLogoUrl}
+                                onChange={(e) => setSmmFormGatewayLogoUrl(e.target.value)}
+                                placeholder="e.g., https://domain.com/logo.png or /logo.png"
+                                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-blue-500 font-bold font-sans"
+                              />
+                              {smmFormGatewayLogoUrl && (
+                                <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden p-1 shrink-0">
+                                  <img 
+                                    src={smmFormGatewayLogoUrl} 
+                                    className="max-w-full max-h-full object-contain" 
+                                    onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }} 
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-[9px] text-slate-500 mt-1">Leave empty to use standard built-in brand SVGs (bKash, Nagad, USDT, Card, Rocket, etc.).</p>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>

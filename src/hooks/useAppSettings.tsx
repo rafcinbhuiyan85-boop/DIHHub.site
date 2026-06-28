@@ -410,7 +410,13 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   }, [settings]);
 
   useEffect(() => {
-    const faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+    let faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+    if (faviconUrl === '/favicon.png' || faviconUrl === '/favicon.ico' || faviconUrl === 'favicon.png' || faviconUrl === 'favicon.ico') {
+      faviconUrl = '/favicon-dih.png';
+    }
+    if (faviconUrl && !faviconUrl.startsWith('/') && !faviconUrl.startsWith('http') && !faviconUrl.startsWith('data:')) {
+      faviconUrl = '/' + faviconUrl;
+    }
     const links = document.querySelectorAll("link[rel*='icon']");
     links.forEach((link: any) => {
       link.href = faviconUrl;

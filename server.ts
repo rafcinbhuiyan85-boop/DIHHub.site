@@ -357,6 +357,9 @@ async function startServer() {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
+    const settings = loadData(SETTINGS_FILE, {});
+    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
+
     const newUser = {
       id: Date.now().toString(),
       name,
@@ -365,7 +368,7 @@ async function startServer() {
       registeredAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
       status: 'active',
-      balance: 0
+      balance: initialBalance
     };
 
     users.push(newUser);
@@ -404,6 +407,9 @@ async function startServer() {
       return res.json({ status: 'ok', user: { id: user.id, name: user.name, email: user.email, balance: user.balance || 0 } });
     }
 
+    const settings = loadData(SETTINGS_FILE, {});
+    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
+
     const newUser = {
       id: Date.now().toString(),
       name: name || email.split('@')[0],
@@ -412,7 +418,7 @@ async function startServer() {
       registeredAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
       status: 'active',
-      balance: 0
+      balance: initialBalance
     };
 
     users.push(newUser);
@@ -3564,6 +3570,9 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
           let html = fs.readFileSync(indexHtmlPath, 'utf8');
           const settings = loadData(SETTINGS_FILE, {});
           let faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+          if (faviconUrl === '/favicon.png' || faviconUrl === '/favicon.ico' || faviconUrl === 'favicon.png' || faviconUrl === 'favicon.ico') {
+            faviconUrl = '/favicon-dih.png';
+          }
           if (faviconUrl && !faviconUrl.startsWith('/') && !faviconUrl.startsWith('http') && !faviconUrl.startsWith('data:')) {
             faviconUrl = '/' + faviconUrl;
           }

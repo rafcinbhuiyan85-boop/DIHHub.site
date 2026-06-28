@@ -6,7 +6,7 @@ import {
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video, Zap, FileText,
-  Gamepad2, ShieldCheck
+  Gamepad2, ShieldCheck, Copy, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -171,6 +171,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   // Dynamic Gateway configuration sync from admin settings
   const [manualGateways, setManualGateways] = useState<any[]>([]);
   const [localDeposits, setLocalDeposits] = useState<any[]>([]);
+  const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
 
   // Step-by-Step Payment Screenshot OCR Verification States
   const [depositStep, setDepositStep] = useState<'form' | 'verify'>('form');
@@ -451,9 +452,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       if (cachedBalance) {
         setBalance(parseFloat(cachedBalance));
       } else {
-        const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
-        setBalance(initialBalance);
-        localStorage.setItem(balanceKey, initialBalance.toFixed(2));
+        if (isLoggedIn) {
+          // If logged in, wait for server response to fetch real balance instead of defaulting to $50
+          setBalance(0.00);
+        } else {
+          const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
+          setBalance(initialBalance);
+          localStorage.setItem(balanceKey, initialBalance.toFixed(2));
+        }
       }
 
       if (cachedOrders) {
@@ -558,7 +564,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     };
 
     fetchBalanceObj();
-    const interval = setInterval(fetchBalanceObj, 15000); // 15 seconds
+    const interval = setInterval(fetchBalanceObj, 5000); // 5 seconds
     return () => clearInterval(interval);
   }, [isLoggedIn, userEmail, balanceKey]);
 
@@ -570,7 +576,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         const resSvcs = await fetch('/api/smm/services');
         if (resSvcs.ok) {
           const svcs = await resSvcs.json();
-          if (Array.isArray(svcs) && svcs.length > 0) {
+          if (Array.isArray(svcs)) {
             localStorage.setItem('dih_smm_services_v2', JSON.stringify(svcs));
             setServicesList(svcs);
           }
@@ -705,7 +711,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
   };
 
-  const getGatewayBrandInfo = (gateId: string, defaultName: string) => {
+  const getGatewayBrandInfo = (gateId: string, defaultName: string, logoUrl?: string) => {
     const id = (gateId || '').trim().toLowerCase();
     const title = (defaultName || '').trim().toLowerCase();
 
@@ -716,6 +722,44 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const isCard = id.includes('card') || title.includes('card') || title.includes('visa') || title.includes('master');
     const isBinance = id.includes('binance') || id.includes('binace') || title.includes('binance') || title.includes('binace');
     const isUsdt = id.includes('usdt') || id.includes('tether') || title.includes('usdt') || title.includes('tether');
+
+    let baseColorClass = '';
+    if (isBkash) {
+      baseColorClass = selectedMethod === 'bkash'
+        ? 'bg-pink-600/10 text-pink-400 border-pink-500 shadow-lg shadow-pink-600/15'
+        : 'border-[#1e2336] bg-pink-500/5 text-pink-400 hover:text-white hover:bg-pink-550/10 hover:border-pink-500/30';
+    } else if (isNagad) {
+      baseColorClass = selectedMethod === 'nagad'
+        ? 'bg-orange-600/10 text-orange-400 border-orange-500 shadow-lg shadow-orange-600/15'
+        : 'border-[#1e2336] bg-orange-500/5 text-orange-400 hover:text-white hover:bg-orange-550/10 hover:border-orange-500/30';
+    } else if (isUsdt) {
+      baseColorClass = selectedMethod === 'usdt'
+        ? 'bg-emerald-600/10 text-emerald-400 border-emerald-500 shadow-lg shadow-emerald-600/15'
+        : 'border-[#1e2336] bg-emerald-500/5 text-emerald-400 hover:text-white hover:bg-emerald-500/10 hover:border-emerald-500/30';
+    } else {
+      baseColorClass = selectedMethod === gateId
+        ? 'bg-slate-700/20 text-white border-slate-600 shadow-md'
+        : 'border-[#1e2336] bg-[#141720]/50 text-slate-400 hover:text-white hover:border-[#2d3748]';
+    }
+
+    if (logoUrl && logoUrl.trim() !== '') {
+      return {
+        label: defaultName || gateId,
+        logo: (
+          <img 
+            src={logoUrl} 
+            alt={defaultName} 
+            className="w-full h-full object-contain rounded" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        ),
+        colorClass: baseColorClass || (selectedMethod === gateId
+          ? 'bg-blue-600/10 text-blue-400 border-blue-500 shadow-lg shadow-blue-600/15'
+          : 'border-[#1e2336] bg-[#141720]/50 text-slate-400 hover:text-white hover:border-[#2d3748]')
+      };
+    }
 
     if (isBkash) {
       return {
@@ -2879,7 +2923,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-sans">
                               {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
-                                const brand = getGatewayBrandInfo(gate.id, gate.title);
+                                const brand = getGatewayBrandInfo(gate.id, gate.title, gate.logoUrl);
                                 return (
                                   <button
                                     key={gate.id}
@@ -2916,21 +2960,39 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-black text-[9px] uppercase">{activeGate.type || 'Personal'}</span>
                               </div>
 
-                              <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-lg p-3 flex justify-between items-center font-mono text-xs">
-                                <span className="text-slate-400">Account:</span>
-                                <span className="text-white font-extrabold select-all flex items-center gap-1.5">
-                                  {activeGate.numberOrAddress}
+                              <div className="space-y-1.5 font-sans">
+                                <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Account / Address</span>
+                                <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 font-mono text-xs overflow-hidden">
+                                  <span className="text-white font-extrabold select-all break-all text-left bg-black/40 p-2.5 rounded border border-white/5 flex-1 tracking-wide leading-relaxed">
+                                    {activeGate.numberOrAddress}
+                                  </span>
                                   <button 
                                     type="button"
                                     onClick={() => {
                                       navigator.clipboard.writeText(activeGate.numberOrAddress);
-                                      alert('Account details copied to clipboard!');
+                                      setCopiedAddress(true);
+                                      setTimeout(() => setCopiedAddress(false), 2000);
                                     }}
-                                    className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/5 px-1.5 py-0.5 rounded font-sans cursor-pointer active:scale-95 transition-all"
+                                    className={cn(
+                                      "w-full md:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 active:scale-95",
+                                      copiedAddress 
+                                        ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20" 
+                                        : "bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/15"
+                                    )}
                                   >
-                                    Copy
+                                    {copiedAddress ? (
+                                      <>
+                                        <Check size={13} strokeWidth={3} />
+                                        <span>Copied!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={13} strokeWidth={2.5} />
+                                        <span>Copy</span>
+                                      </>
+                                    )}
                                   </button>
-                                </span>
+                                </div>
                               </div>
 
                               <div className="text-[11px] text-slate-400 italic leading-relaxed bg-[#0c0e14]/40 border border-[#1e2336]/30 p-2 rounded">

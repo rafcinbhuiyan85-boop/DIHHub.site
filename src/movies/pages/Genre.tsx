@@ -12,6 +12,7 @@ export function MoviesGenre({ genreId, onNavigate, onBack }: { genreId: string; 
   if (!genreName) {
     if (genreId === '10759') genreName = 'Action & Adventure';
     else if (genreId === '16') genreName = 'Animation';
+    else if (genreId === '16,10759') genreName = 'Action Animation';
     else genreName = 'Genre';
   }
 
