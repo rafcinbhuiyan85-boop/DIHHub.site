@@ -345,6 +345,35 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmFormGatewayEnabled, setSmmFormGatewayEnabled] = useState(true);
   const [smmFormGatewayMinDeposit, setSmmFormGatewayMinDeposit] = useState<number>(2.5);
   const [smmFormGatewayLogoUrl, setSmmFormGatewayLogoUrl] = useState('');
+  const [gatewayLogoUploading, setGatewayLogoUploading] = useState(false);
+
+  const handleUploadGatewayLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setGatewayLogoUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSmmFormGatewayLogoUrl(data.url);
+        setSmmToast({ message: "Gateway logo uploaded successfully!", type: 'success' });
+      } else {
+        setSmmToast({ message: "Gateway logo upload failed.", type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setSmmToast({ message: "Gateway logo upload error.", type: 'error' });
+    } finally {
+      setGatewayLogoUploading(false);
+    }
+  };
 
   const saveSmmServices = async (services: any[]) => {
     setSmmServicesList(services);
@@ -1210,7 +1239,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       const markupMultiplier = parseFloat(importMarkup) || 1.5;
       
       const newImportedServices = apiServices
-        .filter(s => selectedApiSvcIds.includes(s.id))
+        .filter(s => selectedApiSvcIds.map(String).includes(String(s.id)))
         .map(apiSvc => {
           maxId++;
           const calculatedPrice = parseFloat((apiSvc.originalPrice * markupMultiplier).toFixed(4));
@@ -7935,7 +7964,20 @@ service cloud.firestore {
                             />
                           </div>
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">Custom Gateway Logo URL (Image/Icon)</span>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Custom Gateway Logo URL (Image/Icon)</span>
+                              <label className="text-[10px] font-black uppercase tracking-wider text-blue-400 hover:text-blue-350 cursor-pointer flex items-center gap-1 select-none">
+                                <Upload size={10} className={gatewayLogoUploading ? "animate-bounce" : ""} />
+                                {gatewayLogoUploading ? 'Uploading...' : 'Upload Logo'}
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                  onChange={handleUploadGatewayLogo} 
+                                  disabled={gatewayLogoUploading}
+                                />
+                              </label>
+                            </div>
                             <div className="flex gap-3 items-center">
                               <input
                                 type="text"
@@ -7954,7 +7996,7 @@ service cloud.firestore {
                                 </div>
                               )}
                             </div>
-                            <p className="text-[9px] text-slate-500 mt-1">Leave empty to use standard built-in brand SVGs (bKash, Nagad, USDT, Card, Rocket, etc.).</p>
+                            <p className="text-[9px] text-slate-500 mt-1">Leave empty to use standard built-in brand SVGs (bKash, Nagad, USDT, Card, Rocket, etc.). You can paste any image link or upload directly from your gallery.</p>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>

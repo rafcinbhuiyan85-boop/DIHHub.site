@@ -814,6 +814,8 @@ export default function BachelorPoint() {
                 key={getVideoUrl(activeWatchItem)}
                 ref={playerRef}
                 controls 
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
                 autoPlay 
                 preload="metadata" 
                 poster={getPosterUrl(activeWatchItem)}
@@ -825,7 +827,7 @@ export default function BachelorPoint() {
               
               {/* Custom Logo overlay like HTML */}
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-slate-800 pointer-events-none">
-                <span className="text-[10px] font-black text-white/95">DIH <span className="text-[var(--bp-primary)]">CINEMA</span></span>
+                <span className="text-[10px] font-black text-white/95">DIH <span className="text-[var(--bp-primary)]">HUB</span></span>
               </div>
             </div>
 

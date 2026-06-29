@@ -357,9 +357,6 @@ async function startServer() {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const settings = loadData(SETTINGS_FILE, {});
-    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
-
     const newUser = {
       id: Date.now().toString(),
       name,
@@ -368,7 +365,7 @@ async function startServer() {
       registeredAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
       status: 'active',
-      balance: initialBalance
+      balance: 0.00
     };
 
     users.push(newUser);
@@ -407,9 +404,6 @@ async function startServer() {
       return res.json({ status: 'ok', user: { id: user.id, name: user.name, email: user.email, balance: user.balance || 0 } });
     }
 
-    const settings = loadData(SETTINGS_FILE, {});
-    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
-
     const newUser = {
       id: Date.now().toString(),
       name: name || email.split('@')[0],
@@ -418,7 +412,7 @@ async function startServer() {
       registeredAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
       status: 'active',
-      balance: initialBalance
+      balance: 0.00
     };
 
     users.push(newUser);
@@ -790,11 +784,12 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   }
 
   app.get("/api/smm/services", (req, res) => {
-    let services = loadData(SMM_SERVICES_FILE, []);
-    if (!Array.isArray(services) || services.length === 0) {
-      services = getInitialSmmServices();
+    if (!fs.existsSync(SMM_SERVICES_FILE)) {
+      const services = getInitialSmmServices();
       saveData(SMM_SERVICES_FILE, services);
+      return res.json(services);
     }
+    const services = loadData(SMM_SERVICES_FILE, []);
     res.json(services);
   });
 
@@ -1195,6 +1190,41 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
     await saveData(STORE_FILE, filtered);
     res.json({ status: 'ok' });
   });
+  
+  // Custom dynamic favicon router to always ensure custom logo/favicon shows
+  const serveFavicon = (req: any, res: any) => {
+    try {
+      const settings = loadData(SETTINGS_FILE, {});
+      let faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+      if (faviconUrl === '/favicon.png' || faviconUrl === '/favicon.ico' || faviconUrl === 'favicon.png' || faviconUrl === 'favicon.ico') {
+        faviconUrl = '/favicon-dih.png';
+      }
+      if (faviconUrl.startsWith('http') || faviconUrl.startsWith('data:')) {
+        return res.redirect(faviconUrl);
+      }
+      const cleanPath = faviconUrl.replace(/^\//, '');
+      const customPath = path.join(process.cwd(), 'public', cleanPath);
+      if (fs.existsSync(customPath)) {
+        return res.sendFile(customPath);
+      }
+      const distCustomPath = path.join(process.cwd(), 'dist', cleanPath);
+      if (fs.existsSync(distCustomPath)) {
+        return res.sendFile(distCustomPath);
+      }
+      // Fallback
+      res.sendFile(path.join(process.cwd(), 'public', 'favicon-dih.png'));
+    } catch (e) {
+      try {
+        res.sendFile(path.join(process.cwd(), 'public', 'favicon-dih.png'));
+      } catch (err) {
+        res.status(404).send();
+      }
+    }
+  };
+
+  app.get('/favicon.ico', serveFavicon);
+  app.get('/favicon.png', serveFavicon);
+  app.get('/favicon-dih.png', serveFavicon);
   
   app.use('/api/uploads', express.static(UPLOADS_DIR));
 
@@ -2163,7 +2193,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
                 url: videoUrl,
                 thumbnail: thumbUrl,
                 title: data.title || 'Processed Video',
-                source: 'RapidAPI Premium'
+                source: 'DihSave Premium'
               });
             }
           }
