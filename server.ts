@@ -107,11 +107,10 @@ const loadData = (file: string, defaultVal: any) => {
 
 const saveData = async (file: string, data: any) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
-  try {
-    await saveToCloud(file, data);
-  } catch (err) {
-    console.error("Cloud sync backup failed:", err);
-  }
+  // Run cloud sync asynchronously in background to prevent blocking Express API response loop and causing gateway timeouts
+  saveToCloud(file, data).catch(err => {
+    console.error("[Background CloudSync] backup failed:", err);
+  });
 };
 
 const refundUserBalance = async (email: string, amount: number) => {

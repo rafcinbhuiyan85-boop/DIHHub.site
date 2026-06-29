@@ -1262,7 +1262,10 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       const mergedList = [...smmServicesList];
       let newlyAdded = 0;
       newImportedServices.forEach(neu => {
-        const existingIndex = mergedList.findIndex(s => s.providerId === neu.providerId && s.providerServiceId === neu.providerServiceId);
+        const existingIndex = mergedList.findIndex(s => 
+          String(s.providerId).trim() === String(neu.providerId).trim() && 
+          String(s.providerServiceId).trim() === String(neu.providerServiceId).trim()
+        );
         if (existingIndex !== -1) {
           mergedList[existingIndex] = {
             ...mergedList[existingIndex],

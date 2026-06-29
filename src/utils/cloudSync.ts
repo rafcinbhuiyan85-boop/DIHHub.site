@@ -232,20 +232,53 @@ export async function saveToCloud(filePath: string, data: any): Promise<void> {
       const localIds = new Set(data.map(item => item && item.id ? String(item.id) : '').filter(Boolean));
 
       // 1. Delete items from cloud that are NOT in local array anymore
+      const deletePromises: Promise<any>[] = [];
       for (const cid of cloudIds) {
         if (!localIds.has(String(cid))) {
           const docRef = doc(firestoreDb, collectionName, String(cid));
-          await deleteDoc(docRef);
-          console.log(`🗑️ [CloudSync] Deleted ${cid} from cloud collection: ${collectionName}`);
+          deletePromises.push(deleteDoc(docRef));
         }
       }
 
-      // 2. Upload/update local items to cloud
+      // Chunk array helper for parallelizing writes safely without overloading connection limit
+      const chunkArray = <T>(arr: T[], size: number): T[][] => {
+        const chunks: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) {
+          chunks.push(arr.slice(i, i + size));
+        }
+        return chunks;
+      };
+
+      if (deletePromises.length > 0) {
+        console.log(`🗑️ [CloudSync] Initiating parallel deletion of ${deletePromises.length} items from ${collectionName}...`);
+        const deleteChunks = chunkArray(deletePromises, 80);
+        for (const chunk of deleteChunks) {
+          await Promise.all(chunk);
+        }
+        console.log(`✅ [CloudSync] Deleted stale items from cloud collection: ${collectionName}`);
+      }
+
+      // 2. Upload/update local items to cloud in parallel chunks
+      const uploadPromises: Promise<any>[] = [];
       for (const item of data) {
         if (item && item.id) {
           const docRef = doc(firestoreDb, collectionName, String(item.id));
-          await setDoc(docRef, item);
+          uploadPromises.push(setDoc(docRef, item));
         }
+      }
+
+      if (uploadPromises.length > 0) {
+        console.log(`📤 [CloudSync] Uploading ${uploadPromises.length} items to cloud collection ${collectionName} in parallel chunks...`);
+        const uploadChunks = chunkArray(uploadPromises, 80);
+        let chunkIndex = 0;
+        for (const chunk of uploadChunks) {
+          chunkIndex++;
+          await Promise.all(chunk);
+          if (chunkIndex % 5 === 0 || chunkIndex === uploadChunks.length) {
+            console.log(`📈 [CloudSync] Uploaded progress: ${chunkIndex}/${uploadChunks.length} chunks for ${collectionName}`);
+          }
+        }
+        console.log(`✅ [CloudSync] Successfully synchronized all ${uploadPromises.length} items to cloud collection: ${collectionName}`);
       }
     }
   } catch (error) {
