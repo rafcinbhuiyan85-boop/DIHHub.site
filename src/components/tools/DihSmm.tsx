@@ -456,7 +456,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           // If logged in, wait for server response to fetch real balance instead of defaulting to $50
           setBalance(0.00);
         } else {
-          const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50.00;
+          const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 0.00;
           setBalance(initialBalance);
           localStorage.setItem(balanceKey, initialBalance.toFixed(2));
         }
@@ -573,7 +573,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const syncWithServer = async () => {
       try {
         // 1. Services
-        const resSvcs = await fetch('/api/smm/services');
+        const resSvcs = await fetch(`/api/smm/services?t=${Date.now()}`);
         if (resSvcs.ok) {
           const svcs = await resSvcs.json();
           if (Array.isArray(svcs)) {
@@ -583,7 +583,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         }
         
         // 2. Orders
-        const resOrders = await fetch('/api/smm/orders');
+        const resOrders = await fetch(`/api/smm/orders?t=${Date.now()}`);
         if (resOrders.ok) {
           const ordersVal = await resOrders.json();
           if (Array.isArray(ordersVal)) {
@@ -606,7 +606,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         }
 
         // 3. Deposits
-        const resDeps = await fetch('/api/smm/deposits');
+        const resDeps = await fetch(`/api/smm/deposits?t=${Date.now()}`);
         if (resDeps.ok) {
           const deps = await resDeps.json();
           if (Array.isArray(deps)) {

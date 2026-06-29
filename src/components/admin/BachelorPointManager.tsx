@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Trash2, Save, Upload, Video, ChevronLeft, 
-  Check, X, Film, Sparkles, Activity, Clock, Calendar, Eye, Tv
+  Check, X, Film, Sparkles, Activity, Clock, Calendar, Eye, Tv, Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import bachelorPointS5Poster from '../../assets/images/bachelor_point_s5_premium_1781464542219.jpg';
@@ -102,8 +102,9 @@ const INITIAL_CONTENTS: ContentItem[] = [];
 
 export default function BachelorPointManager() {
   const [contents, setContents] = useState<ContentItem[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'add'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'add' | 'edit'>('list');
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'ok' | 'err' }[]>([]);
+  const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
 
   // Form states
   const [fTitle, setFTitle] = useState('');
@@ -391,6 +392,173 @@ export default function BachelorPointManager() {
     }
   };
 
+  const handleStartEdit = (item: ContentItem) => {
+    setEditingItem(item);
+    setFTitle(item.title);
+    setFType(item.type);
+    setFCat(item.category_id.toString());
+    setFDesc(item.description || '');
+    setFYear(item.release_year ? item.release_year.toString() : '');
+    setFDur(item.duration_minutes ? item.duration_minutes.toString() : '');
+    setFFeat(item.is_featured || false);
+    setFPosterUrl(item.poster_url || '');
+    setFVideoUrl(item.video_url || '');
+    setFPosterFile(null);
+    setFVideoFile(null);
+    setViewMode('edit');
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    if (!fTitle.trim()) {
+      triggerToast('Title and basic fields are required.', 'err');
+      return;
+    }
+
+    if (!fVideoFile && !fVideoUrl.trim()) {
+      triggerToast('Please select a video file or enter a direct video streaming URL.', 'err');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      let poster_file_key = editingItem.poster_file_key || '';
+      let video_file_key = editingItem.video_file_key || '';
+      let poster_url = fPosterUrl.trim();
+      let video_url = fVideoUrl.trim();
+
+      // Convert and compress poster image to base64
+      if (fPosterFile) {
+        poster_file_key = `poster_${editingItem.id}_${Date.now()}`;
+        try {
+          await fileStorage.saveFile(poster_file_key, fPosterFile); // Keep local copy for fast preview
+        } catch (e) {}
+
+        try {
+          poster_url = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const max_width = 480;
+                const scale = max_width / img.width;
+                canvas.width = max_width;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  resolve(canvas.toDataURL('image/jpeg', 0.7));
+                } else {
+                  resolve(e.target?.result as string);
+                }
+              };
+              img.src = e.target?.result as string;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(fPosterFile);
+          });
+        } catch (err) {
+          console.error("Failed to compress thumbnail to Base64:", err);
+        }
+      }
+
+      // Upload video to server if file chosen
+      if (fVideoFile) {
+        video_file_key = `video_${editingItem.id}_${Date.now()}`;
+        try {
+          await fileStorage.saveFile(video_file_key, fVideoFile); // Keep local copy for fast preview
+        } catch (e) {}
+
+        const formData = new FormData();
+        formData.append('video', fVideoFile);
+        const upRes = await fetch('/api/bachelor/upload-video', {
+          method: 'POST',
+          body: formData
+        });
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          video_url = upData.url;
+        }
+      }
+
+      const updatedItem: ContentItem = {
+        ...editingItem,
+        title: fTitle.trim(),
+        description: fDesc.trim(),
+        type: fType,
+        poster_url: poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop',
+        video_url: video_url,
+        release_year: parseInt(fYear) || new Date().getFullYear(),
+        duration_minutes: parseInt(fDur) || 25,
+        category_id: parseInt(fCat) || 3,
+        is_featured: fFeat
+      };
+
+      if (poster_file_key) updatedItem.poster_file_key = poster_file_key;
+      if (video_file_key) updatedItem.video_file_key = video_file_key;
+
+      const updated = contents.map(c => c.id === editingItem.id ? updatedItem : c);
+      setContents(updated);
+      
+      const saved = localStorage.getItem(STORAGE_KEY);
+      let catData = KEY_CATEGORIES;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.categories) catData = parsed.categories;
+        } catch(e) {}
+      }
+
+      const fullData = {
+        categories: catData,
+        contents: updated
+      };
+
+      // Save to server
+      await fetch('/api/bachelor/contents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullData)
+      });
+
+      // Save back to LocalStorage custom data
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fullData));
+
+      // Dispatch custom storage sync event
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('bp_storage_update'));
+      try {
+        const bChan = new BroadcastChannel('bp_storage_sync');
+        bChan.postMessage('bp_storage_update');
+        bChan.close();
+      } catch (e) {}
+
+      triggerToast(`Successfully edited "${fTitle}" stream metadata!`, 'ok');
+
+      // Clear Form Fields
+      setFTitle('');
+      setFDesc('');
+      setFYear('');
+      setFDur('');
+      setFFeat(false);
+      setFPosterFile(null);
+      setFVideoFile(null);
+      setFPosterUrl('');
+      setFVideoUrl('');
+      setEditingItem(null);
+      setViewMode('list');
+
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to edit stream metadata asset', 'err');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDelete = async (id: number, title: string) => {
     // Non-blocking, secure deletion without window.confirm (which is blocked by iframe security policies)
     const item = contents.find(c => c.id === id);
@@ -543,34 +711,44 @@ export default function BachelorPointManager() {
                           </div>
                         </td>
                         <td className="p-4 text-right whitespace-nowrap">
-                          {deletingId === item.id ? (
+                          <div className="inline-flex items-center gap-1.5">
                             <button 
                               type="button" 
-                              onClick={() => {
-                                handleDelete(item.id, item.title);
-                                setDeletingId(null);
-                              }}
-                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all animate-pulse"
-                              title="Click again to confirm complete deletion"
+                              onClick={() => handleStartEdit(item)}
+                              className="p-2 bg-blue-500/10 hover:bg-blue-500 text-blue-450 hover:text-white rounded-lg transition-all"
+                              title="Edit stream metadata"
                             >
-                              Confirm?
+                              <Edit size={13} />
                             </button>
-                          ) : (
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setDeletingId(item.id);
-                                // Auto reset after 4s
-                                setTimeout(() => {
-                                  setDeletingId(current => current === item.id ? null : current);
-                                }, 4000);
-                              }}
-                              className="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg transition-all"
-                              title="Delete completely"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
+                            {deletingId === item.id ? (
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  handleDelete(item.id, item.title);
+                                  setDeletingId(null);
+                                }}
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all animate-pulse"
+                                title="Click again to confirm complete deletion"
+                              >
+                                Confirm?
+                              </button>
+                            ) : (
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  setDeletingId(item.id);
+                                  // Auto reset after 4s
+                                  setTimeout(() => {
+                                    setDeletingId(current => current === item.id ? null : current);
+                                  }, 4000);
+                                }}
+                                className="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg transition-all"
+                                title="Delete completely"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -581,14 +759,14 @@ export default function BachelorPointManager() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleAddSubmit} className="bg-slate-950 border border-slate-900 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl max-w-4xl mx-auto">
+        <form onSubmit={viewMode === 'edit' ? handleEditSubmit : handleAddSubmit} className="bg-slate-950 border border-slate-900 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl max-w-4xl mx-auto">
           <div>
             <h3 className="text-lg font-black uppercase text-white tracking-wider flex items-center gap-2">
               <Sparkles size={18} className="text-[#e5173f]" />
-              Metadata Upload Panel
+              {viewMode === 'edit' ? 'Edit Stream Metadata' : 'Metadata Upload Panel'}
             </h3>
             <p className="text-xs text-slate-500 font-semibold mt-1">
-              Select local files from your device gallery. All data stays client-side.
+              {viewMode === 'edit' ? 'Modify the selected stream parameters. Leaving file inputs blank preserves existing media.' : 'Select local files from your device gallery. All data stays client-side.'}
             </p>
           </div>
 
@@ -764,7 +942,7 @@ export default function BachelorPointManager() {
               ) : (
                 <>
                   <Save size={14} />
-                  Save manually
+                  {viewMode === 'edit' ? 'Update Release' : 'Save manually'}
                 </>
               )}
             </button>

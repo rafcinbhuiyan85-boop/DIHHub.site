@@ -476,7 +476,7 @@ async function startServer() {
     // If user does not exist on the server (e.g. they loaded SMM Panel using a guest mail or a newly typed email),
     // automatically provision a server-side account for them to store their transactions and balance securely!
     const settings = loadData(SETTINGS_FILE, {});
-    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 50;
+    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 0;
 
     user = {
       id: "usr_" + Date.now() + "_" + Math.floor(Math.random() * 1000),

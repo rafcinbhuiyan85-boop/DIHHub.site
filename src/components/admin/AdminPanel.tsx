@@ -423,7 +423,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     
     const syncWithServer = async () => {
       try {
-        const resSvcs = await fetch('/api/smm/services');
+        const resSvcs = await fetch(`/api/smm/services?t=${Date.now()}`);
         if (resSvcs.ok) {
           const svcs = await resSvcs.json();
           if (Array.isArray(svcs)) {
@@ -431,7 +431,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             setSmmServicesList(svcs);
           }
         }
-        const resOrders = await fetch('/api/smm/orders');
+        const resOrders = await fetch(`/api/smm/orders?t=${Date.now()}`);
         if (resOrders.ok) {
           const ords = await resOrders.json();
           if (Array.isArray(ords)) {
@@ -439,7 +439,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             setSmmOrders(ords);
           }
         }
-        const resDeps = await fetch('/api/smm/deposits');
+        const resDeps = await fetch(`/api/smm/deposits?t=${Date.now()}`);
         if (resDeps.ok) {
           const deps = await resDeps.json();
           if (Array.isArray(deps)) {
@@ -889,7 +889,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     let updated = [];
     if (smmModalType === 'add-provider') {
       const newProv = {
-        id: smmProviders.length ? Math.max(...smmProviders.map(p => p.id)) + 1 : 1,
+        id: smmProviders.length ? Math.max(...smmProviders.map(p => Number(p.id) || 0)) + 1 : 1,
         name: smmFormProvName,
         apiUrl: smmFormProvUrl,
         apiKey: smmFormProvKey,
@@ -1235,7 +1235,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setImportStep('importing');
     
     setTimeout(() => {
-      let maxId = smmServicesList.length ? Math.max(...smmServicesList.map(s => s.id)) : 0;
+      let maxId = smmServicesList.length ? Math.max(...smmServicesList.map(s => Number(s.id) || 0)) : 0;
       const markupMultiplier = parseFloat(importMarkup) || 1.5;
       
       const newImportedServices = apiServices

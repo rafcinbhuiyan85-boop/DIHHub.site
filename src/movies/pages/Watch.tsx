@@ -160,7 +160,7 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
           />
         )}
         <div style={{ position:'absolute', top:8, right:0, width:110, height:34, background:'#000', zIndex:30, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:12 }}>
-          <span style={{ fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.85)' }}>DIH <span style={{ color:'#F59E0B' }}>CINEMA</span></span>
+          <span style={{ fontSize:10, fontWeight:900, color:'rgba(255,255,255,0.85)' }}>DIH <span style={{ color:'#e5173f' }}>HUB</span></span>
         </div>
       </div>
     </div>
