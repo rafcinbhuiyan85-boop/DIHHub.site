@@ -5818,18 +5818,18 @@ service cloud.firestore {
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs text-slate-300">
+                    <div className="overflow-x-auto custom-scrollbar">
+                      <table className="w-full text-left text-xs text-slate-300 min-w-[750px]">
                         <thead>
                           <tr className="border-b border-slate-800/80 text-slate-500 font-bold">
-                            <th className="pb-3 text-[10px] uppercase">ID</th>
-                            <th className="pb-3 text-[10px] uppercase">User Profile</th>
-                            <th className="pb-3 text-[10px] uppercase">Ordered package</th>
-                            <th className="pb-3 text-[10px] uppercase w-[150px]">Target Social Link</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Quantity</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Charged</th>
-                            <th className="pb-3 text-[10px] uppercase text-center">Status</th>
-                            <th className="pb-3 text-[10px] uppercase text-right">Action</th>
+                            <th className="pb-3 text-[10px] uppercase w-12">ID</th>
+                            <th className="pb-3 text-[10px] uppercase w-40">User Profile</th>
+                            <th className="pb-3 text-[10px] uppercase">Ordered Package</th>
+                            <th className="pb-3 text-[10px] uppercase w-44">Target Social Link</th>
+                            <th className="pb-3 text-[10px] uppercase text-right w-20">Quantity</th>
+                            <th className="pb-3 text-[10px] uppercase text-right w-20">Charged</th>
+                            <th className="pb-3 text-[10px] uppercase text-center w-28">Status</th>
+                            <th className="pb-3 text-[10px] uppercase text-right w-28">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/40">
@@ -5837,36 +5837,72 @@ service cloud.firestore {
                             .map((o) => {
                               const usr = smmUsers.find(u => u.id === o.userId) || { name: 'Guest Client', email: 'guest@smm.com' };
                               return (
-                                <tr key={o.id} className="hover:bg-slate-900/10 transition">
-                                  <td className="py-3.5 font-mono text-slate-500 text-[11px]">#{o.id}</td>
-                                  <td className="py-3.5">
+                                <tr key={o.id} className="hover:bg-slate-900/15 transition duration-150">
+                                  <td className="py-3 font-mono text-slate-500 text-[11px]">#{o.id}</td>
+                                  <td className="py-3">
                                     <p className="font-bold text-slate-200">{usr.name}</p>
-                                    <span className="text-[10px] text-slate-500">{usr.email}</span>
+                                    <span className="text-[10px] text-slate-500 block truncate max-w-[150px]">{usr.email}</span>
                                   </td>
-                                  <td className="py-3.5 max-w-[200px] leading-relaxed truncate">
-                                    <p className="font-medium text-slate-200">{o.serviceName}</p>
-                                    <span className="text-[9px] text-slate-500 uppercase font-black font-mono tracking-wider">{o.category}</span>
+                                  <td className="py-3 max-w-[180px] leading-relaxed">
+                                    <p className="font-medium text-slate-200 truncate" title={o.serviceName}>{o.serviceName}</p>
+                                    <span className="text-[9px] text-blue-400 font-black font-mono tracking-wider">{o.category}</span>
                                   </td>
-                                  <td className="py-3.5 max-w-[150px] truncate">
-                                    <a href={o.link} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{o.link}</a>
+                                  <td className="py-3 max-w-[160px]">
+                                    <div className="flex items-center gap-1.5">
+                                      <a 
+                                        href={o.link} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="text-blue-400 hover:underline truncate block max-w-[120px] font-mono text-[11px]"
+                                        title={o.link}
+                                      >
+                                        {o.link}
+                                      </a>
+                                      <button
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(o.link || '');
+                                          setSmmToast({ message: "Link copied to clipboard!", type: 'success' });
+                                        }}
+                                        className="text-slate-500 hover:text-slate-300 transition"
+                                        title="Copy URL"
+                                      >
+                                        <Copy size={11} />
+                                      </button>
+                                    </div>
                                   </td>
-                                  <td className="py-3.5 text-right font-mono text-slate-300 font-bold">{o.quantity.toLocaleString()}</td>
-                                  <td className="py-3.5 text-right font-mono text-blue-400 font-bold">${o.amount.toFixed(2)}</td>
-                                  <td className="py-3.5 text-center">
-                                    <span className={cn(
-                                      "px-2.5 py-0.5 rounded-full text-[9px] font-bold capitalize border",
-                                      o.status === 'completed' ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/15" :
-                                      o.status === 'processing' ? "bg-blue-500/5 text-blue-400 border-blue-500/15" :
-                                      o.status === 'pending' ? "bg-amber-500/5 text-amber-400 border-amber-500/15" :
-                                      "bg-red-500/5 text-red-500 border-red-500/15"
-                                    )}>
-                                      {o.status}
-                                    </span>
+                                  <td className="py-3 text-right font-mono text-slate-300 font-bold">{o.quantity.toLocaleString()}</td>
+                                  <td className="py-3 text-right font-mono text-emerald-400 font-bold">${o.amount.toFixed(4)}</td>
+                                  <td className="py-3 text-center">
+                                    <select
+                                      value={o.status}
+                                      onChange={(e) => {
+                                        const newStatus = e.target.value;
+                                        const updated = smmOrders.map(item => {
+                                          if (item.id === o.id) {
+                                            return { ...item, status: newStatus };
+                                          }
+                                          return item;
+                                        });
+                                        saveSmmOrders(updated);
+                                        setSmmToast({ message: `Order #${o.id} status updated to ${newStatus}`, type: 'success' });
+                                      }}
+                                      className={cn(
+                                        "bg-[#08090d] border border-slate-800 rounded-lg px-2 py-0.5 text-[10px] font-bold capitalize outline-none cursor-pointer text-center",
+                                        o.status === 'completed' ? "text-emerald-400 border-emerald-500/30" :
+                                        o.status === 'processing' ? "text-blue-400 border-blue-500/30" :
+                                        o.status === 'pending' ? "text-amber-400 border-amber-500/30" :
+                                        "text-red-400 border-red-500/30"
+                                      )}
+                                    >
+                                      {['pending', 'processing', 'completed', 'cancelled', 'partial'].map(st => (
+                                        <option key={st} value={st} className="bg-[#0b0c10] text-slate-300 capitalize">{st}</option>
+                                      ))}
+                                    </select>
                                   </td>
-                                  <td className="py-3.5 text-right font-medium">
+                                  <td className="py-3 text-right font-medium">
                                     <div className="flex gap-1.5 justify-end items-center">
                                       {smmDeletingOrderId === o.id ? (
-                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
+                                        <div className="flex items-center gap-1 animate-in fade-in duration-100">
                                           <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
                                           <button
                                             onClick={() => {
@@ -5900,13 +5936,13 @@ service cloud.firestore {
                                               setSmmModalType('edit-order');
                                               setIsSmmModalOpen(true);
                                             }}
-                                            className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
+                                            className="px-2.5 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
                                           >
                                             Edit
                                           </button>
                                           <button
                                             onClick={() => setSmmDeletingOrderId(o.id)}
-                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
+                                            className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
                                             title="Delete Order"
                                           >
                                             <Trash2 size={12} />
@@ -6923,6 +6959,37 @@ service cloud.firestore {
                             </button>
                           </div>
                           <p className="text-[9px] text-slate-500 font-mono mt-1">💡 Enter platform names exactly as specified in SMM Services categories list so the quick filter buttons can match them properly.</p>
+                        </div>
+
+                        {/* Specific Option Toggles requested by user */}
+                        <div className="border-t border-slate-800/60 pt-4 space-y-3">
+                          <label className="text-[11px] font-bold text-slate-400">Toggle Specific Platform Shortcuts</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex items-center justify-between p-3.5 bg-[#08090d] border border-slate-850 rounded-xl">
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-200">GAME Category Shortcut</h4>
+                                <p className="text-[9px] text-slate-500 mt-0.5">Toggle the visibility of the "GAME" quick shortcut button.</p>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={settings.smmEnableGameShortcut !== false}
+                                onChange={(e) => updateSettings({ smmEnableGameShortcut: e.target.checked })}
+                                className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-blue-550 cursor-pointer"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between p-3.5 bg-[#08090d] border border-slate-850 rounded-xl">
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-200">Fb/Insta {"{OLD/ACC}"} Category Shortcut</h4>
+                                <p className="text-[9px] text-slate-500 mt-0.5">Toggle the visibility of the "Fb/Insta {"{OLD/ACC}"}" shortcut button.</p>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={settings.smmEnableFbInstaShortcut !== false}
+                                onChange={(e) => updateSettings({ smmEnableFbInstaShortcut: e.target.checked })}
+                                className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-blue-550 cursor-pointer"
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* SERVICE-SMM SHORTCUT MAPPINGS MANAGER */}

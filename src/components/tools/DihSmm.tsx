@@ -262,32 +262,37 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       }
     }
 
-    // ALWAYS ensure GAME and Fb/Insta {OLD/ACC} are in the list for SMM shortcuts
-    // to satisfy user request even if they have old saved shortcuts
-    const normalized = list.map(item => item.toLowerCase());
-    
-    // Add GAME if missing
-    if (!normalized.includes('game') && !normalized.includes('games')) {
-      const othersIdx = list.findIndex(item => item.toLowerCase() === 'others');
-      if (othersIdx !== -1) {
-        list.splice(othersIdx, 0, 'GAME');
-      } else {
-        list.push('GAME');
+    // Filter out or inject GAME and Fb/Insta {OLD/ACC} depending on admin configurations
+    if (settings.smmEnableGameShortcut === false) {
+      list = list.filter(item => item.toLowerCase() !== 'game' && item.toLowerCase() !== 'games');
+    } else {
+      const normalizedCurrent = list.map(item => item.toLowerCase());
+      if (!normalizedCurrent.includes('game') && !normalizedCurrent.includes('games')) {
+        const othersIdx = list.findIndex(item => item.toLowerCase() === 'others');
+        if (othersIdx !== -1) {
+          list.splice(othersIdx, 0, 'GAME');
+        } else {
+          list.push('GAME');
+        }
       }
     }
 
-    // Add Fb/Insta {OLD/ACC} if missing
-    if (!normalized.includes('fb/insta {old/acc}') && !normalized.includes('fb/insta [old/acc]')) {
-      const othersIdx = list.findIndex(item => item.toLowerCase() === 'others');
-      if (othersIdx !== -1) {
-        list.splice(othersIdx, 0, 'Fb/Insta {OLD/ACC}');
-      } else {
-        list.push('Fb/Insta {OLD/ACC}');
+    if (settings.smmEnableFbInstaShortcut === false) {
+      list = list.filter(item => item.toLowerCase() !== 'fb/insta {old/acc}' && item.toLowerCase() !== 'fb/insta [old/acc]');
+    } else {
+      const normalizedCurrent = list.map(item => item.toLowerCase());
+      if (!normalizedCurrent.includes('fb/insta {old/acc}') && !normalizedCurrent.includes('fb/insta [old/acc]')) {
+        const othersIdx = list.findIndex(item => item.toLowerCase() === 'others');
+        if (othersIdx !== -1) {
+          list.splice(othersIdx, 0, 'Fb/Insta {OLD/ACC}');
+        } else {
+          list.push('Fb/Insta {OLD/ACC}');
+        }
       }
     }
 
     return list;
-  }, [settings?.smmShortcuts]);
+  }, [settings?.smmShortcuts, settings?.smmEnableGameShortcut, settings?.smmEnableFbInstaShortcut]);
 
   const serviceMatchesPlatform = (s: any, platform: string) => {
     if (!platform || !s) return false;

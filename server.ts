@@ -757,31 +757,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
   // --- GLOBAL SMM SERVICES, ORDERS, AND DEPOSITS PERSISTENCE ---
   function getInitialSmmServices() {
-    return [
-      // GAME
-      { id: 210, name: "PUBG Mobile UC - Instant Recharge [Player ID]", category: "GAME", price: 1.15, min: 60, max: 8100, desc: "Direct in-game top-up via Player ID.", time: "5-30 minutes", quality: "Premium" },
-      { id: 211, name: "Free Fire Diamonds - Instant Top-Up [UID]", category: "GAME", price: 0.90, min: 100, max: 5600, desc: "Fast Diamond delivery using game UID.", time: "5-15 minutes", quality: "Standard" },
-      { id: 212, name: "Mobile Legends MLBB Diamonds - ID Direct", category: "GAME", price: 1.20, min: 50, max: 6000, desc: "Fast direct top-up MLBB using User ID + Zone ID.", time: "5-30 minutes", quality: "Premium" },
-      { id: 213, name: "Clash of Clans Gems / Gold Pass - Manual Shop", category: "GAME", price: 4.50, min: 1, max: 100, desc: "Get Clash of Clans items loaded directly.", time: "1-4 hours", quality: "VIP" },
-      { id: 214, name: "CS2 / Valorant Private Undetected Cheats (7 Days)", category: "GAME", price: 15.00, min: 1, max: 100, desc: "100% undetected safe weekly key access.", time: "Instant", quality: "VIP" },
-
-      // Fb/Insta {OLD/ACC}
-      { id: 310, name: "Facebook Aged Account - 2018-2020 Active Profile [Real History]", category: "Fb/Insta {OLD/ACC}", price: 8.50, min: 1, max: 50, desc: "Old active personal profile, great for ads/spam-free business setup.", time: "1-3 hours", quality: "Premium" },
-      { id: 311, name: "Instagram Aged Account - 5-10 Years Old [With Posts/Followers]", category: "Fb/Insta {OLD/ACC}", price: 12.00, min: 1, max: 50, desc: "HQ aged Instagram accounts, extremely safe for marketing.", time: "1-3 hours", quality: "Premium" },
-      { id: 312, name: "Facebook Verified Business Manager (BM) - Active Ads", category: "Fb/Insta {OLD/ACC}", price: 25.00, min: 1, max: 10, desc: "Fully verified active BM account ready for massive ads campaigns.", time: "2-6 hours", quality: "VIP" },
-
-      // Instagram
-      { id: 101, name: "Instagram Followers - Organic [Real Active Accounts]", category: "Instagram", price: 0.38, min: 100, max: 100000, desc: "Ultra stable organic-looking active followers. Non drop.", time: "1-6 hours", quality: "Premium" },
-      { id: 102, name: "Instagram Followers - Fast [Direct Server]", category: "Instagram", price: 0.18, min: 100, max: 200000, desc: "Fast instant delivery followers.", time: "0-30 minutes", quality: "Standard" },
-      { id: 103, name: "Instagram Likes - Non Drop [30 Days Refill Button]", category: "Instagram", price: 0.05, min: 50, max: 500000, desc: "Organic-paced secure likes.", time: "0-1 hours", quality: "Standard" },
-
-      // Facebook
-      { id: 110, name: "Facebook Page Likes + Followers [Lifetime Stable]", category: "Facebook", price: 0.65, min: 100, max: 500000, desc: "Stable profile or page likes, permanent warranty.", time: "0-24 hours", quality: "Standard" },
-      { id: 111, name: "Facebook Post Likes - Instant Liquid Speed", category: "Facebook", price: 0.18, min: 50, max: 200000, desc: "Quick reaction boosts on posts, photos and text.", time: "0-6 hours", quality: "Standard" },
-
-      // Website Traffic
-      { id: 190, name: "Website Traffic - Worldwide Cheap [Organic Direct]", category: "Website Traffic", price: 0.08, min: 1000, max: 10000000, desc: "Cheap direct organic clicks.", time: "Instant", quality: "Standard" }
-    ];
+    return [];
   }
 
   app.get("/api/smm/services", (req, res) => {
