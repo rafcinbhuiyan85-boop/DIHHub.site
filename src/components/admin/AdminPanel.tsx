@@ -7080,6 +7080,45 @@ service cloud.firestore {
                       </div>
                     </div>
 
+                    {/* Developed by @rafcin.b Toggle Configuration */}
+                    <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Branding System Configuration</span>
+                          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Show 'Developed by @rafcin.b' Branding</h3>
+                          <p className="text-xs text-slate-500 font-medium mt-1">
+                            Toggle whether the 'Developed by' credit branding with the Instagram link is shown in the website footer.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => updateSettings({ showDevelopedBy: settings.showDevelopedBy === false ? true : false })}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 select-none",
+                            settings.showDevelopedBy !== false ? "bg-blue-600" : "bg-slate-800"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              settings.showDevelopedBy !== false ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
+                          Current Visibility:
+                        </span>
+                        <span className={cn(
+                          "font-black font-mono text-[10px] uppercase tracking-wide",
+                          settings.showDevelopedBy !== false ? "text-emerald-400" : "text-red-400"
+                        )}>
+                          {settings.showDevelopedBy !== false ? "👁️ Visible to All Users" : "🚫 Hidden from Footer"}
+                        </span>
+                      </div>
+                    </div>
+
                     {/* Supported Payment Options Card */}
                     <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5">
                       <div className="mb-4 text-left">

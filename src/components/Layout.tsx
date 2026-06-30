@@ -585,21 +585,25 @@ export default function Layout({
                   <p className="font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">
                     © 2026 DIH HUB OFFICIAL - ALL RIGHTS RESERVED
                   </p>
-                  <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-400/80 dark:text-slate-500 uppercase tracking-widest text-[9px]">
-                      Developed by
-                    </span>
-                    <a 
-                      href="https://www.instagram.com/rafcin.b/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center p-1.5 rounded-full text-white bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] hover:scale-110 active:scale-95 transition-all shadow-md shadow-pink-500/10 hover:shadow-pink-500/25 cursor-pointer border border-transparent"
-                      title="Follow on Instagram @rafcin.b"
-                    >
-                      <Instagram size={11} className="stroke-[2.5]" />
-                    </a>
-                  </div>
+                  {settings.showDevelopedBy !== false && (
+                    <>
+                      <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-400/80 dark:text-slate-500 uppercase tracking-widest text-[9px]">
+                          Developed by
+                        </span>
+                        <a 
+                          href="https://www.instagram.com/rafcin.b/" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center p-1.5 rounded-full text-white bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] hover:scale-110 active:scale-95 transition-all shadow-md shadow-pink-500/10 hover:shadow-pink-500/25 cursor-pointer border border-transparent"
+                          title="Follow on Instagram @rafcin.b"
+                        >
+                          <Instagram size={11} className="stroke-[2.5]" />
+                        </a>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </footer>

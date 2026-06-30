@@ -125,6 +125,7 @@ export interface AppSettings {
   upcomingTools?: string[];
   comingSoonTools?: string[];
   smmManualGateways?: any[];
+  showDevelopedBy?: boolean;
 }
 
 const DEFAULT_TEMPLATES: Template[] = [
@@ -305,6 +306,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   toolNotices: {},
   upcomingTools: [],
   comingSoonTools: [],
+  showDevelopedBy: true,
   smmManualGateways: [
     { id: 'bkash', title: 'bKash Merchant', numberOrAddress: '+8801835313433', type: 'Merchant', instructions: 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).', enabled: true, minDeposit: 5 },
     { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801602469609', type: 'Personal', instructions: 'Send money to our Personal Nagad wallet, and put TxID above.', enabled: true, minDeposit: 5 },
