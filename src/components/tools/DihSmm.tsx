@@ -139,6 +139,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [activePage, setActivePage] = useState<'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit'>('dashboard');
   const [activeCat, setActiveCat] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [smmCatalogPage, setSmmCatalogPage] = useState<number>(1);
+  const smmCatalogPerPage = 50;
+
+  useEffect(() => {
+    setSmmCatalogPage(1);
+  }, [searchQuery, activeCat]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   
   // New Order Form States
@@ -592,21 +598,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         if (resOrders.ok) {
           const ordersVal = await resOrders.json();
           if (Array.isArray(ordersVal)) {
-            // Merge with local user specific orders
-            const localCachedStr = localStorage.getItem(ordersKey);
-            let localCached: SMMOrder[] = [];
-            if (localCachedStr) {
-              try { localCached = JSON.parse(localCachedStr); } catch(e) {}
-            }
-            // Add user's local orders to server list if not present, and update local state
-            const merged = [...ordersVal];
-            localCached.forEach(lc => {
-              if (!merged.find(m => m.id === lc.id)) {
-                merged.push(lc);
-              }
-            });
-            localStorage.setItem(ordersKey, JSON.stringify(merged));
-            setOrders(merged);
+            localStorage.setItem(ordersKey, JSON.stringify(ordersVal));
+            setOrders(ordersVal);
           }
         }
 
@@ -1735,6 +1728,11 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     });
   }, [activeServices, activeCat, searchQuery, settings.smmShortcutMappings]);
 
+  const paginatedCatalogServices = useMemo(() => {
+    const startIdx = (smmCatalogPage - 1) * smmCatalogPerPage;
+    return filteredServices.slice(startIdx, startIdx + smmCatalogPerPage);
+  }, [filteredServices, smmCatalogPage]);
+
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       // Filter by the currently active logged-in user
@@ -2206,50 +2204,80 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                     <p className="text-sm font-semibold text-slate-400">No services found.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredServices.map(s => (
-                      <div key={s.id} className="bg-[#141720] border border-[#1e2336] rounded-xl p-4.5 flex flex-col justify-between hover:border-blue-500/20 duration-150">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.category}</span>
-                              <h4 className="text-[13px] font-bold text-white leading-snug mt-0.5">{s.name}</h4>
-                            </div>
-                            <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider shrink-0", getQualityBadgeClass(s.quality))}>
-                              {s.quality}
-                            </span>
-                          </div>
-                          
-                          <p className="text-slate-400 text-[11.5px] leading-relaxed">{s.desc}</p>
-                          
-                          <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-500">
-                            <span>Min: {fmt(s.min)}</span>
-                            {s.refill && (
-                              <span className={cn(
-                                "px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wide border shrink-0",
-                                getCleanRefill(s.refill).toLowerCase().includes('no')
-                                  ? "bg-red-500/10 text-red-400 border-red-500/15"
-                                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15"
-                              )}>
-                                🔄 Refill: {getCleanRefill(s.refill)}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {paginatedCatalogServices.map(s => (
+                        <div key={s.id} className="bg-[#141720] border border-[#1e2336] rounded-xl p-4.5 flex flex-col justify-between hover:border-blue-500/20 duration-150">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.category}</span>
+                                <h4 className="text-[13px] font-bold text-white leading-snug mt-0.5">{s.name}</h4>
+                              </div>
+                              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider shrink-0", getQualityBadgeClass(s.quality))}>
+                                {s.quality}
                               </span>
-                            )}
+                            </div>
+                            
+                            <p className="text-slate-400 text-[11.5px] leading-relaxed">{s.desc}</p>
+                            
+                            <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-500">
+                              <span>Min: {fmt(s.min)}</span>
+                              {s.refill && (
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wide border shrink-0",
+                                  getCleanRefill(s.refill).toLowerCase().includes('no')
+                                    ? "bg-red-500/10 text-red-400 border-red-500/15"
+                                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15"
+                                )}>
+                                  🔄 Refill: {getCleanRefill(s.refill)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3.5 mt-4 border-t border-[#1e2336] shrink-0">
+                            <div className="text-[15px] font-mono font-bold text-blue-500">
+                              ${s.price.toFixed(4)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
+                            </div>
+                            <button 
+                              onClick={() => goOrder(s.id)}
+                              className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-605 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                            >
+                              Order &rarr;
+                            </button>
                           </div>
                         </div>
+                      ))}
+                    </div>
 
-                        <div className="flex items-center justify-between pt-3.5 mt-4 border-t border-[#1e2336] shrink-0">
-                          <div className="text-[15px] font-mono font-bold text-blue-500">
-                            ${s.price.toFixed(4)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
-                          </div>
-                          <button 
-                            onClick={() => goOrder(s.id)}
-                            className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-605 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                    {/* Catalog Pagination Controls */}
+                    {filteredServices.length > smmCatalogPerPage && (
+                      <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-[#141720] border border-[#1e2336] p-3 rounded-xl text-xs">
+                        <span className="text-slate-400">
+                          Showing <span className="font-bold text-white">{(smmCatalogPage - 1) * smmCatalogPerPage + 1}</span> to <span className="font-bold text-white">{Math.min(filteredServices.length, smmCatalogPage * smmCatalogPerPage)}</span> of <span className="font-bold text-white">{filteredServices.length}</span> SMM services
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={smmCatalogPage === 1}
+                            onClick={() => setSmmCatalogPage(p => Math.max(1, p - 1))}
+                            className="px-3 py-1 bg-[#0c0e15] hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-black uppercase rounded-lg disabled:opacity-30 disabled:cursor-not-allowed border border-[#1e2336] transition"
                           >
-                            Order &rarr;
+                            Prev
+                          </button>
+                          <span className="text-slate-500 font-mono font-bold">
+                            Page {smmCatalogPage} of {Math.ceil(filteredServices.length / smmCatalogPerPage)}
+                          </span>
+                          <button
+                            disabled={smmCatalogPage >= Math.ceil(filteredServices.length / smmCatalogPerPage)}
+                            onClick={() => setSmmCatalogPage(p => p + 1)}
+                            className="px-3 py-1 bg-[#0c0e15] hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-black uppercase rounded-lg disabled:opacity-30 disabled:cursor-not-allowed border border-[#1e2336] transition"
+                          >
+                            Next
                           </button>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>

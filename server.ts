@@ -777,7 +777,22 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   app.post("/api/smm/orders", async (req, res) => {
-    await saveData(SMM_ORDERS_FILE, req.body || []);
+    let ordersList = [];
+    if (Array.isArray(req.body)) {
+      ordersList = req.body;
+    } else if (req.body && typeof req.body === 'object') {
+      const existing = loadData(SMM_ORDERS_FILE, []);
+      const idx = existing.findIndex((o: any) => o.id === req.body.id);
+      if (idx !== -1) {
+        existing[idx] = { ...existing[idx], ...req.body };
+      } else {
+        existing.push(req.body);
+      }
+      ordersList = existing;
+    } else {
+      ordersList = loadData(SMM_ORDERS_FILE, []);
+    }
+    await saveData(SMM_ORDERS_FILE, ordersList);
     res.json({ status: "ok" });
     processQueuedOrders().catch(e => console.error("[Queue Processor Error]:", e));
   });
@@ -788,7 +803,22 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   app.post("/api/smm/deposits", async (req, res) => {
-    await saveData(SMM_DEPOSITS_FILE, req.body || []);
+    let depositsList = [];
+    if (Array.isArray(req.body)) {
+      depositsList = req.body;
+    } else if (req.body && typeof req.body === 'object') {
+      const existing = loadData(SMM_DEPOSITS_FILE, []);
+      const idx = existing.findIndex((d: any) => d.id === req.body.id);
+      if (idx !== -1) {
+        existing[idx] = { ...existing[idx], ...req.body };
+      } else {
+        existing.push(req.body);
+      }
+      depositsList = existing;
+    } else {
+      depositsList = loadData(SMM_DEPOSITS_FILE, []);
+    }
+    await saveData(SMM_DEPOSITS_FILE, depositsList);
     res.json({ status: "ok" });
   });
 

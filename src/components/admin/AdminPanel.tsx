@@ -223,6 +223,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [smmOrderStatusFilter, setSmmOrderStatusFilter] = useState('');
   const [smmSvcSearch, setSmmSvcSearch] = useState('');
   const [smmSvcCatFilter, setSmmSvcCatFilter] = useState('');
+  const [smmServicesPage, setSmmServicesPage] = useState(1);
+  const smmServicesPerPage = 50;
+
+  useEffect(() => {
+    setSmmServicesPage(1);
+  }, [smmSvcSearch, smmSvcCatFilter]);
+
   const [smmUserSearch, setSmmUserSearch] = useState('');
   const [smmDepStatusFilter, setSmmDepStatusFilter] = useState('');
 
@@ -290,6 +297,11 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       return match && matchesCat;
     });
   }, [smmServicesList, smmSvcSearch, smmSvcCatFilter]);
+
+  const paginatedCatalogServices = useMemo(() => {
+    const startIdx = (smmServicesPage - 1) * smmServicesPerPage;
+    return visibleCatalogServices.slice(startIdx, startIdx + smmServicesPerPage);
+  }, [visibleCatalogServices, smmServicesPage]);
 
   const adminUniqueSmmCategoriesOptions = useMemo(() => {
     const defaults = ['Instagram', 'Facebook', 'YouTube', 'TikTok', 'Twitter/X', 'Telegram', 'Spotify', 'LinkedIn', 'Discord', 'Website Traffic', 'GAME', 'Fb/Insta {OLD/ACC}', 'Others'];
@@ -1221,11 +1233,16 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setImportStep('importing');
     
     setTimeout(() => {
-      let maxId = smmServicesList.length ? Math.max(...smmServicesList.map(s => Number(s.id) || 0)) : 0;
+      let maxId = 0;
+      smmServicesList.forEach(s => {
+        const num = Number(s.id) || 0;
+        if (num > maxId) maxId = num;
+      });
       const markupMultiplier = parseFloat(importMarkup) || 1.5;
       
+      const selectedSet = new Set(selectedApiSvcIds.map(String));
       const newImportedServices = apiServices
-        .filter(s => selectedApiSvcIds.map(String).includes(String(s.id)))
+        .filter(s => selectedSet.has(String(s.id)))
         .map(apiSvc => {
           maxId++;
           const calculatedPrice = parseFloat((apiSvc.originalPrice * markupMultiplier).toFixed(4));
@@ -1246,13 +1263,17 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         });
         
       const mergedList = [...smmServicesList];
+      const existingMap = new Map<string, number>();
+      mergedList.forEach((s, idx) => {
+        const key = `${String(s.providerId).trim()}:${String(s.providerServiceId).trim()}`;
+        existingMap.set(key, idx);
+      });
+
       let newlyAdded = 0;
       newImportedServices.forEach(neu => {
-        const existingIndex = mergedList.findIndex(s => 
-          String(s.providerId).trim() === String(neu.providerId).trim() && 
-          String(s.providerServiceId).trim() === String(neu.providerServiceId).trim()
-        );
-        if (existingIndex !== -1) {
+        const key = `${String(neu.providerId).trim()}:${String(neu.providerServiceId).trim()}`;
+        const existingIndex = existingMap.get(key);
+        if (existingIndex !== undefined) {
           mergedList[existingIndex] = {
             ...mergedList[existingIndex],
             price: neu.price,
@@ -6112,7 +6133,7 @@ service cloud.firestore {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-800/40">
-                            {visibleCatalogServices.map((s) => {
+                            {paginatedCatalogServices.map((s) => {
                               const activePrice = s.price * (settings.smmPriceMultiplier || 1.0);
                               const isChecked = selectedCatalogSvcIds.includes(s.id);
                               return (
@@ -6240,6 +6261,34 @@ service cloud.firestore {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Pagination Controls */}
+                      {visibleCatalogServices.length > smmServicesPerPage && (
+                        <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-[#08090d] border border-slate-850/60 p-3 rounded-xl text-xs">
+                          <span className="text-slate-400 text-[11px]">
+                            Showing <span className="font-bold text-white">{(smmServicesPage - 1) * smmServicesPerPage + 1}</span> to <span className="font-bold text-white">{Math.min(visibleCatalogServices.length, smmServicesPage * smmServicesPerPage)}</span> of <span className="font-bold text-white">{visibleCatalogServices.length}</span> SMM services
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              disabled={smmServicesPage === 1}
+                              onClick={() => setSmmServicesPage(p => Math.max(1, p - 1))}
+                              className="px-3 py-1 bg-[#121620] hover:bg-slate-800 text-slate-330 hover:text-white text-[10px] font-black uppercase rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition"
+                            >
+                              Prev
+                            </button>
+                            <span className="text-slate-500 font-mono font-bold text-[11px]">
+                              Page {smmServicesPage} of {Math.ceil(visibleCatalogServices.length / smmServicesPerPage)}
+                            </span>
+                            <button
+                              disabled={smmServicesPage >= Math.ceil(visibleCatalogServices.length / smmServicesPerPage)}
+                              onClick={() => setSmmServicesPage(p => p + 1)}
+                              className="px-3 py-1 bg-[#121620] hover:bg-slate-800 text-slate-330 hover:text-white text-[10px] font-black uppercase rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
