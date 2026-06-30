@@ -96,6 +96,11 @@ const SMM_DEPOSITS_FILE = path.join(DATA_DIR, 'smm-deposits.json');
 const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
 const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
 
+const DEFAULT_PROVIDERS = [
+  { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
+  { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
+];
+
 const loadData = (file: string, defaultVal: any) => {
   if (!fs.existsSync(file)) return defaultVal;
   try {
@@ -302,10 +307,10 @@ async function startServer() {
         } else if (p.startsWith('/api/smm')) {
           await Promise.all([
             syncIfNeeded(USERS_FILE, []),
-            syncIfNeeded(SMM_SERVICES_FILE, []),
+            syncIfNeeded(SMM_SERVICES_FILE, getInitialSmmServices()),
             syncIfNeeded(SMM_ORDERS_FILE, []),
             syncIfNeeded(SMM_DEPOSITS_FILE, []),
-            syncIfNeeded(SMM_PROVIDERS_FILE, [])
+            syncIfNeeded(SMM_PROVIDERS_FILE, DEFAULT_PROVIDERS)
           ]);
         } else if (p.startsWith('/api/store') || p.startsWith('/api/apk')) {
           await syncIfNeeded(STORE_FILE, []);
@@ -321,27 +326,25 @@ async function startServer() {
 
   // --- Resilient Cloud Database Recovery on Startup ---
   if (!process.env.VERCEL) {
-    (async () => {
-      console.log("🔄 [CloudSync] Initiating startup cloud database synchronization in background...");
-      try {
-        await Promise.all([
-          syncFileWithCloud(USERS_FILE, []),
-          syncFileWithCloud(SETTINGS_FILE, {}),
-          syncFileWithCloud(STORE_FILE, []),
-          syncFileWithCloud(LOGS_FILE, []),
-          syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []),
-          syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {}),
-          syncFileWithCloud(SMM_SERVICES_FILE, []),
-          syncFileWithCloud(SMM_ORDERS_FILE, []),
-          syncFileWithCloud(SMM_DEPOSITS_FILE, []),
-          syncFileWithCloud(SMM_PROVIDERS_FILE, []),
-          syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] })
-        ]);
-        console.log("🚀 [CloudSync] Background startup databases synchronized and persistent fallback loaded successfully.");
-      } catch (err) {
-        console.error("⚠️ [CloudSync] Error in background startup database synchronization:", err);
-      }
-    })();
+    console.log("🔄 [CloudSync] Initiating startup cloud database synchronization...");
+    try {
+      await Promise.all([
+        syncFileWithCloud(USERS_FILE, []),
+        syncFileWithCloud(SETTINGS_FILE, {}),
+        syncFileWithCloud(STORE_FILE, []),
+        syncFileWithCloud(LOGS_FILE, []),
+        syncFileWithCloud(path.join(DATA_DIR, "migrations.json"), []),
+        syncFileWithCloud(path.join(DATA_DIR, "hostinger_data.json"), {}),
+        syncFileWithCloud(SMM_SERVICES_FILE, getInitialSmmServices()),
+        syncFileWithCloud(SMM_ORDERS_FILE, []),
+        syncFileWithCloud(SMM_DEPOSITS_FILE, []),
+        syncFileWithCloud(SMM_PROVIDERS_FILE, DEFAULT_PROVIDERS),
+        syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] })
+      ]);
+      console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
+    } catch (err) {
+      console.error("⚠️ [CloudSync] Error in startup database synchronization:", err);
+    }
   } else {
     console.log("ℹ️ [CloudSync] Vercel environment detected. Relying on on-demand sync middleware to minimize cold-start latency.");
   }
@@ -474,8 +477,7 @@ async function startServer() {
     
     // If user does not exist on the server (e.g. they loaded SMM Panel using a guest mail or a newly typed email),
     // automatically provision a server-side account for them to store their transactions and balance securely!
-    const settings = loadData(SETTINGS_FILE, {});
-    const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 0;
+    const initialBalance = 0.00;
 
     user = {
       id: "usr_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
@@ -783,11 +785,6 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   }
 
   app.get("/api/smm/services", (req, res) => {
-    if (!fs.existsSync(SMM_SERVICES_FILE)) {
-      const services = getInitialSmmServices();
-      saveData(SMM_SERVICES_FILE, services);
-      return res.json(services);
-    }
     const services = loadData(SMM_SERVICES_FILE, []);
     res.json(services);
   });

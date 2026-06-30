@@ -583,7 +583,7 @@ export default function Layout({
                 {/* Meta Rows */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-[10px]">
                   <p className="font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">
-                    © 2024 DIH HUB (DIGITAL INNOVATION HOUSE HUB). ALL RIGHTS RESERVED
+                    © 2026 DIH HUB OFFICIAL - ALL RIGHTS RESERVED
                   </p>
                   <span className="hidden sm:inline text-slate-200 dark:text-slate-800 font-light">|</span>
                   <div className="flex items-center gap-2">

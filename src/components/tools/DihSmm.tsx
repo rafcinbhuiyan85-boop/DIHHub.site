@@ -456,7 +456,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           // If logged in, wait for server response to fetch real balance instead of defaulting to $50
           setBalance(0.00);
         } else {
-          const initialBalance = settings.smmDefaultBalance !== undefined ? parseFloat(settings.smmDefaultBalance) : 0.00;
+          const initialBalance = 0.00;
           setBalance(initialBalance);
           localStorage.setItem(balanceKey, initialBalance.toFixed(2));
         }
@@ -3338,7 +3338,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             {/* Elegant Mobile-Accessible Footer */}
             <div className="mt-12 pt-6 border-t border-[#1e2336]/30 text-center">
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                © 2024 DIH HUB (DIGITAL INNOVATION HOUSE HUB). ALL RIGHTS RESERVED
+                © 2026 DIH HUB OFFICIAL - ALL RIGHTS RESERVED
               </p>
             </div>
 

@@ -617,21 +617,9 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       fetch('/api/smm/providers')
         .then(res => res.json())
         .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setSmmProviders(prev => JSON.stringify(prev) !== JSON.stringify(data) ? data : prev);
             localStorage.setItem('dih_smm_providers_v2', JSON.stringify(data));
-          } else {
-            const defaultProviders = [
-              { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
-              { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
-            ];
-            setSmmProviders(defaultProviders);
-            localStorage.setItem('dih_smm_providers_v2', JSON.stringify(defaultProviders));
-            fetch('/api/smm/providers', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(defaultProviders)
-            }).catch(err => console.error("Error seeding providers:", err));
           }
         })
         .catch(() => {
@@ -675,8 +663,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     };
 
     loadSmmData();
-    const interval = setInterval(loadSmmData, 10000);
-    return () => clearInterval(interval);
   }, [settings.smmDefaultBalance, auth.currentUser?.email, activeTab]);
 
   useEffect(() => {
@@ -7452,11 +7438,27 @@ service cloud.firestore {
                                   matchesFuzzyCategory(s.category, apiCatFilter) &&
                                   (s.name.toLowerCase().includes(apiSearchQuery.toLowerCase()))
                                 );
-                                setSelectedApiSvcIds(matched.map(m => m.id));
+                                const matchedIds = matched.map(m => m.id);
+                                setSelectedApiSvcIds(prev => {
+                                  const next = [...prev];
+                                  matchedIds.forEach(id => {
+                                    if (!next.map(String).includes(String(id))) next.push(id);
+                                  });
+                                  return next;
+                                });
                               }}
                               className="text-[9px] font-black uppercase text-blue-400 hover:text-blue-300 font-sans tracking-wide"
                             >
                               Select All Matching
+                            </button>
+                            <span className="text-slate-700">|</span>
+                            <button
+                              onClick={() => {
+                                setSelectedApiSvcIds(apiServices.map(s => s.id));
+                              }}
+                              className="text-[9px] font-black uppercase text-indigo-400 hover:text-indigo-300 font-sans tracking-wide"
+                            >
+                              Select All ({apiServices.length}) Services
                             </button>
                             <span className="text-slate-700">|</span>
                             <button
@@ -7475,7 +7477,7 @@ service cloud.firestore {
                               (s.name.toLowerCase().includes(apiSearchQuery.toLowerCase()))
                             );
                             const isAllVisibleChecked = visibleApiServices.length > 0 && 
-                              visibleApiServices.every(s => selectedApiSvcIds.includes(s.id));
+                              visibleApiServices.every(s => selectedApiSvcIds.map(String).includes(String(s.id)));
                             return (
                               <table className="w-full text-xs font-sans">
                                 <thead className="bg-[#0e1015]/65 text-slate-500 text-[9px] font-black uppercase tracking-wider text-left sticky top-0 z-10 border-b border-slate-850">
@@ -7490,13 +7492,13 @@ service cloud.firestore {
                                             setSelectedApiSvcIds(prev => {
                                               const next = [...prev];
                                               newlyAdded.forEach(id => {
-                                                if (!next.includes(id)) next.push(id);
+                                                if (!next.map(String).includes(String(id))) next.push(id);
                                               });
                                               return next;
                                             });
                                           } else {
-                                            const visibleIds = visibleApiServices.map(s => s.id);
-                                            setSelectedApiSvcIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                                            const visibleIds = visibleApiServices.map(s => String(s.id));
+                                            setSelectedApiSvcIds(prev => prev.filter(id => !visibleIds.includes(String(id))));
                                           }
                                         }}
                                         className="w-3.5 h-3.5 rounded border-slate-850 bg-slate-900 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
@@ -7511,14 +7513,14 @@ service cloud.firestore {
                                 </thead>
                                 <tbody className="divide-y divide-slate-850/60 font-medium">
                                   {visibleApiServices.map((svc) => {
-                                    const isChecked = selectedApiSvcIds.includes(svc.id);
+                                    const isChecked = selectedApiSvcIds.map(String).includes(String(svc.id));
                                     const userPrice = svc.originalPrice * (parseFloat(importMarkup) || 1.0);
                                     return (
                                       <tr 
                                         key={svc.id} 
                                         onClick={() => {
                                           if (isChecked) {
-                                            setSelectedApiSvcIds(prev => prev.filter(id => id !== svc.id));
+                                            setSelectedApiSvcIds(prev => prev.filter(id => String(id) !== String(svc.id)));
                                           } else {
                                             setSelectedApiSvcIds(prev => [...prev, svc.id]);
                                           }
