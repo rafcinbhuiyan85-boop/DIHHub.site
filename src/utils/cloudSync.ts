@@ -148,6 +148,45 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
         return localData;
       }
       return localData;
+    } else if (collectionName === 'dih_v3_smm_services') {
+      const chunksCollection = 'dih_v3_smm_services_chunks';
+      const colRef = collection(firestoreDb, chunksCollection);
+      const querySnapshot = await getDocs(colRef);
+      const chunkDocs: any[] = [];
+      querySnapshot.forEach((doc) => {
+        chunkDocs.push({ id: doc.id, ...doc.data() });
+      });
+
+      if (chunkDocs.length > 0) {
+        chunkDocs.sort((a, b) => {
+          const numA = parseInt(a.id.replace('chunk_', '')) || 0;
+          const numB = parseInt(b.id.replace('chunk_', '')) || 0;
+          return numA - numB;
+        });
+        
+        let restoredItems: any[] = [];
+        for (const docObj of chunkDocs) {
+          if (Array.isArray(docObj.items)) {
+            restoredItems = restoredItems.concat(docObj.items);
+          }
+        }
+        console.log(`📥 [CloudSync] Restored chunked ${collectionName} SMM services from Cloud (count: ${restoredItems.length})`);
+        saveLocalData(filePath, restoredItems);
+        return restoredItems;
+      } else if (Array.isArray(localData) && localData.length > 0) {
+        console.log(`📤 [CloudSync] Seeding empty SMM services chunks with local data (count: ${localData.length})`);
+        const chunkSize = 400;
+        const seedPromises = [];
+        for (let i = 0; i < localData.length; i += chunkSize) {
+          const chunk = localData.slice(i, i + chunkSize);
+          const chunkId = `chunk_${Math.floor(i / chunkSize)}`;
+          const docRef = doc(firestoreDb, chunksCollection, chunkId);
+          seedPromises.push(setDoc(docRef, { items: chunk }));
+        }
+        await Promise.all(seedPromises);
+        return localData;
+      }
+      return localData;
     } else {
       // Array Sync (users, store, logs, etc.)
       const colRef = collection(firestoreDb, collectionName);
@@ -221,6 +260,35 @@ export async function saveToCloud(filePath: string, data: any): Promise<void> {
         console.log('✅ [CloudSync] Site settings synchronized successfully to site/settings in Firestore.');
       }
     } else if (Array.isArray(data)) {
+      if (collectionName === 'dih_v3_smm_services') {
+        const chunksCollection = 'dih_v3_smm_services_chunks';
+        const chunkSize = 400;
+        const totalChunks = Math.ceil(data.length / chunkSize);
+        
+        console.log(`📤 [CloudSync] Saving ${data.length} SMM services in ${totalChunks} chunks...`);
+        const chunkPromises = [];
+        for (let i = 0; i < data.length; i += chunkSize) {
+          const chunk = data.slice(i, i + chunkSize);
+          const chunkId = `chunk_${Math.floor(i / chunkSize)}`;
+          const docRef = doc(firestoreDb, chunksCollection, chunkId);
+          chunkPromises.push(setDoc(docRef, { items: chunk }));
+        }
+        await Promise.all(chunkPromises);
+
+        const colRef = collection(firestoreDb, chunksCollection);
+        const querySnapshot = await getDocs(colRef);
+        for (const docObj of querySnapshot.docs) {
+          const chunkIdx = parseInt(docObj.id.replace('chunk_', ''));
+          if (!isNaN(chunkIdx) && chunkIdx >= totalChunks) {
+            console.log(`🗑️ [CloudSync] Deleting stale SMM services chunk: ${docObj.id}`);
+            const staleDocRef = doc(firestoreDb, chunksCollection, docObj.id);
+            await deleteDoc(staleDocRef);
+          }
+        }
+        console.log(`✅ [CloudSync] Chunked SMM services sync complete!`);
+        return;
+      }
+
       // Syncing an array. First, get list of current cloud items to determine deletions
       const colRef = collection(firestoreDb, collectionName);
       const querySnapshot = await getDocs(colRef);

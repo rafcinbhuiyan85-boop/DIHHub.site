@@ -5922,54 +5922,33 @@ service cloud.firestore {
                                   </td>
                                   <td className="py-3 text-right font-medium">
                                     <div className="flex gap-1.5 justify-end items-center">
-                                      {smmDeletingOrderId === o.id ? (
-                                        <div className="flex items-center gap-1 animate-in fade-in duration-100">
-                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
-                                          <button
-                                            onClick={() => {
-                                              handleDeleteSmmOrder(o.id);
-                                              setSmmDeletingOrderId(null);
-                                            }}
-                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
-                                          >
-                                            Yes
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingOrderId(null)}
-                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
-                                          >
-                                            No
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              setSelectedSmmItem(o);
-                                              setSmmFormName(o.serviceName);
-                                              setSmmFormStatus(o.status);
-                                              setSmmFormLink(o.link);
-                                              setSmmFormQty(o.quantity.toString());
-                                              setSmmFormAmount(o.amount.toString());
-                                              setSmmFormApiOrderId(o.apiOrderId || '');
-                                              setSmmFormApiProviderId(o.apiProviderId || '');
-                                              setSmmModalTitle(`Edit Order #${o.id}`);
-                                              setSmmModalType('edit-order');
-                                              setIsSmmModalOpen(true);
-                                            }}
-                                            className="px-2.5 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingOrderId(o.id)}
-                                            className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
-                                            title="Delete Order"
-                                          >
-                                            <Trash2 size={12} />
-                                          </button>
-                                        </>
-                                      )}
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedSmmItem(o);
+                                            setSmmFormName(o.serviceName);
+                                            setSmmFormStatus(o.status);
+                                            setSmmFormLink(o.link);
+                                            setSmmFormQty(o.quantity.toString());
+                                            setSmmFormAmount(o.amount.toString());
+                                            setSmmFormApiOrderId(o.apiOrderId || '');
+                                            setSmmFormApiProviderId(o.apiProviderId || '');
+                                            setSmmModalTitle(`Edit Order #${o.id}`);
+                                            setSmmModalType('edit-order');
+                                            setIsSmmModalOpen(true);
+                                          }}
+                                          className="px-2.5 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteSmmOrder(o.id)}
+                                          className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
+                                          title="Delete Order"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </>
                                     </div>
                                   </td>
                                 </tr>
@@ -6201,58 +6180,37 @@ service cloud.firestore {
                                   <td className="py-3 text-right font-mono text-slate-400">{s.max?.toLocaleString() || '1,000,000'}</td>
                                   <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex gap-1.5 justify-end items-center">
-                                      {smmDeletingServiceId === s.id ? (
-                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
-                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
-                                          <button
-                                            onClick={() => {
-                                              handleDeleteSmmService(s.id);
-                                              setSmmDeletingServiceId(null);
-                                            }}
-                                            className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase transition active:scale-95"
-                                          >
-                                            Yes
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingServiceId(null)}
-                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
-                                          >
-                                            No
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              setSelectedSmmItem(s);
-                                              setSmmFormName(s.name);
-                                              setSmmFormCategory(s.category);
-                                              setSmmFormQuality(s.quality || 'Standard');
-                                              setSmmFormPrice(s.price.toString());
-                                              setSmmFormTime(s.time || '0-24 hours');
-                                              setSmmFormMin(s.min?.toString() || '100');
-                                              setSmmFormMax(s.max?.toString() || '1000000');
-                                              setSmmFormDesc(s.desc || '');
-                                              setSmmFormRefill(s.refill || 'No Refill');
-                                              setSmmFormSvcProviderId(s.providerId || 'manual');
-                                              setSmmFormSvcProviderServiceId(s.providerServiceId || '');
-                                              setSmmModalTitle(`Edit Service #${s.id}`);
-                                              setSmmModalType('edit-service');
-                                              setIsSmmModalOpen(true);
-                                            }}
-                                            className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingServiceId(s.id)}
-                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-450"
-                                            title="Delete Service"
-                                          >
-                                            <Trash2 size={12} />
-                                          </button>
-                                        </>
-                                      )}
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedSmmItem(s);
+                                            setSmmFormName(s.name);
+                                            setSmmFormCategory(s.category);
+                                            setSmmFormQuality(s.quality || 'Standard');
+                                            setSmmFormPrice(s.price.toString());
+                                            setSmmFormTime(s.time || '0-24 hours');
+                                            setSmmFormMin(s.min?.toString() || '100');
+                                            setSmmFormMax(s.max?.toString() || '1000000');
+                                            setSmmFormDesc(s.desc || '');
+                                            setSmmFormRefill(s.refill || 'No Refill');
+                                            setSmmFormSvcProviderId(s.providerId || 'manual');
+                                            setSmmFormSvcProviderServiceId(s.providerServiceId || '');
+                                            setSmmModalTitle(`Edit Service #${s.id}`);
+                                            setSmmModalType('edit-service');
+                                            setIsSmmModalOpen(true);
+                                          }}
+                                          className="px-2 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteSmmService(s.id)}
+                                          className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-450"
+                                          title="Delete Service"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </>
                                     </div>
                                   </td>
                                 </tr>
@@ -6356,52 +6314,31 @@ service cloud.firestore {
                                   <td className="py-3 text-right text-slate-500">{u.joined}</td>
                                   <td className="py-3 text-right font-medium">
                                     <div className="flex gap-1.5 justify-end items-center">
-                                      {smmDeletingUserId === u.id ? (
-                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
-                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedSmmItem(u);
+                                            setSmmFormUserName(u.name);
+                                            setSmmFormUserEmail(u.email);
+                                            setSmmFormUserBalance(u.balance.toFixed(2));
+                                            setSmmModalTitle(`Edit User Info: ${u.name}`);
+                                            setSmmModalType('edit-user');
+                                            setIsSmmModalOpen(true);
+                                          }}
+                                          className="px-2.5 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
+                                        >
+                                          Adjust Funds
+                                        </button>
+                                        {u.id !== 999 && (
                                           <button
-                                            onClick={() => {
-                                              handleDeleteSmmUser(u.id);
-                                              setSmmDeletingUserId(null);
-                                            }}
-                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
+                                            onClick={() => handleDeleteSmmUser(u.id)}
+                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
+                                            title="Delete Customer Profile"
                                           >
-                                            Yes
+                                            <Trash2 size={12} />
                                           </button>
-                                          <button
-                                            onClick={() => setSmmDeletingUserId(null)}
-                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
-                                          >
-                                            No
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              setSelectedSmmItem(u);
-                                              setSmmFormUserName(u.name);
-                                              setSmmFormUserEmail(u.email);
-                                              setSmmFormUserBalance(u.balance.toFixed(2));
-                                              setSmmModalTitle(`Edit User Info: ${u.name}`);
-                                              setSmmModalType('edit-user');
-                                              setIsSmmModalOpen(true);
-                                            }}
-                                            className="px-2.5 py-1 rounded bg-[#08090d] border border-slate-800 hover:bg-slate-800 hover:text-white text-[10px] font-bold text-slate-300 transition"
-                                          >
-                                            Adjust Funds
-                                          </button>
-                                          {u.id !== 999 && (
-                                            <button
-                                              onClick={() => setSmmDeletingUserId(u.id)}
-                                              className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
-                                              title="Delete Customer Profile"
-                                            >
-                                              <Trash2 size={12} />
-                                            </button>
-                                          )}
-                                        </>
-                                      )}
+                                        )}
+                                      </>
                                     </div>
                                   </td>
                                 </tr>
@@ -6526,54 +6463,33 @@ service cloud.firestore {
                                   </td>
                                   <td className="py-3 text-right">
                                     <div className="flex gap-2 justify-end items-center">
-                                      {smmDeletingDepositId === d.id ? (
-                                        <div className="flex items-center gap-1.5 animate-in fade-in duration-100">
-                                          <span className="text-[9px] font-bold text-red-400 uppercase">Sure?</span>
-                                          <button
-                                            onClick={() => {
-                                              handleDeleteSmmDeposit(d.id);
-                                              setSmmDeletingDepositId(null);
-                                            }}
-                                            className="px-2 py-0.5 rounded bg-red-650 hover:bg-red-600 text-white text-[9px] font-black uppercase transition active:scale-95"
-                                          >
-                                            Yes
-                                          </button>
-                                          <button
-                                            onClick={() => setSmmDeletingDepositId(null)}
-                                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold uppercase transition active:scale-95"
-                                          >
-                                            No
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          {d.status === 'pending' ? (
-                                            <div className="flex gap-1.5 justify-end">
-                                              <button
-                                                onClick={() => handleRejectSmmDeposit(d.id)}
-                                                className="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[10px] transition"
-                                              >
-                                                Reject
-                                              </button>
-                                              <button
-                                                onClick={() => handleApproveSmmDeposit(d.id)}
-                                                className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] transition"
-                                              >
-                                                Approve
-                                              </button>
-                                            </div>
-                                          ) : (
-                                            <span className="text-[10px] text-slate-400 font-mono bg-slate-900 border border-slate-850 px-1.5 py-0.5 rounded">Reviewed</span>
-                                          )}
-                                          <button
-                                            onClick={() => setSmmDeletingDepositId(d.id)}
-                                            className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-450 transition"
-                                            title="Delete Deposit Record"
-                                          >
-                                            <Trash2 size={12} />
-                                          </button>
-                                        </>
-                                      )}
+                                      <>
+                                        {d.status === 'pending' ? (
+                                          <div className="flex gap-1.5 justify-end">
+                                            <button
+                                              onClick={() => handleRejectSmmDeposit(d.id)}
+                                              className="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[10px] transition"
+                                            >
+                                              Reject
+                                            </button>
+                                            <button
+                                              onClick={() => handleApproveSmmDeposit(d.id)}
+                                              className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] transition"
+                                            >
+                                              Approve
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <span className="text-[10px] text-slate-400 font-mono bg-slate-900 border border-slate-850 px-1.5 py-0.5 rounded">Reviewed</span>
+                                        )}
+                                        <button
+                                          onClick={() => handleDeleteSmmDeposit(d.id)}
+                                          className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-450 transition"
+                                          title="Delete Deposit Record"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </>
                                     </div>
                                   </td>
                                 </tr>
