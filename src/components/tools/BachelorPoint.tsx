@@ -27,6 +27,7 @@ interface ContentItem {
   view_count: number;
   poster_file_key?: string;
   video_file_key?: string;
+  starring?: string;
 }
 
 // Helper for storing and retrieving files from IndexedDB
@@ -832,10 +833,46 @@ export default function BachelorPoint() {
             </div>
 
             {/* INFORMATION AREA */}
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-900 shadow-xl">
-              <h1 className="text-2xl font-black text-white uppercase tracking-wide leading-tight">
-                {activeWatchItem.title}
-              </h1>
+            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-900 shadow-xl space-y-4">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-black text-white uppercase tracking-wide leading-tight">
+                  {activeWatchItem.title}
+                </h1>
+                
+                {/* Starring information displayed if enabled in settings */}
+                {settings.bachelorShowStarring !== false && (
+                  <div className="flex flex-col gap-1 mt-1 border-t border-white/5 pt-3">
+                    <span className="text-[10px] font-black text-[var(--bp-primary)] tracking-widest uppercase">Starring Cast</span>
+                    <p className="text-xs text-slate-300 font-semibold leading-relaxed">
+                      {activeWatchItem.starring || "Mishu Sabbir, Ziaul Hoque Polash, Marzuk Russell, Chashi Alam, Sabila Nur, Sanjana Sarkar Riya, Musafir Syed Bacchu"}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Admin/Uploaded Info */}
+                <div className="flex items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-wider border-t border-white/5 pt-3">
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-600">Released:</span>
+                    <span className="text-slate-400">{activeWatchItem.release_year}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-600">Category:</span>
+                    <span className="text-slate-400">{getCategoryName(activeWatchItem.category_id)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-600">Duration:</span>
+                    <span className="text-slate-400">{activeWatchItem.duration_minutes} Mins</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-600">Views:</span>
+                    <span className="text-slate-400">{activeWatchItem.view_count || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-slate-450 text-xs font-semibold leading-relaxed border-t border-white/5 pt-3">
+                {activeWatchItem.description || "No description provided for this exclusive manual upload."}
+              </p>
             </div>
           </div>
         )}

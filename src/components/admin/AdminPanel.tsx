@@ -1228,6 +1228,49 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     }
   };
 
+  const [isSmmSyncing, setIsSmmSyncing] = useState(false);
+
+  const handleManualSmmSync = async () => {
+    if (isSmmSyncing) return;
+    setIsSmmSyncing(true);
+    setSmmToast({ message: "Syncing SMM services & prices with active providers...", type: "info" });
+    try {
+      const response = await fetch("/api/admin/smm/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await response.json();
+      if (response.ok && data.status === "ok") {
+        setSmmToast({
+          message: `Sync Complete! Auto-added ${data.added} services and updated ${data.updated} prices (with 17% profit).`,
+          type: "success"
+        });
+        
+        // Reload SMM services from backend
+        const sRes = await fetch("/api/smm/services");
+        if (sRes.ok) {
+          const freshSvcs = await sRes.json();
+          setSmmServicesList(freshSvcs);
+        }
+
+        // Reload SMM providers
+        const pRes = await fetch("/api/smm/providers");
+        if (pRes.ok) {
+          const freshProvs = await pRes.json();
+          setSmmProviders(freshProvs);
+          localStorage.setItem('dih_smm_providers_v2', JSON.stringify(freshProvs));
+        }
+      } else {
+        setSmmToast({ message: `Sync Error: ${data.error || "Could not execute sync."}`, type: "error" });
+      }
+    } catch (err: any) {
+      console.error("[SMM Manual Sync Error]:", err);
+      setSmmToast({ message: `Sync Failed: ${err.message}`, type: "error" });
+    } finally {
+      setIsSmmSyncing(false);
+    }
+  };
+
   const handleImportSelectedApiServices = () => {
     if (!activeImportProvider || selectedApiSvcIds.length === 0) return;
     
@@ -2263,7 +2306,15 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                       className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl py-3 pl-10 pr-4 text-[10px] focus:border-blue-500 outline-none transition-all w-56 font-bold placeholder:text-slate-800"
                     />
                   </div>
-                  {/* Button removed by user request */}
+                  <button 
+                    onClick={() => {
+                      resetHtmlForm();
+                      setIsEditingHtml(true);
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                  >
+                    <Plus size={14} strokeWidth={2.5} /> Deploy New Template
+                  </button>
                 </div>
               </div>
 
@@ -2482,7 +2533,16 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                             const file = e.target.files?.[0];
                                             if (!file) return;
                                             const reader = new FileReader();
-                                            reader.onload = (event) => setHtmlFormData({ ...htmlFormData, htmlContent: event.target?.result as string, name: file.name.replace(/\.[^/.]+$/, "") });
+                                            reader.onload = (event) => {
+                                              const nameVal = file.name.replace(/\.[^/.]+$/, "");
+                                              const generatedId = nameVal.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+                                              setHtmlFormData(prev => ({
+                                                ...prev,
+                                                htmlContent: event.target?.result as string,
+                                                name: nameVal,
+                                                id: prev.id || generatedId
+                                              }));
+                                            };
                                             reader.readAsText(file);
                                           }}
                                           className="absolute inset-0 opacity-0 cursor-pointer z-10"
@@ -2501,45 +2561,75 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                             let h='', c='', j='', n='';
                                             const assets: { [key: string]: string } = {};
                                             
-                                            for(let f of files) {
-                                              const fn = f.name;
-                                              const fnLower = fn.toLowerCase();
-                                              
-                                              if (fnLower.endsWith('.html')) {
-                                                const text = await f.text();
-                                                if (fnLower === 'index.html' || !h) {
-                                                  h = text;
-                                                  n = f.name.replace(/\.[^/.]+$/, "");
-                                                } else {
-                                                  h += '\n' + text;
+                                            // 1. Scan for main html file (entrypoint)
+                                            let mainHtmlFile: File | null = null;
+                                            for (let i = 0; i < files.length; i++) {
+                                              const f = files[i];
+                                              const fnLower = f.name.toLowerCase();
+                                              if (fnLower === 'index.html') {
+                                                mainHtmlFile = f;
+                                                break;
+                                              }
+                                            }
+                                            if (!mainHtmlFile) {
+                                              for (let i = 0; i < files.length; i++) {
+                                                const f = files[i];
+                                                if (f.name.toLowerCase().endsWith('.html')) {
+                                                  mainHtmlFile = f;
+                                                  break;
                                                 }
-                                              } else if (fnLower.endsWith('.css')) {
+                                              }
+                                            }
+
+                                            if (mainHtmlFile) {
+                                              h = await mainHtmlFile.text();
+                                              if (mainHtmlFile.webkitRelativePath) {
+                                                // Extract the root directory name to use as template title
+                                                n = mainHtmlFile.webkitRelativePath.split('/')[0];
+                                              } else {
+                                                n = mainHtmlFile.name.replace(/\.[^/.]+$/, "");
+                                              }
+                                            }
+
+                                            // 2. Process all other files (images, audio, stylesheets, scripts)
+                                            for (let i = 0; i < files.length; i++) {
+                                              const f = files[i];
+                                              if (f === mainHtmlFile) continue;
+
+                                              // Keep full relative path structure without the root directory prefix
+                                              const fn = f.webkitRelativePath ? f.webkitRelativePath.split('/').slice(1).join('/') : f.name;
+                                              if (!fn) continue;
+                                              
+                                              const fnLower = fn.toLowerCase();
+                                              if (fnLower.endsWith('.css')) {
                                                 const text = await f.text();
                                                 c += '\n' + text;
                                               } else if (fnLower.endsWith('.js')) {
                                                 const text = await f.text();
                                                 j += '\n' + text;
                                               } else {
-                                                // Read other files (images, audio, etc.) as Base64 Data URL
-                                                await new Promise<void>((resolve) => {
-                                                  const reader = new FileReader();
-                                                  reader.onload = (event) => {
-                                                    if (event.target?.result) {
-                                                      assets[fn] = event.target.result as string;
-                                                    }
-                                                    resolve();
-                                                  };
-                                                  reader.onerror = () => resolve();
-                                                  reader.readAsDataURL(f);
-                                                });
-                                              }
+
+                                              await new Promise<void>((resolve) => {
+                                                const reader = new FileReader();
+                                                reader.onload = (event) => {
+                                                  if (event.target?.result) {
+                                                    assets[fn] = event.target.result as string;
+                                                  }
+                                                  resolve();
+                                                };
+                                                reader.onerror = () => resolve();
+                                                reader.readAsDataURL(f);
+                                              });
+                                             }
                                             }
                                             
+                                            const generatedId = n ? n.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') : '';
                                             setHtmlFormData(p => ({ 
                                               ...p, 
+                                              id: p.id || generatedId,
                                               htmlContent: h || p.htmlContent, 
-                                              cssContent: c.trim() || p.cssContent, 
-                                              jsContent: j.trim() || p.jsContent, 
+                                              cssContent: (c.trim() ? c.trim() : p.cssContent), 
+                                              jsContent: (j.trim() ? j.trim() : p.jsContent), 
                                               name: n || p.name,
                                               assets: { ...(p.assets || {}), ...assets }
                                             }));
@@ -4805,41 +4895,81 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
           {activeTab === 'config-bachelor-point' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Bachelor Point Design Themes Configuration */}
-              <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
-                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Bachelor Point Color Theme</h3>
-                    <p className="text-xs text-slate-500 font-medium mt-1">
-                      Toggle between the customized high-fidelity premium red/glowing style or a clean, classic black/slate layout for Bachelor Point.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => updateSettings({ bachelorEnableColorTheme: settings.bachelorEnableColorTheme === false ? true : false })}
-                    className={cn(
-                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500/20 select-none",
-                      settings.bachelorEnableColorTheme !== false ? "bg-red-650" : "bg-slate-800"
-                    )}
-                  >
-                    <span
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Theme Configuration</span>
+                      <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Bachelor Point Color Theme</h3>
+                      <p className="text-xs text-slate-500 font-medium mt-1">
+                        Toggle between the customized high-fidelity premium red/glowing style or a clean, classic black/slate layout for Bachelor Point.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ bachelorEnableColorTheme: settings.bachelorEnableColorTheme === false ? true : false })}
                       className={cn(
-                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                        settings.bachelorEnableColorTheme !== false ? "translate-x-5" : "translate-x-0"
+                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500/20 select-none",
+                        settings.bachelorEnableColorTheme !== false ? "bg-red-650" : "bg-slate-800"
                       )}
-                    />
-                  </button>
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          settings.bachelorEnableColorTheme !== false ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
+                      Current Bachelor Style:
+                    </span>
+                    <span className={cn(
+                      "font-black font-mono text-[10px] uppercase tracking-wide",
+                      settings.bachelorEnableColorTheme !== false ? "text-red-400" : "text-slate-400"
+                    )}>
+                      {settings.bachelorEnableColorTheme !== false ? "✨ Premium Color Design" : "📦 Clean Slate Design"}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
-                    Current Bachelor Style:
-                  </span>
-                  <span className={cn(
-                    "font-black font-mono text-[10px] uppercase tracking-wide",
-                    settings.bachelorEnableColorTheme !== false ? "text-red-400" : "text-slate-400"
-                  )}>
-                    {settings.bachelorEnableColorTheme !== false ? "✨ Premium Color Design (Red Glow / Cinematic)" : "📦 Clean Slate Slate-950 design"}
-                  </span>
+
+                <div className="bg-[#0d0f14] border border-slate-800/80 rounded-2xl p-5 text-left space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Cast Display Configuration</span>
+                      <h3 className="text-xs font-bold text-slate-200 uppercase tracking-tight mt-1">Show Starring Cast</h3>
+                      <p className="text-xs text-slate-500 font-medium mt-1">
+                        Toggle whether to display the starring cast list beneath video play/stream titles in Bachelor Point.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ bachelorShowStarring: settings.bachelorShowStarring === false ? true : false })}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500/20 select-none",
+                        settings.bachelorShowStarring !== false ? "bg-red-650" : "bg-slate-800"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          settings.bachelorShowStarring !== false ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-slate-900 border border-slate-800 text-slate-400">
+                      Current Display State:
+                    </span>
+                    <span className={cn(
+                      "font-black font-mono text-[10px] uppercase tracking-wide",
+                      settings.bachelorShowStarring !== false ? "text-emerald-400" : "text-slate-400"
+                    )}>
+                      {settings.bachelorShowStarring !== false ? "👁️ Starring Cast Visible" : "🙈 Starring Cast Hidden"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -5583,27 +5713,37 @@ service cloud.firestore {
                   
                   <div className="flex items-center gap-3">
                     {smmSubTab === 'services' && (
-                      <button
-                        onClick={() => {
-                          setSmmFormName('');
-                          setSmmFormCategory('Instagram');
-                          setSmmFormQuality('Standard');
-                          setSmmFormPrice('1.50');
-                          setSmmFormTime('0-24 hours');
-                          setSmmFormMin('100');
-                          setSmmFormMax('500000');
-                          setSmmFormDesc('');
-                          setSmmFormRefill('No Refill');
-                          setSmmFormSvcProviderId('manual');
-                          setSmmFormSvcProviderServiceId('');
-                          setSmmModalTitle('Add SMM Service');
-                          setSmmModalType('add-service');
-                          setIsSmmModalOpen(true);
-                        }}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-blue-500/10 transition active:scale-95"
-                      >
-                        <Plus size={13} /> Add SMM Service
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleManualSmmSync}
+                          disabled={isSmmSyncing}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/10 transition active:scale-95"
+                        >
+                          <RefreshCcw size={13} className={isSmmSyncing ? "animate-spin" : ""} />
+                          {isSmmSyncing ? "Syncing..." : "Auto-Sync Services & Prices"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSmmFormName('');
+                            setSmmFormCategory('Instagram');
+                            setSmmFormQuality('Standard');
+                            setSmmFormPrice('1.50');
+                            setSmmFormTime('0-24 hours');
+                            setSmmFormMin('100');
+                            setSmmFormMax('500000');
+                            setSmmFormDesc('');
+                            setSmmFormRefill('No Refill');
+                            setSmmFormSvcProviderId('manual');
+                            setSmmFormSvcProviderServiceId('');
+                            setSmmModalTitle('Add SMM Service');
+                            setSmmModalType('add-service');
+                            setIsSmmModalOpen(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-blue-500/10 transition active:scale-95"
+                        >
+                          <Plus size={13} /> Add SMM Service
+                        </button>
+                      </div>
                     )}
 
                     <div className="flex items-center gap-2 bg-[#0d0f14] border border-slate-800/80 rounded-full pl-3 pr-1.5 py-1">

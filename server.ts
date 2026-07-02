@@ -1071,6 +1071,269 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
     }
   });
 
+  // --- SMM AUTOMATIC SERVICES AND PRICE SYNC LOGIC ---
+  async function getProviderServicesInternal(url: string, key: string): Promise<any[]> {
+    if (!url || !key) return [];
+    try {
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+        normalizedUrl = "https://" + normalizedUrl;
+      }
+
+      const params = new URLSearchParams();
+      params.append('key', key.trim());
+      params.append('action', 'services');
+
+      let response;
+      try {
+        response = await axios.post(normalizedUrl, params.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 15000
+        });
+      } catch (postErr) {
+        const separator = normalizedUrl.includes('?') ? '&' : '?';
+        const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(key.trim())}&action=services`;
+        response = await axios.get(getUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 15000
+        });
+      }
+
+      const rawData = response.data;
+      if (!rawData || (typeof rawData === 'object' && rawData.error)) {
+        return [];
+      }
+
+      let rawServicesList: any[] = [];
+      if (Array.isArray(rawData)) {
+        rawServicesList = rawData;
+      } else if (rawData && typeof rawData === 'object') {
+        const foundArray = Object.values(rawData).find(v => Array.isArray(v));
+        if (foundArray) {
+          rawServicesList = foundArray as any[];
+        } else {
+          const keys = Object.keys(rawData);
+          if (keys.length > 0 && typeof rawData[keys[0]] === 'object') {
+            rawServicesList = Object.entries(rawData).map(([id, sObj]: [string, any]) => ({
+              service: id,
+              ...sObj
+            }));
+          }
+        }
+      }
+
+      if (!rawServicesList || rawServicesList.length === 0) return [];
+
+      return rawServicesList.map((svc: any, idx: number) => {
+        const idVal = parseInt(svc.service || svc.id || svc.service_id) || (20000 + idx);
+        const nameVal = (svc.name || svc.title || svc.service_name || svc.label || `Service #${idVal}`).toString().trim();
+        const catVal = (svc.category || svc.group || svc.cat || svc.service_category || svc.section || "Others").toString().trim();
+        
+        let rateStr = String(svc.rate || svc.price || svc.charge || svc.cost || "0.0").trim();
+        rateStr = rateStr.replace(/[^0-9.]/g, '');
+        const rateVal = parseFloat(rateStr) || 0.0;
+
+        let minStr = String(svc.min || svc.min_quantity || svc.min_qty || "50").trim();
+        minStr = minStr.replace(/[^0-9]/g, '');
+        const minVal = parseInt(minStr) || 50;
+
+        let maxStr = String(svc.max || svc.max_quantity || svc.max_qty || "100000").trim();
+        maxStr = maxStr.replace(/[^0-9]/g, '');
+        const maxVal = parseInt(maxStr) || 100000;
+
+        const descVal = svc.desc || svc.description || "Live directly connected service from provider package.";
+        
+        let refillStatus = "No Refill";
+        const hasNoRefillWord = /no[n\s-]*refill|without\s*refill/i.test(nameVal);
+
+        if (!hasNoRefillWord) {
+          if (svc.refill !== undefined && svc.refill !== null) {
+            const r = svc.refill;
+            if (r === true || r === 1 || r === '1' || r === 'true' || r === 'Yes' || r === 'yes') {
+              refillStatus = "Yes (Refill)";
+            } else if (r === false || r === 0 || r === '0' || r === 'false' || r === 'No' || r === 'no') {
+              refillStatus = "No Refill";
+            } else {
+              refillStatus = String(r).trim();
+              if (/^\d+$/.test(refillStatus)) {
+                refillStatus = `${refillStatus}D Refill`;
+              }
+            }
+          }
+
+          if (refillStatus === "No Refill" || refillStatus === "Yes (Refill)") {
+            const lifetimeMatch = /lifetime/i.test(nameVal);
+            const daysMatch = nameVal.match(/(\d+)\s*(?:days?|d)\s*refill/i) || 
+                              nameVal.match(/refill\s*(?:button|guarantee)?\s*(\d+)\s*days?/i) ||
+                              nameVal.match(/r(\d{2,3})(?:\D|$)/i) ||
+                              nameVal.match(/(\d+)\s*d\s*refill/i);
+            
+            if (lifetimeMatch) {
+              refillStatus = "Lifetime Refill";
+            } else if (daysMatch) {
+              refillStatus = `${daysMatch[1]}D Refill`;
+            } else if (/refill/i.test(nameVal)) {
+              refillStatus = (refillStatus === "No Refill") ? "Refill Supported" : refillStatus;
+            }
+          }
+        }
+
+        let avgTimeVal = "";
+        if (svc.average_time !== undefined && svc.average_time !== null && svc.average_time !== "0" && svc.average_time !== 0 && String(svc.average_time).trim() !== "") {
+          const avgMinutes = parseInt(String(svc.average_time).trim());
+          if (!isNaN(avgMinutes) && avgMinutes > 0) {
+            if (avgMinutes < 60) {
+              avgTimeVal = `${avgMinutes} minutes`;
+            } else {
+              const hrs = (avgMinutes / 60).toFixed(1);
+              avgTimeVal = `${hrs.endsWith('.0') ? parseInt(hrs) : hrs} hours`;
+            }
+          }
+        }
+
+        return {
+          id: idVal,
+          name: nameVal,
+          category: catVal,
+          originalPrice: rateVal,
+          min: minVal,
+          max: maxVal,
+          desc: descVal,
+          time: avgTimeVal || svc.time || svc.speed || svc.delivery || "0-24 hours",
+          quality: svc.quality || svc.class || svc.tier || svc.type || "Standard",
+          refill: refillStatus
+        };
+      });
+    } catch (err) {
+      console.error("[SMM Background Sync] Fetch failed:", err);
+      return [];
+    }
+  }
+
+  async function syncSmmServicesWithProviders(): Promise<{ added: number, updated: number, errors: string[] }> {
+    console.log("[SMM Background Sync] Starting automatic SMM services sync...");
+    let addedCount = 0;
+    let updatedCount = 0;
+    const errors: string[] = [];
+
+    try {
+      const providers = loadData(SMM_PROVIDERS_FILE, []);
+      const activeProviders = providers.filter((p: any) => p.status === 'active');
+      if (activeProviders.length === 0) {
+        console.log("[SMM Background Sync] No active SMM providers found. Skipping.");
+        return { added: 0, updated: 0, errors: ["No active SMM providers found."] };
+      }
+
+      const smmServices = loadData(SMM_SERVICES_FILE, []);
+      let modified = false;
+
+      let maxId = 0;
+      smmServices.forEach((s: any) => {
+        if (s.id && typeof s.id === 'number' && s.id > maxId) {
+          maxId = s.id;
+        }
+      });
+
+      for (const provider of activeProviders) {
+        try {
+          console.log(`[SMM Background Sync] Fetching services from provider: ${provider.name} (${provider.apiUrl})`);
+          const apiServices = await getProviderServicesInternal(provider.apiUrl, provider.apiKey);
+          if (!apiServices || apiServices.length === 0) {
+            console.log(`[SMM Background Sync] No services found or failed to fetch for ${provider.name}.`);
+            errors.push(`Failed to fetch services for ${provider.name}.`);
+            continue;
+          }
+
+          console.log(`[SMM Background Sync] Found ${apiServices.length} services from provider: ${provider.name}`);
+
+          const existingProviderServices = new Map<string, any>();
+          smmServices.forEach((s: any) => {
+            if (s.providerId && s.providerId.toString() === provider.id.toString() && s.providerServiceId) {
+              existingProviderServices.set(s.providerServiceId.toString(), s);
+            }
+          });
+
+          for (const apiSvc of apiServices) {
+            const provSvcId = apiSvc.id.toString();
+            const existingSvc = existingProviderServices.get(provSvcId);
+
+            if (existingSvc) {
+              const providerPrice = apiSvc.originalPrice;
+              const ourNewPrice = parseFloat((providerPrice * 1.17).toFixed(4));
+
+              if (existingSvc.price !== ourNewPrice) {
+                console.log(`[SMM Background Sync] Price update for Service #${existingSvc.id} (Provider: ${provider.name}, Svc ID: ${provSvcId}): $${existingSvc.price} -> $${ourNewPrice}`);
+                existingSvc.price = ourNewPrice;
+                existingSvc.min = apiSvc.min;
+                existingSvc.max = apiSvc.max;
+                existingSvc.refill = apiSvc.refill;
+                updatedCount++;
+                modified = true;
+              }
+            } else {
+              maxId++;
+              const calculatedPrice = parseFloat((apiSvc.originalPrice * 1.17).toFixed(4));
+              const newSvc = {
+                id: maxId,
+                name: apiSvc.name,
+                category: apiSvc.category,
+                price: calculatedPrice,
+                min: apiSvc.min,
+                max: apiSvc.max,
+                desc: apiSvc.desc || "Automatically imported service.",
+                time: apiSvc.time || "0-24 hours",
+                quality: apiSvc.quality || "Standard",
+                refill: apiSvc.refill || "No Refill",
+                providerId: provider.id.toString(),
+                providerServiceId: provSvcId
+              };
+
+              smmServices.push(newSvc);
+              console.log(`[SMM Background Sync] Auto-added new Service #${maxId} (Provider: ${provider.name}, Svc ID: ${provSvcId}): ${apiSvc.name} at price $${calculatedPrice}`);
+              addedCount++;
+              modified = true;
+            }
+          }
+
+          const count = smmServices.filter((s: any) => s.providerId === provider.id.toString()).length;
+          if (provider.serviceCount !== count) {
+            provider.serviceCount = count;
+            await saveData(SMM_PROVIDERS_FILE, providers);
+          }
+        } catch (provErr: any) {
+          console.error(`[SMM Background Sync] Error syncing provider ${provider.name}:`, provErr);
+          errors.push(`Error syncing ${provider.name}: ${provErr.message}`);
+        }
+      }
+
+      if (modified) {
+        await saveData(SMM_SERVICES_FILE, smmServices);
+        console.log("[SMM Background Sync] Auto-sync completed and SMM services file updated.");
+      } else {
+        console.log("[SMM Background Sync] SMM services are already up to date.");
+      }
+    } catch (err: any) {
+      console.error("[SMM Background Sync] Error during background SMM sync:", err);
+      errors.push(`Global sync error: ${err.message}`);
+    }
+
+    return { added: addedCount, updated: updatedCount, errors };
+  }
+
+  app.post("/api/admin/smm/sync", async (req, res) => {
+    try {
+      const results = await syncSmmServicesWithProviders();
+      res.json({ status: "ok", ...results });
+    } catch (err: any) {
+      res.status(500).json({ error: `Manual SMM Sync failed: ${err.message}` });
+    }
+  });
+
   app.post("/api/admin/smm/place-order", async (req, res) => {
     const { url, key, service, link, quantity } = req.body;
     if (!url || !key || !service || !link || !quantity) {
@@ -3637,6 +3900,15 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       setInterval(() => {
         processQueuedOrders().catch(err => console.error("[Queue Processor] Error in background task:", err));
       }, 15000);
+
+      // Start SMM automatic provider services & pricing sync
+      console.log("[SMM Background Sync] Initializing background auto-sync task (runs every 30 minutes)...");
+      setTimeout(() => {
+        syncSmmServicesWithProviders().catch(err => console.error("[SMM Background Sync] Error in initial sync:", err));
+      }, 10000); // 10s delay to avoid blocking server boot
+      setInterval(() => {
+        syncSmmServicesWithProviders().catch(err => console.error("[SMM Background Sync] Error in background task:", err));
+      }, 30 * 60 * 1000); // 30 minutes
     });
   }
 }

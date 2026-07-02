@@ -25,6 +25,7 @@ interface ContentItem {
   view_count: number;
   poster_file_key?: string;
   video_file_key?: string;
+  starring?: string;
 }
 
 // IndexedDB Storage
@@ -113,6 +114,7 @@ export default function BachelorPointManager() {
   const [fDesc, setFDesc] = useState('');
   const [fYear, setFYear] = useState('');
   const [fDur, setFDur] = useState('');
+  const [fStarring, setFStarring] = useState('');
   const [fFeat, setFFeat] = useState(false);
 
   // Local File Uploads
@@ -328,6 +330,7 @@ export default function BachelorPointManager() {
         duration_minutes: parseInt(fDur) || 25,
         category_id: parseInt(fCat) || 3,
         is_featured: fFeat,
+        starring: fStarring.trim() || undefined,
         view_count: 0
       };
 
@@ -377,6 +380,7 @@ export default function BachelorPointManager() {
       setFDesc('');
       setFYear('');
       setFDur('');
+      setFStarring('');
       setFFeat(false);
       setFPosterFile(null);
       setFVideoFile(null);
@@ -400,6 +404,7 @@ export default function BachelorPointManager() {
     setFDesc(item.description || '');
     setFYear(item.release_year ? item.release_year.toString() : '');
     setFDur(item.duration_minutes ? item.duration_minutes.toString() : '');
+    setFStarring(item.starring || '');
     setFFeat(item.is_featured || false);
     setFPosterUrl(item.poster_url || '');
     setFVideoUrl(item.video_url || '');
@@ -494,7 +499,8 @@ export default function BachelorPointManager() {
         release_year: parseInt(fYear) || new Date().getFullYear(),
         duration_minutes: parseInt(fDur) || 25,
         category_id: parseInt(fCat) || 3,
-        is_featured: fFeat
+        is_featured: fFeat,
+        starring: fStarring.trim() || undefined
       };
 
       if (poster_file_key) updatedItem.poster_file_key = poster_file_key;
@@ -543,6 +549,7 @@ export default function BachelorPointManager() {
       setFDesc('');
       setFYear('');
       setFDur('');
+      setFStarring('');
       setFFeat(false);
       setFPosterFile(null);
       setFVideoFile(null);
@@ -778,6 +785,17 @@ export default function BachelorPointManager() {
               placeholder="e.g. Bachelor Point - Full E01"
               value={fTitle}
               onChange={(e) => setFTitle(e.target.value)}
+              className="px-3.5 py-2.5 bg-[#12121a] border border-slate-800 rounded-xl text-xs outline-none focus:border-[#e5173f]/80 text-white font-semibold"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Starring Cast</label>
+            <input 
+              type="text" 
+              placeholder="e.g. Mishu Sabbir, Ziaul Hoque Polash, Marzuk Russell, Chashi Alam..."
+              value={fStarring}
+              onChange={(e) => setFStarring(e.target.value)}
               className="px-3.5 py-2.5 bg-[#12121a] border border-slate-800 rounded-xl text-xs outline-none focus:border-[#e5173f]/80 text-white font-semibold"
             />
           </div>

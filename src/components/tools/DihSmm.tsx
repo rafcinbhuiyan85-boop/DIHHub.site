@@ -318,7 +318,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const isSpotify = sName.includes('spotify') || sCat.includes('spotify');
     const isLinkedin = sName.includes('linkedin') || sCat.includes('linkedin');
     const isDiscord = sName.includes('discord') || sCat.includes('discord');
-    const isTraffic = sName.includes('traffic') || sName.includes('website') || sName.includes('visitor') || sName.includes('seo') || sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
+    const isTraffic = (sName.includes('traffic') || sName.includes('website') || sName.includes('visitor') || sName.includes('seo') || sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo')) && !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord;
     const isGame = sName.includes('game') || sName.includes('hack') || sName.includes('pubg') || sName.includes('free fire') || sName.includes('freefire') || sName.includes('clash') || sName.includes('gaming') || sName.includes('diamonds') || sName.includes('mlbb') || sName.includes('recharge') || sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
     const isOldAcc = sName.includes('{old/acc}') || sName.includes('old account') || sName.includes('old acc') || sName.includes('acc}') || sCat.includes('{old/acc}') || sCat.includes('old account') || sCat.includes('old acc') || sCat.includes('acc}');
 
@@ -362,6 +362,16 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (plat === 'linkedin') return sCat.includes('linkedin');
     if (plat === 'discord') return sCat.includes('discord');
     if (plat.includes('traffic') || plat.includes('website')) {
+      const isOtherPlat = sCat.includes('instagram') || sCat.includes('ig ') || sCat.includes('ig-') ||
+                          sCat.includes('facebook') || sCat.includes('fb') || sCat.includes('fanpage') || sCat.includes('meta') ||
+                          sCat.includes('youtube') || sCat.includes('yt ') || sCat.includes('yt-') ||
+                          sCat.includes('tiktok') ||
+                          sCat.includes('twitter') || sCat.includes('x.') || sCat === 'x' || sCat.includes('rt ') || sCat.includes('tweet') ||
+                          sCat.includes('telegram') || sCat.includes('tg ') || sCat.includes('tg-') ||
+                          sCat.includes('spotify') ||
+                          sCat.includes('linkedin') ||
+                          sCat.includes('discord');
+      if (isOtherPlat) return false;
       return sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
     }
     if (plat === 'game' || plat === 'games' || plat === 'game hacks') {

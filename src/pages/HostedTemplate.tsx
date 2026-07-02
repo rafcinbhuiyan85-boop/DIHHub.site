@@ -73,10 +73,22 @@ export default function HostedTemplate() {
     if (template.assets) {
       Object.entries(template.assets).forEach(([fileName, dataUrl]) => {
         const escapedName = fileName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const regex = new RegExp(`(["'\\(])(?:\\./)?${escapedName}(["'\\)])`, 'g');
-        cleanHtml = cleanHtml.replace(regex, `$1${dataUrl}$2`);
-        cleanCss = cleanCss.replace(regex, `$1${dataUrl}$2`);
-        cleanJs = cleanJs.replace(regex, `$1${dataUrl}$2`);
+        
+        // 1. Standard quotes or parentheses with optional leading ./ or /
+        const regex1 = new RegExp(`(["'\\(])(?:\\./|/)?${escapedName}(["'\\)])`, 'g');
+        cleanHtml = cleanHtml.replace(regex1, `$1${dataUrl}$2`);
+        cleanCss = cleanCss.replace(regex1, `$1${dataUrl}$2`);
+        cleanJs = cleanJs.replace(regex1, `$1${dataUrl}$2`);
+
+        // 2. CSS url() with optional leading ./ or / without quotes
+        const regex2 = new RegExp(`url\\((?:\\./|/)?${escapedName}\\)`, 'g');
+        cleanHtml = cleanHtml.replace(regex2, `url(${dataUrl})`);
+        cleanCss = cleanCss.replace(regex2, `url(${dataUrl})`);
+        cleanJs = cleanJs.replace(regex2, `url(${dataUrl})`);
+
+        // 3. HTML src= or href= attributes with optional leading ./ or / without quotes
+        const regex3 = new RegExp(`(=)(?:\\./|/)?${escapedName}(\\s|>)`, 'g');
+        cleanHtml = cleanHtml.replace(regex3, `$1"${dataUrl}"$2`);
       });
     }
 

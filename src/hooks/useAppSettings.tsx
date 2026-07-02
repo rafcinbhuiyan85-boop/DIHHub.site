@@ -118,6 +118,7 @@ export interface AppSettings {
   smmPaymentMethods: string[];
   smmEnableColorTheme?: boolean;
   bachelorEnableColorTheme?: boolean;
+  bachelorShowStarring?: boolean;
   smmUsdToBdtRate?: number;
   smmShortcutMappings?: Record<string, number[]>;
   disabledTools?: string[];
@@ -300,6 +301,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   smmPaymentMethods: ['bkash', 'nagad', 'rocket', 'card', 'crypto'],
   smmEnableColorTheme: true,
   bachelorEnableColorTheme: true,
+  bachelorShowStarring: true,
   smmUsdToBdtRate: 120,
   smmShortcutMappings: {},
   disabledTools: ['mobile-bypass'],
