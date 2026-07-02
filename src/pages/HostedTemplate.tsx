@@ -66,6 +66,20 @@ export default function HostedTemplate() {
   );
 
   const getCleanHtml = () => {
+    let cleanHtml = template.htmlContent || '';
+    let cleanCss = template.cssContent || '';
+    let cleanJs = template.jsContent || '';
+
+    if (template.assets) {
+      Object.entries(template.assets).forEach(([fileName, dataUrl]) => {
+        const escapedName = fileName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`(["'\\(])(?:\\./)?${escapedName}(["'\\)])`, 'g');
+        cleanHtml = cleanHtml.replace(regex, `$1${dataUrl}$2`);
+        cleanCss = cleanCss.replace(regex, `$1${dataUrl}$2`);
+        cleanJs = cleanJs.replace(regex, `$1${dataUrl}$2`);
+      });
+    }
+
     return `
       <!DOCTYPE html>
       <html>
@@ -74,13 +88,13 @@ export default function HostedTemplate() {
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>${template.name || 'DIH Template'}</title>
           <style>
-            ${template.cssContent || ''}
+            ${cleanCss}
           </style>
         </head>
         <body style="margin: 0; padding: 0;">
-          ${template.htmlContent || ''}
+          ${cleanHtml}
           <script>
-            ${template.jsContent || ''}
+            ${cleanJs}
           </script>
         </body>
       </html>

@@ -54,6 +54,7 @@ interface HtmlTemplate {
   cssContent: string;
   jsContent: string;
   createdAt: any;
+  assets?: { [key: string]: string };
 }
 
 import bachelorPointS5Poster from '../../assets/images/bachelor_point_s5_premium_1781464542219.jpg';
@@ -2498,14 +2499,50 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                             const files = e.target.files;
                                             if (!files?.length) return;
                                             let h='', c='', j='', n='';
+                                            const assets: { [key: string]: string } = {};
+                                            
                                             for(let f of files) {
-                                              const text = await f.text();
-                                              const fn = f.name.toLowerCase();
-                                              if (fn.endsWith('.html')) { if (fn === 'index.html' || !h) { h=text; n=f.name.replace(/\.[^/.]+$/, ""); } else h+='\n'+text; }
-                                              else if (fn.endsWith('.css')) c+='\n'+text;
-                                              else if (fn.endsWith('.js')) j+='\n'+text;
+                                              const fn = f.name;
+                                              const fnLower = fn.toLowerCase();
+                                              
+                                              if (fnLower.endsWith('.html')) {
+                                                const text = await f.text();
+                                                if (fnLower === 'index.html' || !h) {
+                                                  h = text;
+                                                  n = f.name.replace(/\.[^/.]+$/, "");
+                                                } else {
+                                                  h += '\n' + text;
+                                                }
+                                              } else if (fnLower.endsWith('.css')) {
+                                                const text = await f.text();
+                                                c += '\n' + text;
+                                              } else if (fnLower.endsWith('.js')) {
+                                                const text = await f.text();
+                                                j += '\n' + text;
+                                              } else {
+                                                // Read other files (images, audio, etc.) as Base64 Data URL
+                                                await new Promise<void>((resolve) => {
+                                                  const reader = new FileReader();
+                                                  reader.onload = (event) => {
+                                                    if (event.target?.result) {
+                                                      assets[fn] = event.target.result as string;
+                                                    }
+                                                    resolve();
+                                                  };
+                                                  reader.onerror = () => resolve();
+                                                  reader.readAsDataURL(f);
+                                                });
+                                              }
                                             }
-                                            setHtmlFormData(p => ({ ...p, htmlContent: h||p.htmlContent, cssContent: c.trim()||p.cssContent, jsContent: j.trim()||p.jsContent, name: n||p.name }));
+                                            
+                                            setHtmlFormData(p => ({ 
+                                              ...p, 
+                                              htmlContent: h || p.htmlContent, 
+                                              cssContent: c.trim() || p.cssContent, 
+                                              jsContent: j.trim() || p.jsContent, 
+                                              name: n || p.name,
+                                              assets: { ...(p.assets || {}), ...assets }
+                                            }));
                                           }}
                                           className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                         />

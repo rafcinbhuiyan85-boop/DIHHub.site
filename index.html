@@ -9,6 +9,33 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png?v=5" />
     <link rel="shortcut icon" href="/favicon.ico?v=5" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/favicon.png?v=5" />
+    <script>
+      (function() {
+        try {
+          const cached = localStorage.getItem('dh_v3_settings');
+          if (cached) {
+            const settings = JSON.parse(cached);
+            let faviconUrl = settings.faviconUrl || '/favicon-dih.png';
+            if (faviconUrl === '/favicon.png' || faviconUrl === '/favicon.ico' || faviconUrl === 'favicon.png' || faviconUrl === 'favicon.ico') {
+              faviconUrl = '/favicon-dih.png';
+            }
+            if (faviconUrl) {
+              if (!faviconUrl.startsWith('/') && !faviconUrl.startsWith('http') && !faviconUrl.startsWith('data:')) {
+                faviconUrl = '/' + faviconUrl;
+              }
+              const links = document.querySelectorAll("link[rel*='icon']");
+              links.forEach(function(link) {
+                link.href = faviconUrl;
+              });
+              const appleLink = document.querySelector("link[rel='apple-touch-icon']");
+              if (appleLink) {
+                appleLink.href = faviconUrl;
+              }
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script src="/desipaybd.js"></script>
     <script>
       window.addEventListener('DOMContentLoaded', () => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, PlusCircle, List, ArrowDownToLine, Upload,
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
-  AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu,
+  AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu, Trash2,
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video, Zap, FileText,
@@ -125,6 +125,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const userEmail = userToUse?.email || 'contact@dihhub.site';
   const userName = userToUse?.name || 'Guest User';
   const isLoggedIn = !!userToUse;
+  const isAdmin = userToUse?.role === 'admin' || userToUse?.isAdmin || userToUse?.email === 'rafcin.b';
 
   // Scoped localStorage keys
   const balanceKey = isLoggedIn ? `dih_smm_balance_${userEmail}` : `dih_smm_balance_guest`;
@@ -953,6 +954,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   };
 
   const navigate = (page: 'dashboard' | 'new-order' | 'services' | 'orders' | 'deposit', serviceId?: number) => {
+    if (!isLoggedIn && (page === 'new-order' || page === 'orders' || page === 'deposit')) {
+      onAuthClick?.();
+      return;
+    }
     setActivePage(page);
     setMobileMenuOpen(false);
     if (page === 'new-order' && serviceId) {
@@ -968,6 +973,32 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     setDepError(null);
     setDepSuccess(null);
     setDropdownOpen(false);
+  };
+
+  const deleteOrder = async (orderId: number) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this order permanently?");
+    if (!confirmDelete) return;
+
+    const updatedLocalOrders = orders.filter(o => o.id !== orderId);
+    setOrders(updatedLocalOrders);
+    localStorage.setItem(ordersKey, JSON.stringify(updatedLocalOrders));
+
+    try {
+      const res = await fetch('/api/smm/orders');
+      if (res.ok) {
+        const globalOrders = await res.json();
+        if (Array.isArray(globalOrders)) {
+          const updatedGlobalOrders = globalOrders.filter(o => o.id !== orderId);
+          await fetch('/api/smm/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedGlobalOrders)
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error deleting SMM order:", e);
+    }
   };
 
   // Calculations
@@ -1279,7 +1310,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return;
     }
     if (currentTotal > balance) {
-      setOrderError('Insufficient balance. Please add funds.');
+      setOrderError('Insufficient balance. Redirecting to Add Funds...');
+      setTimeout(() => navigate('deposit'), 1500);
       return;
     }
 
@@ -2881,6 +2913,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Charge</th>
                             <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Date</th>
                             <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Status</th>
+                            {isAdmin && <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Actions</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1e2336]/60">
@@ -2907,6 +2940,17 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   {o.status}
                                 </span>
                               </td>
+                              {isAdmin && (
+                                <td className="px-4.5 py-3 text-right">
+                                  <button
+                                    onClick={() => deleteOrder(o.id)}
+                                    className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition cursor-pointer inline-flex items-center justify-center"
+                                    title="Delete Order Permanently"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
