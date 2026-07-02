@@ -117,7 +117,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
             </span>
           </h2>
           <p className="text-[10px] md:text-xs font-black tracking-[0.2em] text-primary dark:text-indigo-400 uppercase select-none opacity-80">
-            Digital Innovation House Hub
+            Digital Innovation House
           </p>
         </div>
         

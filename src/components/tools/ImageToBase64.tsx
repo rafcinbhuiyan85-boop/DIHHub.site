@@ -251,7 +251,7 @@ export default function ImageToBase64() {
       )}
       
       <p className="text-[10px] text-slate-500 italic text-center p-4 border-t border-slate-100 dark:border-slate-800">
-        Tip: Always ensure your Base64 string includes the data prefix (e.g., data:image/png;base64,) for best results.
+        Tip: Always ensure your Base64 string includes the data prefix (data:image/png;base64) for best results
       </p>
     </div>
   );
