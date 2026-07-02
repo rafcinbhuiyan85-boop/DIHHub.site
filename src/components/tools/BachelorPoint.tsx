@@ -848,31 +848,7 @@ export default function BachelorPoint() {
                     </p>
                   </div>
                 )}
-                
-                {/* Admin/Uploaded Info */}
-                <div className="flex items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-wider border-t border-white/5 pt-3">
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-600">Released:</span>
-                    <span className="text-slate-400">{activeWatchItem.release_year}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-600">Category:</span>
-                    <span className="text-slate-400">{getCategoryName(activeWatchItem.category_id)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-600">Duration:</span>
-                    <span className="text-slate-400">{activeWatchItem.duration_minutes} Mins</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-600">Views:</span>
-                    <span className="text-slate-400">{activeWatchItem.view_count || 0}</span>
-                  </div>
-                </div>
               </div>
-              
-              <p className="text-slate-450 text-xs font-semibold leading-relaxed border-t border-white/5 pt-3">
-                {activeWatchItem.description || "No description provided for this exclusive manual upload."}
-              </p>
             </div>
           </div>
         )}

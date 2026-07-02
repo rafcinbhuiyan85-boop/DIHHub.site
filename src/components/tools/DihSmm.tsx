@@ -1754,7 +1754,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         } else if (activeCatLower === 'discord') {
           matchesCat = svcCatLower.includes('discord');
         } else if (activeCatLower === 'website traffic') {
-          matchesCat = svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web');
+          const isOtherPlatform = ['instagram', 'facebook', 'youtube', 'tiktok', 'telegram', 'twitter', 'spotify', 'linkedin', 'discord', 'game'].some(plat => svcCatLower.includes(plat));
+          matchesCat = !isOtherPlatform && (svcCatLower.includes('website') || svcCatLower.includes('traffic') || svcCatLower.includes('web'));
         } else if (activeCatLower === 'others') {
           // Anything that doesn't explicitly match the primary main ones
           const isKnown = ['instagram', 'ig', 'facebook', 'fb', 'youtube', 'yt', 'tiktok', 'tt', 'telegram', 'tg', 'twitter', 'x ', 'linkedin', 'spotify', 'discord', 'website', 'traffic', 'web'].some(k => svcCatLower.includes(k));

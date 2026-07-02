@@ -158,6 +158,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     cssContent: '',
     jsContent: '',
   });
+  const [isReadingFiles, setIsReadingFiles] = useState(false);
+  const [fileLoadStatus, setFileLoadStatus] = useState<string | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [successSlug, setSuccessSlug] = useState<string | null>(null);
@@ -1755,6 +1757,8 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
       cssContent: '',
       jsContent: '',
     });
+    setIsReadingFiles(false);
+    setFileLoadStatus(null);
   };
 
   enum OperationType {
@@ -2529,19 +2533,33 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                      <div className="relative group/up">
                                         <input 
                                           type="file" accept=".html,.htm"
+                                          disabled={isReadingFiles}
                                           onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;
+                                            setIsReadingFiles(true);
+                                            setFileLoadStatus("Synthesizing single HTML file...");
                                             const reader = new FileReader();
                                             reader.onload = (event) => {
                                               const nameVal = file.name.replace(/\.[^/.]+$/, "");
                                               const generatedId = nameVal.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+                                              let finalId = generatedId;
+                                              if (finalId) {
+                                                let count = 1;
+                                                const existingIds = htmlTemplates.map(t => t.id);
+                                                while (existingIds.includes(finalId)) {
+                                                  finalId = `${generatedId}-${count}`;
+                                                  count++;
+                                                }
+                                              }
                                               setHtmlFormData(prev => ({
                                                 ...prev,
                                                 htmlContent: event.target?.result as string,
                                                 name: nameVal,
-                                                id: prev.id || generatedId
+                                                id: prev.id || finalId
                                               }));
+                                              setIsReadingFiles(false);
+                                              setFileLoadStatus(`Loaded single HTML file: ${file.name}`);
                                             };
                                             reader.readAsText(file);
                                           }}
@@ -2555,9 +2573,13 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                      <div className="relative group/up">
                                         <input 
                                           type="file" {...({ webkitdirectory: "", directory: "" } as any)} multiple
+                                          disabled={isReadingFiles}
                                           onChange={async (e) => {
                                             const files = e.target.files;
                                             if (!files?.length) return;
+                                            setIsReadingFiles(true);
+                                            setFileLoadStatus("Reading files recursively...");
+                                            
                                             let h='', c='', j='', n='';
                                             const assets: { [key: string]: string } = {};
                                             
@@ -2592,6 +2614,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                             }
 
                                             // 2. Process all other files (images, audio, stylesheets, scripts)
+                                            let loadedCount = 0;
                                             for (let i = 0; i < files.length; i++) {
                                               const f = files[i];
                                               if (f === mainHtmlFile) continue;
@@ -2601,6 +2624,29 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               if (!fn) continue;
                                               
                                               const fnLower = fn.toLowerCase();
+                                              
+                                              // SKIP JUNK FILES to prevent exceeding size limits
+                                              if (
+                                                fnLower.includes('node_modules/') ||
+                                                fnLower.includes('.git/') ||
+                                                fnLower.includes('.github/') ||
+                                                fnLower.includes('thumbs.db') ||
+                                                fnLower.includes('.ds_store') ||
+                                                fnLower.endsWith('.zip') ||
+                                                fnLower.endsWith('.rar') ||
+                                                fnLower.endsWith('.tar.gz')
+                                              ) {
+                                                continue;
+                                              }
+
+                                              // Skip massive individual files (>2.5MB) to prevent browser/network locks
+                                              if (f.size > 2.5 * 1024 * 1024) {
+                                                console.warn(`File ${fn} skipped because it exceeds 2.5MB limit.`);
+                                                continue;
+                                              }
+                                              
+                                              setFileLoadStatus(`Reading [${i+1}/${files.length}]: ${f.name}...`);
+
                                               if (fnLower.endsWith('.css')) {
                                                 const text = await f.text();
                                                 c += '\n' + text;
@@ -2614,6 +2660,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                                 reader.onload = (event) => {
                                                   if (event.target?.result) {
                                                     assets[fn] = event.target.result as string;
+                                                    loadedCount++;
                                                   }
                                                   resolve();
                                                 };
@@ -2624,15 +2671,28 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                             }
                                             
                                             const generatedId = n ? n.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') : '';
+                                            let finalId = generatedId;
+                                            if (finalId) {
+                                              let count = 1;
+                                              const existingIds = htmlTemplates.map(t => t.id);
+                                              while (existingIds.includes(finalId)) {
+                                                finalId = `${generatedId}-${count}`;
+                                                count++;
+                                              }
+                                            }
+                                            
                                             setHtmlFormData(p => ({ 
                                               ...p, 
-                                              id: p.id || generatedId,
+                                              id: p.id || finalId,
                                               htmlContent: h || p.htmlContent, 
                                               cssContent: (c.trim() ? c.trim() : p.cssContent), 
                                               jsContent: (j.trim() ? j.trim() : p.jsContent), 
                                               name: n || p.name,
                                               assets: { ...(p.assets || {}), ...assets }
                                             }));
+
+                                            setIsReadingFiles(false);
+                                            setFileLoadStatus(`Loaded folder "${n}" with ${loadedCount} assets!`);
                                           }}
                                           className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                         />
@@ -2643,6 +2703,118 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                      </div>
                                   </div>
                                </div>
+
+                               {/* FILE LOADER STATUS BAR */}
+                               {fileLoadStatus && (
+                                 <div className="bg-[#12121a] border border-white/5 rounded-2xl p-4 flex items-center gap-3 animate-in fade-in duration-300">
+                                   {isReadingFiles ? (
+                                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                   ) : (
+                                     <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                                   )}
+                                   <span className="text-xs font-semibold text-slate-300 font-mono tracking-tight leading-none break-all">{fileLoadStatus}</span>
+                                 </div>
+                               )}
+
+                               {/* STAGED ASSETS AREA */}
+                               {((htmlFormData.assets && Object.keys(htmlFormData.assets).length > 0) || htmlFormData.htmlContent) && (
+                                  <div className="space-y-4 border-t border-white/5 pt-6 animate-in fade-in duration-300">
+                                     <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center gap-3">
+                                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                                           Staged Assets ({Object.keys(htmlFormData.assets || {}).length} files)
+                                        </label>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setHtmlFormData(p => ({ ...p, assets: {} }));
+                                            setFileLoadStatus(null);
+                                          }}
+                                          className="text-[8px] font-black uppercase text-red-500 hover:text-red-400 tracking-widest bg-red-500/10 hover:bg-red-500/25 px-2.5 py-1 rounded"
+                                        >
+                                          Clear All Assets
+                                        </button>
+                                     </div>
+                                     
+                                     {/* Total Size Indicator */}
+                                     {(() => {
+                                        const totalAssetsSizeChars = Object.values(htmlFormData.assets || {}).reduce((acc, curr) => acc + curr.length, 0);
+                                        const totalAssetsSizeKb = Math.round(totalAssetsSizeChars * 0.75 / 1024);
+                                        const isOverLimit = totalAssetsSizeKb > 850; // 850KB warning (Firestore is 1MB)
+                                        return (
+                                           <div className={cn(
+                                              "p-3.5 rounded-xl border flex items-center justify-between text-[10px] font-bold uppercase tracking-wider",
+                                              isOverLimit 
+                                                 ? "bg-red-500/10 border-red-500/20 text-red-400" 
+                                                 : "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
+                                           )}>
+                                              <div className="flex items-center gap-2">
+                                                 <span>Payload Size: {totalAssetsSizeKb} KB</span>
+                                                 <span className="text-slate-600 font-medium">/ 1020 KB Limit</span>
+                                              </div>
+                                              <span>
+                                                 {isOverLimit ? "⚠️ Exceeds Firestore limit! Remove large files" : "✅ Within safe limits"}
+                                              </span>
+                                           </div>
+                                        );
+                                     })()}
+
+                                     <div className="max-h-52 overflow-y-auto bg-black/40 border border-white/5 rounded-2xl p-4 space-y-2 no-scrollbar text-[10px]">
+                                        {htmlFormData.htmlContent && (
+                                           <div className="flex items-center justify-between py-1 border-b border-white/5 px-1">
+                                              <span className="text-blue-400 font-semibold truncate max-w-[70%]">📄 index.html (Main Entrypoint)</span>
+                                              <span className="text-slate-500 font-mono font-bold">~{Math.round((htmlFormData.htmlContent.length) / 1024)} KB</span>
+                                           </div>
+                                        )}
+                                        {htmlFormData.cssContent && (
+                                           <div className="flex items-center justify-between py-1 border-b border-white/5 px-1">
+                                              <span className="text-indigo-400 font-semibold truncate max-w-[70%]">🎨 global.css</span>
+                                              <span className="text-slate-500 font-mono font-bold">~{Math.round((htmlFormData.cssContent.length) / 1024)} KB</span>
+                                           </div>
+                                        )}
+                                        {htmlFormData.jsContent && (
+                                           <div className="flex items-center justify-between py-1 border-b border-white/5 px-1">
+                                              <span className="text-amber-400 font-semibold truncate max-w-[70%]">⚡ custom.js</span>
+                                              <span className="text-slate-500 font-mono font-bold">~{Math.round((htmlFormData.jsContent.length) / 1024)} KB</span>
+                                           </div>
+                                        )}
+                                        {Object.entries(htmlFormData.assets || {}).map(([fn, dataUrl]) => {
+                                           const fileBytes = Math.round(dataUrl.length * 0.75);
+                                           const fileKb = Math.round(fileBytes / 1024);
+                                           return (
+                                              <div key={fn} className="flex items-center justify-between py-1.5 border-b border-white/5 hover:bg-white/5 px-1 rounded transition-colors group">
+                                                 <div className="flex flex-col truncate max-w-[75%] text-left">
+                                                    <span className="text-slate-300 font-semibold truncate font-mono">{fn}</span>
+                                                    <span className="text-slate-500 text-[8px] uppercase font-bold tracking-wider">
+                                                       Type: {dataUrl.split(';')[0]?.replace('data:', '') || 'binary'}
+                                                    </span>
+                                                 </div>
+                                                 <div className="flex items-center gap-3">
+                                                    <span className={cn(
+                                                       "font-mono font-bold",
+                                                       fileKb > 150 ? "text-amber-400" : "text-slate-500"
+                                                    )}>{fileKb} KB</span>
+                                                    <button
+                                                       type="button"
+                                                       onClick={() => {
+                                                          setHtmlFormData(p => {
+                                                             const updatedAssets = { ...(p.assets || {}) };
+                                                             delete updatedAssets[fn];
+                                                             return { ...p, assets: updatedAssets };
+                                                          });
+                                                       }}
+                                                       className="text-red-500 hover:text-red-400 p-1 opacity-60 hover:opacity-100 transition-opacity"
+                                                       title="Remove this asset to reduce payload size"
+                                                    >
+                                                       <Trash2 size={12} />
+                                                    </button>
+                                                 </div>
+                                              </div>
+                                           );
+                                        })}
+                                     </div>
+                                  </div>
+                               )}
 
                                <div className="space-y-4">
                                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center gap-3">
@@ -2661,10 +2833,24 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
 
                             <button 
                               type="submit" 
-                              className="w-full py-7 bg-blue-600 hover:bg-blue-500 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] flex items-center justify-center gap-4 transition-all shadow-[0_20px_60px_rgba(37,99,235,0.3)] active:scale-95 group/save"
+                              disabled={isReadingFiles || (() => {
+                                 const totalAssetsSizeChars = Object.values(htmlFormData.assets || {}).reduce((acc, curr) => acc + curr.length, 0);
+                                 const totalAssetsSizeKb = Math.round(totalAssetsSizeChars * 0.75 / 1024);
+                                 return totalAssetsSizeKb > 1000;
+                              })()}
+                              className={cn(
+                                "w-full py-7 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] flex items-center justify-center gap-4 transition-all shadow-[0_20px_60px_rgba(37,99,235,0.3)] active:scale-95 group/save",
+                                (isReadingFiles || (() => {
+                                   const totalAssetsSizeChars = Object.values(htmlFormData.assets || {}).reduce((acc, curr) => acc + curr.length, 0);
+                                   const totalAssetsSizeKb = Math.round(totalAssetsSizeChars * 0.75 / 1024);
+                                   return totalAssetsSizeKb > 1000;
+                                })()) 
+                                   ? "bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed shadow-none" 
+                                   : "bg-blue-600 hover:bg-blue-500"
+                              )}
                             >
                                <Save size={24} className="group-hover/save:rotate-12 transition-transform" />
-                               DEPLOY CORE ENGINE
+                               {isReadingFiles ? "SYNTHESIZING FILES..." : "DEPLOY CORE ENGINE"}
                             </button>
                           </div>
                        </form>
