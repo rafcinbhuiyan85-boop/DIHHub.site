@@ -105,7 +105,7 @@ const KEY_CATEGORIES = [
 const INITIAL_CONTENTS: ContentItem[] = [];
 
 export default function BachelorPoint() {
-  const { settings } = useAppSettings();
+  const { settings, updateSettings } = useAppSettings();
   const [activeTab, setActiveTab] = useState<'home' | 'browse' | 'watch' | 'admin' | 'add'>('home');
   const [categories, setCategories] = useState<Category[]>(KEY_CATEGORIES);
   const [contents, setContents] = useState<ContentItem[]>(INITIAL_CONTENTS);
@@ -607,9 +607,11 @@ export default function BachelorPoint() {
                   <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight drop-shadow-md">
                     {heroContent.title}
                   </h1>
-                  <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-lg">
-                    {heroContent.description}
-                  </p>
+                  {heroContent.description && heroContent.description.toLowerCase().indexOf("no description") === -1 && (
+                    <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-lg">
+                      {heroContent.description}
+                    </p>
+                  )}
                   
                   <div className="flex flex-wrap items-center gap-3 pt-2">
                     <button 
@@ -866,6 +868,28 @@ export default function BachelorPoint() {
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[var(--bp-primary)] hover:bg-[var(--bp-hover)] text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95"
               >
                 <Plus size={14} /> Add Content manual
+              </button>
+            </div>
+
+            {/* Quick Settings Bar */}
+            <div className="p-5 bg-slate-950 border border-slate-900 rounded-2xl flex items-center justify-between shadow-xl">
+              <div className="flex flex-col gap-1 text-left">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--bp-primary)]">Cast Presentation Control</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wide">Show 'Starring Cast' list under player title</span>
+                <p className="text-[10px] text-slate-500 font-semibold">Toggling this switch will globally show/hide the cast list on all video player items.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateSettings({ bachelorShowStarring: settings.bachelorShowStarring === false ? true : false })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors outline-none cursor-pointer ${
+                  settings.bachelorShowStarring !== false ? "bg-[var(--bp-primary)]" : "bg-slate-800"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.bachelorShowStarring !== false ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
               </button>
             </div>
 

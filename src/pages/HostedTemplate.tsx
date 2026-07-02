@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Loader2, AlertCircle } from 'lucide-react';
 
@@ -18,7 +18,26 @@ export default function HostedTemplate() {
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
-          setTemplate(docSnap.data());
+          const mainData = docSnap.data();
+          const loadedAssets: { [key: string]: string } = mainData.assets || {};
+
+          try {
+            const assetsColRef = collection(db, 'templates', slug, 'assets');
+            const assetsSnap = await getDocs(assetsColRef);
+            assetsSnap.forEach((assetDoc) => {
+              const assetData = assetDoc.data();
+              if (assetData.path && assetData.content) {
+                loadedAssets[assetData.path] = assetData.content;
+              }
+            });
+          } catch (assetsErr) {
+            console.warn("Could not load assets subcollection:", assetsErr);
+          }
+
+          setTemplate({
+            ...mainData,
+            assets: loadedAssets
+          });
         } else {
           setError('Template not found');
         }

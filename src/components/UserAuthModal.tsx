@@ -224,7 +224,7 @@ export default function UserAuthModal({ isOpen, onClose, onSuccess }: UserAuthMo
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. Rafcin Bhuiyan"
+                      placeholder="e.g. Arif Hossain"
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
@@ -241,14 +241,14 @@ export default function UserAuthModal({ isOpen, onClose, onSuccess }: UserAuthMo
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
                     <Mail size={15} />
                   </div>
-                  <input 
-                    type={isLogin ? "text" : "email"}
-                    required
-                    placeholder={isLogin ? "e.g. rafcin.b or email" : "e.g. rafcin@gmail.com"}
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
-                  />
+                    <input 
+                      type={isLogin ? "text" : "email"}
+                      required
+                      placeholder={isLogin ? "e.g. arif.hossain or email" : "e.g. member@dihhub.com"}
+                      value={formData.email}
+                      onChange={e => setFormData({...formData, email: e.target.value})}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                    />
                 </div>
               </div>
 

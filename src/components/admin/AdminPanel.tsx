@@ -1719,22 +1719,49 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
     if (!htmlFormData.htmlContent) { alert("HTML Content is required!"); return; }
 
     const templatePath = `templates/${htmlFormData.id}`;
+    setIsReadingFiles(true);
+    setFileLoadStatus("Deploying main template entrypoint...");
     try {
+      // Split assets to keep main document under 1MB Firestore limit
+      const { assets, ...mainTemplateData } = htmlFormData;
+      
       const templateDoc = doc(db, 'templates', htmlFormData.id);
       await setDoc(templateDoc, {
-        ...htmlFormData,
+        ...mainTemplateData,
         createdAt: htmlFormData.createdAt || Timestamp.now(),
         updatedAt: Timestamp.now()
       }, { merge: true });
+
+      // Save each asset to assets subcollection
+      if (assets && Object.keys(assets).length > 0) {
+        const entries = Object.entries(assets);
+        for (let idx = 0; idx < entries.length; idx++) {
+          const [filePath, fileContent] = entries[idx];
+          setFileLoadStatus(`Deploying assets [${idx + 1}/${entries.length}]: ${filePath}...`);
+          
+          // Replace slashes so it is a valid Firestore document ID
+          const safeAssetId = filePath.replace(/\//g, '___');
+          const assetDocRef = doc(db, 'templates', htmlFormData.id, 'assets', safeAssetId);
+          await setDoc(assetDocRef, {
+            path: filePath,
+            content: fileContent,
+            updatedAt: Timestamp.now()
+          });
+        }
+      }
       
       setSuccessSlug(htmlFormData.id);
+      setFileLoadStatus(`Successfully deployed project to: /t/${htmlFormData.id}`);
       resetHtmlForm();
     } catch (err: any) {
       if (err.message?.includes('permission')) {
         handleFirestoreError(err, OperationType.WRITE, templatePath);
       }
       console.error("Error saving template:", err);
-      alert("Failed to save. Check Firestore permissions.");
+      alert("Failed to save. Check Firestore permissions or size limits.");
+      setFileLoadStatus(`Deployment failed: ${err.message || 'Error'}`);
+    } finally {
+      setIsReadingFiles(false);
     }
   };
 
@@ -2640,7 +2667,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               }
 
                                               // Skip massive individual files (>2.5MB) to prevent browser/network locks
-                                              if (f.size > 2.5 * 1024 * 1024) {
+                                              if (f.size > 15 * 1024 * 1024) {
                                                 console.warn(`File ${fn} skipped because it exceeds 2.5MB limit.`);
                                                 continue;
                                               }
@@ -2648,12 +2675,16 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               setFileLoadStatus(`Reading [${i+1}/${files.length}]: ${f.name}...`);
 
                                               if (fnLower.endsWith('.css')) {
-                                                const text = await f.text();
-                                                c += '\n' + text;
+                                                try {
+                                                  const text = await f.text();
+                                                  c += '\n' + text;
+                                                } catch (err) {}
                                               } else if (fnLower.endsWith('.js')) {
-                                                const text = await f.text();
-                                                j += '\n' + text;
-                                              } else {
+                                                try {
+                                                  const text = await f.text();
+                                                  j += '\n' + text;
+                                                } catch (err) {}
+                                              }
 
                                               await new Promise<void>((resolve) => {
                                                 const reader = new FileReader();
@@ -2667,7 +2698,6 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                                 reader.onerror = () => resolve();
                                                 reader.readAsDataURL(f);
                                               });
-                                             }
                                             }
                                             
                                             const generatedId = n ? n.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') : '';
@@ -2738,9 +2768,9 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                      
                                      {/* Total Size Indicator */}
                                      {(() => {
-                                        const totalAssetsSizeChars = Object.values(htmlFormData.assets || {}).reduce((acc, curr) => acc + curr.length, 0);
+                                        const totalAssetsSizeChars = (Object.values(htmlFormData.assets || {}) as string[]).reduce((acc, curr) => acc + curr.length, 0);
                                         const totalAssetsSizeKb = Math.round(totalAssetsSizeChars * 0.75 / 1024);
-                                        const isOverLimit = totalAssetsSizeKb > 850; // 850KB warning (Firestore is 1MB)
+                                        const isOverLimit = totalAssetsSizeKb > 25600; // 25MB warning (Subcollection allows up to 25MB)
                                         return (
                                            <div className={cn(
                                               "p-3.5 rounded-xl border flex items-center justify-between text-[10px] font-bold uppercase tracking-wider",
@@ -2750,10 +2780,10 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                            )}>
                                               <div className="flex items-center gap-2">
                                                  <span>Payload Size: {totalAssetsSizeKb} KB</span>
-                                                 <span className="text-slate-600 font-medium">/ 1020 KB Limit</span>
+                                                 <span className="text-slate-600 font-medium">/ 25 MB Limit</span>
                                               </div>
                                               <span>
-                                                 {isOverLimit ? "⚠️ Exceeds Firestore limit! Remove large files" : "✅ Within safe limits"}
+                                                 {isOverLimit ? "⚠️ Exceeds 25MB limit! Remove large files" : "✅ Within safe limits"}
                                               </span>
                                            </div>
                                         );
@@ -2778,7 +2808,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                                               <span className="text-slate-500 font-mono font-bold">~{Math.round((htmlFormData.jsContent.length) / 1024)} KB</span>
                                            </div>
                                         )}
-                                        {Object.entries(htmlFormData.assets || {}).map(([fn, dataUrl]) => {
+                                        {(Object.entries(htmlFormData.assets || {}) as [string, string][]).map(([fn, dataUrl]) => {
                                            const fileBytes = Math.round(dataUrl.length * 0.75);
                                            const fileKb = Math.round(fileBytes / 1024);
                                            return (
@@ -2834,16 +2864,16 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                             <button 
                               type="submit" 
                               disabled={isReadingFiles || (() => {
-                                 const totalAssetsSizeChars = Object.values(htmlFormData.assets || {}).reduce((acc, curr) => acc + curr.length, 0);
+                                 const totalAssetsSizeChars = (Object.values(htmlFormData.assets || {}) as string[]).reduce((acc, curr) => acc + curr.length, 0);
                                  const totalAssetsSizeKb = Math.round(totalAssetsSizeChars * 0.75 / 1024);
-                                 return totalAssetsSizeKb > 1000;
+                                 return totalAssetsSizeKb > 25600;
                               })()}
                               className={cn(
                                 "w-full py-7 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] flex items-center justify-center gap-4 transition-all shadow-[0_20px_60px_rgba(37,99,235,0.3)] active:scale-95 group/save",
                                 (isReadingFiles || (() => {
-                                   const totalAssetsSizeChars = Object.values(htmlFormData.assets || {}).reduce((acc, curr) => acc + curr.length, 0);
+                                   const totalAssetsSizeChars = (Object.values(htmlFormData.assets || {}) as string[]).reduce((acc, curr) => acc + curr.length, 0);
                                    const totalAssetsSizeKb = Math.round(totalAssetsSizeChars * 0.75 / 1024);
-                                   return totalAssetsSizeKb > 1000;
+                                   return totalAssetsSizeKb > 25600;
                                 })()) 
                                    ? "bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed shadow-none" 
                                    : "bg-blue-600 hover:bg-blue-500"
