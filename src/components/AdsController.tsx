@@ -13,10 +13,10 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
     const cleanup = (id: string) => {
       const existing = document.getElementById(id);
       if (existing) existing.remove();
-      // Also cleanup any specific classes or identifiers if needed
     };
 
     const isSmmPanel = activeTool === 'dih-smm' || window.location.pathname.includes('dih-smm');
+    const hiderId = 'dh-smm-ad-hider';
 
     if (isSmmPanel) {
       cleanup('dh-header-ads');
@@ -28,12 +28,43 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
       cleanup('dh-adsense-h');
       cleanup('dh-forced-adsterra-1');
       cleanup('dh-forced-adsterra-2');
+
+      // Inject style to dynamically hide any ad elements that may have been loaded, without affecting standard React modals/portals
+      let style = document.getElementById(hiderId) as HTMLStyleElement;
+      if (!style) {
+        style = document.createElement('style');
+        style.id = hiderId;
+        style.textContent = `
+          /* Hide Adsterra social bar, popunder elements, and injected overlays */
+          iframe[src*="effectivecpmnetwork"],
+          iframe[id*="asg"],
+          div[id*="asg"],
+          iframe[class*="adsterra"],
+          div[class*="adsterra"],
+          [id^="at_"],
+          [class^="at_"],
+          body > iframe:not([id*="webpack"]):not([id*="vite"]),
+          body > div:not(#root):not([class*="radix"]):not([class*="Dialog"]):not([id^="radix-"]):not([role="dialog"]) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
       return;
     }
 
+    // Clean up SMM hider when on other tools
+    cleanup(hiderId);
+
     // Unconditionally inject the two specific Adsterra script tags provided by the user on all non-SMM pages
+    // ONLY if they don't already exist in the DOM (to avoid continuous reloading and breaking execution)
     const injectScriptSrc = (src: string, id: string, targetNode: HTMLElement) => {
-      cleanup(id);
+      if (document.getElementById(id)) {
+        return; // Already injected and running! Do not reload or interrupt!
+      }
       const script = document.createElement('script');
       script.id = id;
       script.src = src;
