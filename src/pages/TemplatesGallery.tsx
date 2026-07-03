@@ -161,15 +161,6 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
                 Return to Dashboard
               </button>
             )}
-            <span className="text-[10px] font-medium text-slate-400 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800/60">
-              Template Gallery
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium font-mono">
-              Ready to deploy
-            </span>
           </div>
         </div>
 
@@ -185,11 +176,6 @@ export default function TemplatesGallery({ onBack }: TemplatesGalleryProps) {
               <p className="text-sm text-slate-400 font-normal leading-relaxed max-w-xl">
                 Deploy, manage, and share elegant, isolated single-page web experiences and high-fidelity custom micro-portals.
               </p>
-            </div>
-            
-            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/50 px-6 py-4 rounded-2xl flex flex-col items-center md:items-start gap-1 shadow-sm self-stretch md:self-auto justify-center min-w-[160px]">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TOTAL DESIGNS</span>
-              <span className="text-2xl font-bold text-white font-mono">{templates.length} <span className="text-[10px] text-blue-400 uppercase font-bold tracking-wider ml-1">Live</span></span>
             </div>
           </div>
         </header>

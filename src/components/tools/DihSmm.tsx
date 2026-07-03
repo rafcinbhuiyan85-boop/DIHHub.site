@@ -6,7 +6,7 @@ import {
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video, Zap, FileText,
-  Gamepad2, ShieldCheck, Copy, Check, Mail
+  Gamepad2, ShieldCheck, Copy, Check, Mail, LogOut, ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -1942,6 +1942,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             <CreditCard size={18} className={getSidebarIconColor('deposit')} />
             Add Funds
           </button>
+
+
         </nav>
       </aside>
 
@@ -2555,7 +2557,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                         {selectedService.id}
                                       </span>
                                       <span className="truncate font-semibold">{selectedService.name}</span>
-                                      {selectedService.refill && (
+                                      {selectedService.refill && orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
                                         <span className={cn(
                                           "px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 font-mono tracking-wider border",
                                           getCleanRefill(selectedService.refill).toLowerCase().includes('no') 
@@ -2592,53 +2594,55 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                         autoFocus
                                       />
                                       {/* Quick Refill & Non-Refill Tabs */}
-                                      <div className="flex gap-1">
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDdRefillFilter('all');
-                                          }}
-                                          className={cn(
-                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center cursor-pointer",
-                                            ddRefillFilter === 'all'
-                                              ? "bg-blue-500/15 text-blue-500 border-blue-500/35"
-                                              : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
-                                          )}
-                                        >
-                                          All
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDdRefillFilter('refill');
-                                          }}
-                                          className={cn(
-                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
-                                            ddRefillFilter === 'refill'
-                                              ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/35"
-                                              : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
-                                          )}
-                                        >
-                                          🔄 Refill
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDdRefillFilter('non-refill');
-                                          }}
-                                          className={cn(
-                                            "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
-                                            ddRefillFilter === 'non-refill'
-                                              ? "bg-red-500/15 text-red-400 border-red-500/35"
-                                              : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
-                                          )}
-                                        >
-                                          ⚠️ No Refill
-                                        </button>
-                                      </div>
+                                      {orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
+                                        <div className="flex gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDdRefillFilter('all');
+                                            }}
+                                            className={cn(
+                                              "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center cursor-pointer",
+                                              ddRefillFilter === 'all'
+                                                ? "bg-blue-500/15 text-blue-500 border-blue-500/35"
+                                                : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
+                                            )}
+                                          >
+                                            All
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDdRefillFilter('refill');
+                                            }}
+                                            className={cn(
+                                              "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
+                                              ddRefillFilter === 'refill'
+                                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/35"
+                                                : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
+                                            )}
+                                          >
+                                            🔄 Refill
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDdRefillFilter('non-refill');
+                                            }}
+                                            className={cn(
+                                              "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
+                                              ddRefillFilter === 'non-refill'
+                                                ? "bg-red-500/15 text-red-400 border-red-500/35"
+                                                : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
+                                            )}
+                                          >
+                                            ⚠️ No Refill
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                     <div className="max-h-64 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
                                       {filteredServicesForDropdown.length === 0 ? (
@@ -2673,7 +2677,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                                 <span>Min: {fmt(s.min)}</span>
                                                 <span>•</span>
                                                 <span>Max: {fmt(s.max)}</span>
-                                                {s.refill && (
+                                                {s.refill && orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
                                                   <>
                                                     <span>•</span>
                                                     <span className={cn(
@@ -2816,62 +2820,101 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-[#1e2336] pb-1.5">Specifications</h5>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                                {/* Refill Status Prominent Card */}
-                                <div className={cn(
-                                  "p-3 rounded-lg border flex flex-col gap-1 transition-colors duration-200",
-                                  getCleanRefill(selectedService.refill).toLowerCase().includes('no')
-                                    ? "bg-red-500/5 border-red-500/10 text-red-400"
-                                    : "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
-                                )}>
-                                  <span className="text-[9px] font-black uppercase tracking-wider opacity-60">Refill Guarantee</span>
-                                  <span className="text-xs font-black flex items-center gap-1.5">
-                                    {getCleanRefill(selectedService.refill).toLowerCase().includes('no') ? '❌' : '🔄'}
-                                    {getCleanRefill(selectedService.refill)}
-                                  </span>
-                                </div>
+                                {(orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}') ? (
+                                  <>
+                                    {/* Destination Email Card */}
+                                    <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg flex flex-col gap-1 text-slate-200 col-span-2 md:col-span-1">
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-blue-400">Delivery Channel</span>
+                                      <span className="text-xs font-bold leading-none mt-0.5 flex items-center gap-1.5 whitespace-nowrap">
+                                        📧 Email Delivery
+                                      </span>
+                                    </div>
+                                    {/* Min / Max Range */}
+                                    <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200 col-span-2 md:col-span-1">
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Min / Max Bounds</span>
+                                      <span className="text-xs font-mono font-bold leading-none mt-0.5">
+                                        {fmt(selectedService.min)} to {fmt(selectedService.max)}
+                                      </span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    {/* Refill Status Prominent Card */}
+                                    <div className={cn(
+                                      "p-3 rounded-lg border flex flex-col gap-1 transition-colors duration-200",
+                                      getCleanRefill(selectedService.refill).toLowerCase().includes('no')
+                                        ? "bg-red-500/5 border-red-500/10 text-red-400"
+                                        : "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
+                                    )}>
+                                      <span className="text-[9px] font-black uppercase tracking-wider opacity-60">Refill Guarantee</span>
+                                      <span className="text-xs font-black flex items-center gap-1.5">
+                                        {getCleanRefill(selectedService.refill).toLowerCase().includes('no') ? '❌' : '🔄'}
+                                        {getCleanRefill(selectedService.refill)}
+                                      </span>
+                                    </div>
 
-                                {/* Target Link Type Card */}
-                                <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Destination URL</span>
-                                  <span className="text-xs font-bold leading-none truncate mt-0.5">
-                                    {orderActiveCat.toLowerCase().includes('followers') ? '🔗 Profile / Channel Link' : '🔗 Video / Post / Photo link'}
-                                  </span>
-                                </div>
+                                    {/* Target Link Type Card */}
+                                    <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Destination URL</span>
+                                      <span className="text-xs font-bold leading-none truncate mt-0.5">
+                                        {orderActiveCat.toLowerCase().includes('followers') ? '🔗 Profile / Channel Link' : '🔗 Video / Post / Photo link'}
+                                      </span>
+                                    </div>
 
-                                {/* Min / Max Range */}
-                                <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Min / Max Bounds</span>
-                                  <span className="text-xs font-mono font-bold leading-none mt-0.5">
-                                    {fmt(selectedService.min)} to {fmt(selectedService.max)}
-                                  </span>
-                                </div>
+                                    {/* Min / Max Range */}
+                                    <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Min / Max Bounds</span>
+                                      <span className="text-xs font-mono font-bold leading-none mt-0.5">
+                                        {fmt(selectedService.min)} to {fmt(selectedService.max)}
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           {/* Important notes / Alerts list */}
                           <div className="space-y-3 border-t border-[#1e2336] pt-4.5">
-                            <h5 className="text-[11px] font-black uppercase tracking-wider text-white">Important Notes:</h5>
-                            <div className="border-l-2 border-blue-500 pl-3.5 py-1.5 bg-blue-500/[0.02] rounded-r-lg">
-                              <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed list-none">
-                                <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
-                                  When the service is experiencing high demand, the starting speed may vary.
-                                </li>
-                                <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
-                                  Please avoid placing a second order on the same link until the current order is fully completed.
-                                </li>
-                                <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
-                                  If you encounter any issues with the service, kindly reach out to our support team for assistance.
-                                </li>
-                                <li className="relative pl-3.5">
-                                  <span className="absolute left-0 text-blue-500 font-black">•</span>
-                                  <strong className="text-red-400 font-semibold">Do not place orders for private accounts or private links.</strong> Orders for private content won't be processed and may not be refunded.
-                                </li>
-                              </ul>
-                            </div>
+                            <h5 className="text-[11px] font-black uppercase tracking-wider text-white">
+                              {((orderActivePlatform === 'GAME' && settings.smmGameDeliveryNote) || (orderActivePlatform === 'Fb/Insta {OLD/ACC}' && settings.smmOldFbDeliveryNote)) ? 'Delivery Information:' : 'Important Notes:'}
+                            </h5>
+                            {orderActivePlatform === 'GAME' && settings.smmGameDeliveryNote ? (
+                              <div className="border-l-2 border-amber-500 pl-3.5 py-2 bg-amber-500/[0.02] rounded-r-lg space-y-2 text-xs text-slate-300 leading-relaxed font-sans">
+                                <p className="font-semibold text-white">How will I receive my order?</p>
+                                {settings.smmGameDeliveryNote.split('\n').map((para, idx) => (
+                                  <p key={idx}>{para}</p>
+                                ))}
+                              </div>
+                            ) : orderActivePlatform === 'Fb/Insta {OLD/ACC}' && settings.smmOldFbDeliveryNote ? (
+                              <div className="border-l-2 border-amber-500 pl-3.5 py-2 bg-amber-500/[0.02] rounded-r-lg space-y-2 text-xs text-slate-300 leading-relaxed font-sans">
+                                <p className="font-semibold text-white">How will I receive my order?</p>
+                                {settings.smmOldFbDeliveryNote.split('\n').map((para, idx) => (
+                                  <p key={idx}>{para}</p>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="border-l-2 border-blue-500 pl-3.5 py-1.5 bg-blue-500/[0.02] rounded-r-lg">
+                                <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed list-none">
+                                  <li className="relative pl-3.5">
+                                    <span className="absolute left-0 text-blue-500 font-black">•</span>
+                                    When the service is experiencing high demand, the starting speed may vary.
+                                  </li>
+                                  <li className="relative pl-3.5">
+                                    <span className="absolute left-0 text-blue-500 font-black">•</span>
+                                    Please avoid placing a second order on the same link until the current order is fully completed.
+                                  </li>
+                                  <li className="relative pl-3.5">
+                                    <span className="absolute left-0 text-blue-500 font-black">•</span>
+                                    If you encounter any issues with the service, kindly reach out to our support team for assistance.
+                                  </li>
+                                  <li className="relative pl-3.5">
+                                    <span className="absolute left-0 text-blue-500 font-black">•</span>
+                                    <strong className="text-red-400 font-semibold">Do not place orders for private accounts or private links.</strong> Orders for private content won't be processed and may not be refunded.
+                                  </li>
+                                </ul>
+                              </div>
+                            )}
                           </div>
 
                         </div>
@@ -3449,12 +3492,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
               </div>
             )}
 
-            {/* Elegant Mobile-Accessible Footer */}
-            <div className="mt-12 pt-6 border-t border-[#1e2336]/30 text-center">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                © 2026 DIH HUB OFFICIAL - ALL RIGHTS RESERVED
-              </p>
-            </div>
+
 
           </div>
         </div>

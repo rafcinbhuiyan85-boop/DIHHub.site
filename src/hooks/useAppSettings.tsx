@@ -127,6 +127,9 @@ export interface AppSettings {
   comingSoonTools?: string[];
   smmManualGateways?: any[];
   showDevelopedBy?: boolean;
+  smmGameDeliveryNote?: string;
+  smmOldFbDeliveryNote?: string;
+  enableMemberAccess?: boolean;
 }
 
 const DEFAULT_TEMPLATES: Template[] = [
@@ -309,6 +312,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   upcomingTools: [],
   comingSoonTools: [],
   showDevelopedBy: true,
+  enableMemberAccess: true,
+  smmGameDeliveryNote: "Since this is a game recharge or custom accounts order, there is no automatic system delivery. Once you submit your order, we will reach out to you directly at your email address to provide full account credentials or recharge details.",
+  smmOldFbDeliveryNote: "Since this is a custom or old social accounts order, there is no automatic system delivery. Once you submit your order, we will reach out to you directly at your email address to deliver full account credentials.",
   smmManualGateways: [
     { id: 'bkash', title: 'bKash Merchant', numberOrAddress: '+8801835313433', type: 'Merchant', instructions: 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).', enabled: true, minDeposit: 5 },
     { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801602469609', type: 'Personal', instructions: 'Send money to our Personal Nagad wallet, and put TxID above.', enabled: true, minDeposit: 5 },

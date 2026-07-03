@@ -230,7 +230,7 @@ export default function DexProtector() {
               }}
               onClick={() => fileInputRef.current?.click()}
               className={cn(
-                "cursor-pointer border-2 border-dashed rounded-[40px] p-24 transition-all flex flex-col items-center justify-center gap-6 text-center shadow-sm",
+                "cursor-pointer border-2 border-dashed rounded-[40px] py-20 px-8 transition-all flex flex-col items-center justify-center gap-6 text-center shadow-sm",
                 isDragging 
                   ? "border-red-500 bg-red-500/5 shadow-inner" 
                   : "border-slate-200 dark:border-slate-800 hover:border-red-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -513,7 +513,7 @@ export default function DexProtector() {
                 </div>
               </motion.div>
             ) : (
-              <div className="h-full min-h-[400px] border-2 border-slate-100 dark:border-slate-800 rounded-[48px] flex flex-col items-center justify-center text-slate-400 gap-6 p-12 text-center">
+              <div className="min-h-[260px] py-12 border-2 border-slate-100 dark:border-slate-800 rounded-[48px] flex flex-col items-center justify-center text-slate-400 gap-4 p-8 text-center bg-slate-500/[0.01]">
                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-850 rounded-full flex items-center justify-center opacity-40">
                     <ShieldAlert size={40} />
                  </div>

@@ -213,8 +213,10 @@ function MainApp() {
   };
 
   const renderTool = () => {
+    const isSpecialTester = currentUser?.email === 'rafcinbhuiyan85@gmail.com' || currentUser?.email === 'rafcin.b' || currentUser?.role === 'admin' || currentUser?.isAdmin;
+
     // Check if the current active tool is disabled, upcoming, or coming soon by administrator
-    if (activeTool !== 'admin-login' && activeTool !== 'admin-panel') {
+    if (activeTool !== 'admin-login' && activeTool !== 'admin-panel' && !isSpecialTester) {
       const toolName = settings.toolLabels?.[activeTool] || activeTool;
       const customNotice = settings.toolNotices?.[activeTool];
 

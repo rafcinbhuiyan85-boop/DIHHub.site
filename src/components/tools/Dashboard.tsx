@@ -86,8 +86,24 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
     return !lbl.includes('daily user') && !lbl.includes('uptime') && !lbl.includes('live user') && !lbl.includes('total user');
   });
 
+  const [currentUser] = useState<any>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const savedUser = localStorage.getItem('dihhub_user');
+        if (savedUser && savedUser !== "undefined") {
+          return JSON.parse(savedUser);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse dihhub_user on init:', e);
+    }
+    return null;
+  });
+
+  const isSpecialTester = currentUser?.email === 'rafcinbhuiyan85@gmail.com' || currentUser?.email === 'rafcin.b' || currentUser?.role === 'admin' || currentUser?.isAdmin;
+
   const unfilteredVisibleTools = tools.filter(t => {
-    return settings.visibleTools.includes(t.id);
+    return isSpecialTester || settings.visibleTools.includes(t.id);
   });
 
   const dihMoviesTool = unfilteredVisibleTools.find(t => t.id === 'dih-movies');

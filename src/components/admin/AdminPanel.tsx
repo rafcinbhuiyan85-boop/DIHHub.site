@@ -7321,7 +7321,7 @@ service cloud.firestore {
 
                         {/* Specific Option Toggles requested by user */}
                         <div className="border-t border-slate-800/60 pt-4 space-y-3">
-                          <label className="text-[11px] font-bold text-slate-400">Toggle Specific Platform Shortcuts</label>
+                          <label className="text-[11px] font-bold text-slate-400">Toggle Specific Platform Shortcuts & Options</label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex items-center justify-between p-3.5 bg-[#08090d] border border-slate-850 rounded-xl">
                               <div>
@@ -7347,6 +7347,57 @@ service cloud.firestore {
                                 className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-blue-550 cursor-pointer"
                               />
                             </div>
+                            <div className="flex items-center justify-between p-3.5 bg-[#08090d] border border-slate-850 rounded-xl sm:col-span-2">
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-200">Member Access button</h4>
+                                <p className="text-[9px] text-slate-500 mt-0.5">Toggle the visibility of the "Member Access" button in the app header.</p>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={settings.enableMemberAccess !== false}
+                                onChange={(e) => updateSettings({ enableMemberAccess: e.target.checked })}
+                                className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-blue-550 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                         {/* Custom SMM Game and Old Acc Delivery Notes */}
+                        <div className="border-t border-slate-800/60 pt-4 space-y-4">
+                          <span className="text-[10px] font-black uppercase text-blue-500 tracking-wider block">Custom SMM Manual Delivery Notes</span>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-slate-350 flex items-center justify-between">
+                              <span>SMM Game Delivery Note</span>
+                              <span className="text-[9px] font-medium text-slate-500 font-mono">GAME category</span>
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={settings.smmGameDeliveryNote || ""}
+                              onChange={(e) => updateSettings({ smmGameDeliveryNote: e.target.value })}
+                              placeholder="Since this is a game recharge, there is no automatic system delivery..."
+                              className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium leading-relaxed font-sans"
+                            />
+                            <p className="text-[9px] text-slate-500 leading-normal">
+                              Delivery instructions shown to users when ordering Game Recharges. (Leave empty to completely hide the delivery information box).
+                            </p>
+                          </div>
+
+                          <div className="space-y-2 pt-2 border-t border-slate-850/40">
+                            <label className="text-[11px] font-bold text-slate-350 flex items-center justify-between">
+                              <span>SMM Old / Facebook Accounts Delivery Note</span>
+                              <span className="text-[9px] font-medium text-slate-500 font-mono">Fb/Insta {"{OLD/ACC}"} category</span>
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={settings.smmOldFbDeliveryNote || ""}
+                              onChange={(e) => updateSettings({ smmOldFbDeliveryNote: e.target.value })}
+                              placeholder="Since this is an old or custom account order, there is no automatic delivery..."
+                              className="w-full bg-[#08090d] border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-blue-500 duration-150 font-medium leading-relaxed font-sans"
+                            />
+                            <p className="text-[9px] text-slate-500 leading-normal">
+                              Delivery instructions shown to users when ordering Custom / Old Social Accounts. (Leave empty to completely hide the delivery information box).
+                            </p>
                           </div>
                         </div>
 

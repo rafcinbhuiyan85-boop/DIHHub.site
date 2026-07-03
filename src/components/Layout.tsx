@@ -153,9 +153,13 @@ export default function Layout({
     }
   };
 
-  const unfilteredNavItems = settings.visibleTools
-    .map(id => navItems.find(i => i.id === id))
-    .filter((item): item is typeof navItems[0] => !!item && item.id !== 'dashboard');
+  const isSpecialTester = currentUser?.email === 'rafcinbhuiyan85@gmail.com' || currentUser?.email === 'rafcin.b' || currentUser?.role === 'admin' || currentUser?.isAdmin;
+
+  const unfilteredNavItems = isSpecialTester
+    ? navItems.filter(item => item.id !== 'dashboard')
+    : settings.visibleTools
+        .map(id => navItems.find(i => i.id === id))
+        .filter((item): item is typeof navItems[0] => !!item && item.id !== 'dashboard');
 
   const dihMoviesNavItem = unfilteredNavItems.find(i => i.id === 'dih-movies');
   const bachelorPointNavItem = unfilteredNavItems.find(i => i.id === 'bachelor-point');
@@ -511,7 +515,7 @@ export default function Layout({
                 </div>
               </div>
             ) : (
-              activeTool === 'dashboard' && (
+              activeTool === 'dashboard' && settings.enableMemberAccess !== false && (
                 <button 
                   onClick={onAuthClick}
                   className="relative overflow-hidden group/login px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 dark:from-amber-600 dark:via-yellow-400 dark:to-amber-500 text-slate-950 dark:text-slate-950 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg shadow-amber-500/20 dark:shadow-amber-500/10 border border-amber-400/35 flex items-center gap-1.5"
