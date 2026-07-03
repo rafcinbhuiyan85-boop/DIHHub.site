@@ -305,7 +305,7 @@ function MainApp() {
 
   return (
     <>
-      <AdsController />
+      <AdsController activeTool={activeTool} />
       <Routes>
         <Route path="/templates" element={<TemplatesGallery />} />
         <Route path="/rb/:slug" element={<HostedTemplate />} />

@@ -6,7 +6,7 @@ import {
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video, Zap, FileText,
-  Gamepad2, ShieldCheck, Copy, Check
+  Gamepad2, ShieldCheck, Copy, Check, Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -165,6 +165,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
   const [orderTab, setOrderTab] = useState<'single' | 'mass'>('single');
   const [massOrderText, setMassOrderText] = useState<string>('');
+  const [smmEmailOrderSuccessModal, setSmmEmailOrderSuccessModal] = useState<string | null>(null);
 
   // Deposit Form States
   const [depositType, setDepositType] = useState<'automatic' | 'manual'>('manual');
@@ -321,6 +322,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const isTraffic = (sName.includes('traffic') || sName.includes('website') || sName.includes('visitor') || sName.includes('seo') || sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo')) && !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord;
     const isGame = sName.includes('game') || sName.includes('hack') || sName.includes('pubg') || sName.includes('free fire') || sName.includes('freefire') || sName.includes('clash') || sName.includes('gaming') || sName.includes('diamonds') || sName.includes('mlbb') || sName.includes('recharge') || sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
     const isOldAcc = sName.includes('{old/acc}') || sName.includes('old account') || sName.includes('old acc') || sName.includes('acc}') || sCat.includes('{old/acc}') || sCat.includes('old account') || sCat.includes('old acc') || sCat.includes('acc}');
+    const isManual = !s.providerId || s.providerId === 'manual' || s.providerId === '';
 
     if (plat === 'instagram') return isInstagram;
     if (plat === 'facebook') return isFacebook;
@@ -332,8 +334,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     if (plat === 'linkedin') return isLinkedin;
     if (plat === 'discord') return isDiscord;
     if (plat.includes('traffic') || plat.includes('website')) return isTraffic;
-    if (plat === 'game' || plat === 'games' || plat === 'game hacks') return isGame;
-    if (plat === 'fb/insta {old/acc}' || plat.includes('old') || plat.includes('acc') || plat.includes('{old/acc}')) return isOldAcc;
+    if (plat === 'game' || plat === 'games' || plat === 'game hacks') return isGame && isManual;
+    if (plat === 'fb/insta {old/acc}' || plat.includes('old') || plat.includes('acc') || plat.includes('{old/acc}')) return isOldAcc && isManual;
 
     if (plat === 'others') {
       return !isInstagram && !isFacebook && !isYoutube && !isTiktok && !isTwitter && !isTelegram && !isSpotify && !isLinkedin && !isDiscord && !isTraffic && !isGame && !isOldAcc;
@@ -375,10 +377,14 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return sCat.includes('traffic') || sCat.includes('website') || sCat.includes('visitor') || sCat.includes('seo');
     }
     if (plat === 'game' || plat === 'games' || plat === 'game hacks') {
-      return sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
+      const isGameCat = sCat.includes('game') || sCat.includes('hack') || sCat.includes('pubg') || sCat.includes('free fire') || sCat.includes('freefire') || sCat.includes('gaming') || sCat.includes('diamonds') || sCat.includes('mlbb') || sCat.includes('recharge');
+      const hasManualSvc = activeServices.some(s => s.category === serviceCategory && (!s.providerId || s.providerId === 'manual' || s.providerId === ''));
+      return isGameCat && hasManualSvc;
     }
     if (plat === 'fb/insta {old/acc}' || plat.includes('old') || plat.includes('acc') || plat.includes('{old/acc}')) {
-      return sCat.includes('old') || sCat.includes('acc') || sCat.includes('{old/acc}');
+      const isOldCat = sCat.includes('old') || sCat.includes('acc') || sCat.includes('{old/acc}');
+      const hasManualSvc = activeServices.some(s => s.category === serviceCategory && (!s.providerId || s.providerId === 'manual' || s.providerId === ''));
+      return isOldCat && hasManualSvc;
     }
     
     // Fallback: Dynamically test if any active service inside this category belongs to target platform
@@ -1309,10 +1315,18 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       setOrderError('Please select a service.');
       return;
     }
+    const isEmailInput = orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}';
     const link = orderLink.trim();
     if (!link) {
-      setOrderError('Please enter a link.');
+      setOrderError(isEmailInput ? 'Please enter your email address.' : 'Please enter a link.');
       return;
+    }
+    if (isEmailInput) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(link)) {
+        setOrderError('Please enter a valid email address.');
+        return;
+      }
     }
     const qty = parseInt(orderQty) || 0;
     if (qty < selectedService.min || qty > selectedService.max) {
@@ -1349,7 +1363,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
     setOrderLink('');
     setOrderQty('');
-    setOrderSuccess(`Order #${newOrder.id} placed locally. Connecting SMM Provider to deliver...`);
+    
+    if (isEmailInput) {
+      setSmmEmailOrderSuccessModal(link);
+      setOrderSuccess(`Your order was received! We will contact you via email at ${link} with the details. Stay tuned.`);
+    } else {
+      setOrderSuccess(`Order #${newOrder.id} placed locally. Connecting SMM Provider to deliver...`);
+    }
 
     // SMM Provider Real-Time Placement Proxy
     const provId = selectedService.providerId;
@@ -2680,12 +2700,18 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                           {/* Link Input */}
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Link</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">
+                              {orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}' ? 'Email Address' : 'Link'}
+                            </label>
                             <div className="relative border border-[#1e2336] rounded-lg">
-                              <Link2 size={14} className="absolute left-3 w-4 h-4 text-slate-500 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              {orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}' ? (
+                                <Mail size={14} className="absolute left-3 w-4 h-4 text-slate-500 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              ) : (
+                                <Link2 size={14} className="absolute left-3 w-4 h-4 text-slate-500 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              )}
                               <input 
-                                type="url" 
-                                placeholder="Enter destination link (URL)" 
+                                type={orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}' ? 'email' : 'url'} 
+                                placeholder={orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}' ? 'Enter your email address' : 'Enter destination link (URL)'} 
                                 value={orderLink}
                                 onChange={(e) => setOrderLink(e.target.value)}
                                 className="w-full bg-[#0d0f17] border border-[#1e2336] pl-9.5 pr-4 py-3 text-xs text-white rounded-lg outline-none focus:border-blue-500 placeholder-[#64748b] transition-colors h-11"
@@ -3433,6 +3459,60 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           </div>
         </div>
       </main>
+
+      {/* Human-written success notification for SMM Game / Old Account orders */}
+      <AnimatePresence>
+        {smmEmailOrderSuccessModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative w-full max-w-md bg-[#0d0f17] border border-[#1e2336] rounded-2xl p-6 shadow-2xl text-center"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setSmmEmailOrderSuccessModal(null)}
+                className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Send / Sparkle Icon */}
+              <div className="mx-auto w-14 h-14 bg-blue-550/15 border border-blue-500/20 rounded-full flex items-center justify-center text-blue-400 mb-5">
+                <Send size={24} />
+              </div>
+
+              {/* Natural Human-Written Text */}
+              <h3 className="text-base font-black text-white mb-2.5 tracking-wide">
+                Order Placed Successfully!
+              </h3>
+              
+              <div className="text-slate-300 text-xs leading-relaxed space-y-3 px-1 mb-6 text-center">
+                <p>
+                  Hey! We've received your order.
+                </p>
+                <p>
+                  We will contact you via email at <span className="text-blue-400 font-mono font-bold">{smmEmailOrderSuccessModal}</span> with the details very soon.
+                </p>
+                <p className="font-semibold text-slate-400">
+                  Stay tuned!
+                </p>
+              </div>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setSmmEmailOrderSuccessModal(null)}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-550 active:scale-[0.98] text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-500/10"
+              >
+                Got it, thank you!
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       </div>
     </div>

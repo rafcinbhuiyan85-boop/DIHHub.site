@@ -1,7 +1,11 @@
 import { useEffect } from 'react';
 import { useAppSettings } from '../hooks/useAppSettings';
 
-export default function AdsController() {
+interface AdsControllerProps {
+  activeTool?: string;
+}
+
+export default function AdsController({ activeTool }: AdsControllerProps) {
   const { settings } = useAppSettings();
 
   useEffect(() => {
@@ -12,11 +16,16 @@ export default function AdsController() {
       // Also cleanup any specific classes or identifiers if needed
     };
 
-    if (!settings.enableAds) {
+    const isSmmPanel = activeTool === 'dih-smm' || window.location.pathname.includes('dih-smm');
+
+    if (isSmmPanel || !settings.enableAds) {
       cleanup('dh-header-ads');
       cleanup('dh-footer-ads');
       cleanup('dh-content1-scripts');
       cleanup('dh-content2-scripts');
+      cleanup('dh-adsterra-h');
+      cleanup('dh-adsterra-f');
+      cleanup('dh-adsense-h');
       return;
     }
 
@@ -64,7 +73,7 @@ export default function AdsController() {
       cleanup('dh-adsense-h');
     }
 
-  }, [settings.enableAds, settings.enableAdsterra, settings.enableAdsense, settings.adsterraHeader, settings.adsterraFooter, settings.adsenseHeader]);
+  }, [settings.enableAds, settings.enableAdsterra, settings.enableAdsense, settings.adsterraHeader, settings.adsterraFooter, settings.adsenseHeader, activeTool]);
 
   return null;
 }

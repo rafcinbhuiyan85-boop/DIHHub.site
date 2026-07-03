@@ -392,6 +392,25 @@ async function startServer() {
     res.json({ status: 'ok', user: { id: user.id, name: user.name, email: user.email, balance: user.balance || 0 } });
   });
 
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { email, newPassword } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.email === email);
+    if (!user) {
+      return res.status(404).json({ error: 'No account registered with this email address.' });
+    }
+    
+    if (newPassword) {
+      user.password = newPassword;
+      await saveData(USERS_FILE, users);
+      return res.json({ status: 'ok', message: 'Your password has been successfully reset! You can now log in.' });
+    }
+    
+    res.json({ status: 'ok', requiresReset: true, message: 'Account verified. Please enter your new password.' });
+  });
+
   app.post("/api/auth/google", async (req, res) => {
     const { email, name } = req.body;
     const users = loadData(USERS_FILE, []);

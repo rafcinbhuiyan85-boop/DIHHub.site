@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Mail, Lock, Loader2, ArrowRight, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
+import { X, User, Mail, Lock, Loader2, ArrowRight, Eye, EyeOff, AlertCircle, ShieldCheck, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { auth, googleProvider, signInWithPopup } from '../lib/firebase';
@@ -16,12 +16,22 @@ export default function UserAuthModal({ isOpen, onClose, onSuccess }: UserAuthMo
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'email' | 'reset'>('email');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
 
   // Clear states when opening/closing
   useEffect(() => {
     if (isOpen) {
       setError('');
       setFormData({ name: '', email: '', password: '' });
+      setIsForgotPassword(false);
+      setForgotStep('email');
+      setForgotEmail('');
+      setForgotNewPassword('');
+      setForgotSuccess('');
     }
   }, [isOpen, isLogin]);
 
@@ -71,6 +81,50 @@ export default function UserAuthModal({ isOpen, onClose, onSuccess }: UserAuthMo
         return;
       }
       setError(err?.message || 'Google Auth aborted or restricted. Make sure popups are allowed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setForgotSuccess('');
+
+    try {
+      const payload = forgotStep === 'email' 
+        ? { email: forgotEmail }
+        : { email: forgotEmail, newPassword: forgotNewPassword };
+
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        if (data.requiresReset) {
+          setForgotStep('reset');
+          setForgotSuccess(data.message);
+        } else {
+          setForgotSuccess(data.message);
+          if (forgotStep === 'reset') {
+            setTimeout(() => {
+              setIsForgotPassword(false);
+              setForgotStep('email');
+              setForgotEmail('');
+              setForgotNewPassword('');
+              setForgotSuccess('');
+            }, 3000);
+          }
+        }
+      } else {
+        setError(data.error || 'Request failed. Please try again.');
+      }
+    } catch (err) {
+      setError('Network request failed. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -162,10 +216,18 @@ export default function UserAuthModal({ isOpen, onClose, onSuccess }: UserAuthMo
             {/* Header Area */}
             <div className="text-center pt-2 pb-6">
               <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase font-sans">
-                {isLogin ? 'Welcome Back' : 'Create Account'}
+                {isForgotPassword 
+                    ? 'Forgot Password' 
+                    : isLogin 
+                      ? 'Welcome Back' 
+                      : 'Create Account'}
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-xs mt-1.5 font-medium">
-                {isLogin ? 'Provide credentials or continue with Google' : 'Join of premium tools workspace'}
+                {isForgotPassword 
+                    ? 'Verify and recover your account' 
+                    : isLogin 
+                      ? 'Provide credentials or continue with Google' 
+                      : 'Join our premium tools workspace'}
               </p>
             </div>
 
@@ -177,179 +239,274 @@ export default function UserAuthModal({ isOpen, onClose, onSuccess }: UserAuthMo
               </div>
             )}
 
-            {/* Custom Sliding Tab Controls with Perfect Visual Polish */}
-            <div className="flex bg-slate-100 dark:bg-slate-950/80 p-1.5 rounded-2xl mb-5 border border-slate-200/50 dark:border-slate-800 relative">
-              <button 
-                type="button"
-                onClick={() => setIsLogin(true)}
-                className={cn(
-                  "flex-1 text-center py-2.5 text-xs font-bold rounded-xl transition-all relative z-10 cursor-pointer select-none",
-                  isLogin ? "text-white" : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                )}
-              >
-                Sign In
-              </button>
-              <button 
-                type="button"
-                onClick={() => setIsLogin(false)}
-                className={cn(
-                  "flex-1 text-center py-2.5 text-xs font-bold rounded-xl transition-all relative z-10 cursor-pointer select-none",
-                  !isLogin ? "text-white" : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                )}
-              >
-                Register
-              </button>
-              
-              {/* Perfect sliding highlight in full vivid gradient */}
-              <motion.div 
-                layoutId="auth-tab-active"
-                className="absolute top-1.5 bottom-1.5 rounded-[10px] bg-gradient-to-r from-indigo-600 to-violet-600 shadow-sm pointer-events-none"
-                style={{ 
-                  left: isLogin ? '6px' : 'calc(50% + 1.5px)',
-                  right: isLogin ? 'calc(50% + 1.5px)' : '6px'
-                }}
-                transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              />
-            </div>
-
-            {/* Form Container */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">Full Name</label>
-                  <div className="relative group/input">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
-                      <User size={15} />
-                    </div>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="Rafcin Bhuiyan"
-                      value={formData.name}
-                      onChange={e => setFormData({...formData, name: e.target.value})}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
-                  {isLogin ? 'Email or Username' : 'Email Address'}
-                </label>
-                <div className="relative group/input">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
-                    <Mail size={15} />
-                  </div>
-                    <input 
-                      type={isLogin ? "text" : "email"}
-                      required
-                      placeholder={isLogin ? "rafcin.bhuiyan or email" : "member@dihhub.site"}
-                      value={formData.email}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
-                    />
-                </div>
+            {/* Success message system */}
+            {forgotSuccess && (
+              <div className="mb-5 p-3.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs rounded-xl flex items-start gap-2.5 font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+                <CheckCircle size={15} className="shrink-0 mt-0.5" />
+                <p className="leading-relaxed font-semibold">{forgotSuccess}</p>
               </div>
+            )}
 
-              <div className="space-y-1">
-                <div className="flex items-center justify-between ml-1 leading-none">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
-                  {!isLogin && formData.password && (
-                    <span className={cn("text-[9px] font-bold uppercase tracking-wide", strength.color.replace('bg-', 'text-'))}>
-                      {strength.label}
-                    </span>
-                  )}
-                </div>
-                <div className="relative group/input">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
-                    <Lock size={15} />
+            {isForgotPassword ? (
+              /* Recover / Reset password flow */
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                {forgotStep === 'email' ? (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">Email Address</label>
+                    <div className="relative group/input">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
+                        <Mail size={15} />
+                      </div>
+                      <input 
+                        type="email"
+                        required
+                        placeholder="Enter your registered email address"
+                        value={forgotEmail}
+                        onChange={e => setForgotEmail(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                      />
+                    </div>
                   </div>
-                  <input 
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="At least 6 characters"
-                    value={formData.password}
-                    onChange={e => setFormData({...formData, password: e.target.value})}
-                    className="w-full pl-11 pr-11 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">New Password</label>
+                    <div className="relative group/input">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
+                        <Lock size={15} />
+                      </div>
+                      <input 
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="Enter your new password (at least 6 chars)"
+                        value={forgotNewPassword}
+                        onChange={e => setForgotNewPassword(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white py-3 md:py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all mt-6 shadow-md shadow-indigo-600/15 cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin text-white" size={15} />
+                  ) : (
+                    <>
+                      <span>{forgotStep === 'email' ? 'Verify Email' : 'Reset Password'}</span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setForgotStep('email');
+                    setError('');
+                  }}
+                  className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors py-2 cursor-pointer mt-2"
+                >
+                  Back to login
+                </button>
+              </form>
+            ) : (
+              <>
+                {/* Custom Sliding Tab Controls with Perfect Visual Polish */}
+                <div className="flex bg-slate-100 dark:bg-slate-950/80 p-1.5 rounded-2xl mb-5 border border-slate-200/50 dark:border-slate-800 relative">
+                  <button 
+                    type="button"
+                    onClick={() => setIsLogin(true)}
+                    className={cn(
+                      "flex-1 text-center py-2.5 text-xs font-bold rounded-xl transition-all relative z-10 cursor-pointer select-none",
+                      isLogin ? "text-white" : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                    )}
+                  >
+                    Sign In
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setIsLogin(false)}
+                    className={cn(
+                      "flex-1 text-center py-2.5 text-xs font-bold rounded-xl transition-all relative z-10 cursor-pointer select-none",
+                      !isLogin ? "text-white" : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                    )}
+                  >
+                    Register
+                  </button>
+                  
+                  {/* Perfect sliding highlight in full vivid gradient */}
+                  <motion.div 
+                    layoutId="auth-tab-active"
+                    className="absolute top-1.5 bottom-1.5 rounded-[10px] bg-gradient-to-r from-indigo-600 to-violet-600 shadow-sm pointer-events-none"
+                    style={{ 
+                      left: isLogin ? '6px' : 'calc(50% + 1.5px)',
+                      right: isLogin ? 'calc(50% + 1.5px)' : '6px'
+                    }}
+                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
                   />
+                </div>
+
+                {/* Form Container */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {!isLogin && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">Full Name</label>
+                      <div className="relative group/input">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
+                          <User size={15} />
+                        </div>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="Enter your name"
+                          value={formData.name}
+                          onChange={e => setFormData({...formData, name: e.target.value})}
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
+                      {isLogin ? 'Email or Username' : 'Email Address'}
+                    </label>
+                    <div className="relative group/input">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
+                        <Mail size={15} />
+                      </div>
+                        <input 
+                          type={isLogin ? "text" : "email"}
+                          required
+                          placeholder={isLogin ? "Enter email or username" : "member@dihhub.site"}
+                          value={formData.email}
+                          onChange={e => setFormData({...formData, email: e.target.value})}
+                          className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                        />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between ml-1 leading-none">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
+                      {!isLogin && formData.password && (
+                        <span className={cn("text-[9px] font-bold uppercase tracking-wide", strength.color.replace('bg-', 'text-'))}>
+                          {strength.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative group/input">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none">
+                        <Lock size={15} />
+                      </div>
+                      <input 
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="At least 6 characters"
+                        value={formData.password}
+                        onChange={e => setFormData({...formData, password: e.target.value})}
+                        className="w-full pl-11 pr-11 py-3 bg-slate-50 dark:bg-slate-950/40 text-slate-950 dark:text-white border border-slate-200/80 dark:border-slate-800 rounded-xl focus:border-indigo-500 hover:border-slate-300 dark:hover:border-slate-700 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none text-xs font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors duration-200 flex items-center justify-center"
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+
+                    {/* Password strength dynamic indicators */}
+                    {!isLogin && formData.password && (
+                      <div className="flex gap-1 px-1 pt-1.5">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "h-1 flex-1 rounded-full bg-slate-100 dark:bg-slate-800 transition-colors duration-300",
+                              strength.score >= i && strength.color
+                            )} 
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Forgot Password Link inside login */}
+                    {isLogin && (
+                      <div className="flex justify-end pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsForgotPassword(true);
+                            setForgotStep('email');
+                            setError('');
+                          }}
+                          className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action submission button */}
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white py-3 md:py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all mt-6 shadow-md shadow-indigo-600/15 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    {loading ? (
+                      <Loader2 className="animate-spin text-white" size={15} />
+                    ) : (
+                      <>
+                        <span>{isLogin ? 'Log In Securely' : 'Create Account'}</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="relative flex py-5 items-center">
+                  <div className="flex-grow border-t border-slate-100 dark:border-slate-800/80"></div>
+                  <span className="flex-shrink mx-3 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest leading-none select-none">Or continue with</span>
+                  <div className="flex-grow border-t border-slate-100 dark:border-slate-800/80"></div>
+                </div>
+
+                {/* Exquisite elegant Google Sign In button */}
+                <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors duration-200 flex items-center justify-center"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    className="w-full bg-white hover:bg-slate-50 dark:bg-slate-950/40 dark:hover:bg-slate-950 text-slate-700 dark:text-slate-350 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-3 transition-all border border-slate-200 dark:border-slate-800 group/google cursor-pointer active:scale-[0.97] shadow-sm hover:shadow"
                   >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    <svg className="w-4 h-4 group-hover/google:scale-105 transition-transform" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.4 3.51C17.43 1.67 14.96.6 12 .6 7.69.6 3.99 3.07 2.18 6.66l3.66 2.84C6.71 6.9 9.14 5.04 12 5.04z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                    </svg>
+                    <span>Google Account</span>
                   </button>
                 </div>
-
-                {/* Password strength dynamic indicators */}
-                {!isLogin && formData.password && (
-                  <div className="flex gap-1 px-1 pt-1.5">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div 
-                        key={i} 
-                        className={cn(
-                          "h-1 flex-1 rounded-full bg-slate-100 dark:bg-slate-800 transition-colors duration-300",
-                          strength.score >= i && strength.color
-                        )} 
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action submission button */}
-              <button 
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white py-3 md:py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all mt-6 shadow-md shadow-indigo-600/15 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin text-white" size={15} />
-                ) : (
-                  <>
-                    <span>{isLogin ? 'Log In Securely' : 'Create Account'}</span>
-                    <ArrowRight size={14} />
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="relative flex py-5 items-center">
-              <div className="flex-grow border-t border-slate-100 dark:border-slate-800/80"></div>
-              <span className="flex-shrink mx-3 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest leading-none select-none">Or continue with</span>
-              <div className="flex-grow border-t border-slate-100 dark:border-slate-800/80"></div>
-            </div>
-
-            {/* Exquisite elegant Google Sign In button */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full bg-white hover:bg-slate-50 dark:bg-slate-950/40 dark:hover:bg-slate-950 text-slate-700 dark:text-slate-350 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-3 transition-all border border-slate-200 dark:border-slate-800 group/google cursor-pointer active:scale-[0.97] shadow-sm hover:shadow"
-              >
-                <svg className="w-4 h-4 group-hover/google:scale-105 transition-transform" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.04c1.61 0 3.05.55 4.19 1.63L19.4 3.51C17.43 1.67 14.96.6 12 .6 7.69.6 3.99 3.07 2.18 6.66l3.66 2.84C6.71 6.9 9.14 5.04 12 5.04z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                </svg>
-                <span>Google Account</span>
-              </button>
-            </div>
+              </>
+            )}
           </motion.div>
         </div>
       )}
