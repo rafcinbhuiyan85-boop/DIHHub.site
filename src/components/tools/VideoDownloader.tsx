@@ -101,21 +101,23 @@ export default function VideoDownloader() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-none">
-        <form onSubmit={handleDownload} className="relative mb-6">
-          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
-            <Link2 size={18} />
+        <form onSubmit={handleDownload} className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
+              <Link2 size={18} />
+            </div>
+            <input 
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Paste link (YouTube, Instagram, TikTok...)"
+              className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl py-4 pl-12 pr-4 font-bold text-slate-700 dark:text-slate-200 focus:border-red-500 transition-all text-sm sm:text-base outline-none"
+            />
           </div>
-          <input 
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste link (YouTube, Instagram, TikTok, Pornhub...)"
-            className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl py-3.5 pl-12 pr-40 font-bold text-slate-700 dark:text-slate-200 focus:border-red-500 transition-all"
-          />
           <button 
             type="submit"
             disabled={!url || loading}
-            className="absolute right-2 top-2 bottom-2 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white px-6 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-primary/20"
+            className="bg-primary hover:bg-blue-600 disabled:opacity-50 text-white px-8 py-4 sm:py-0 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20 shrink-0 cursor-pointer active:scale-95"
           >
             {loading ? <Search className="animate-spin" size={20} /> : <Download size={20} />}
             {loading ? 'Fetching...' : 'Download'}
