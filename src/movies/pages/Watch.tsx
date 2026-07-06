@@ -12,7 +12,7 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
   // TV specific states
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
-  const server = 'vidsrc.pm';
+  const [activeServer, setActiveServer] = useState('vidsrc.pm');
   const [isAvailable, setIsAvailable] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -20,11 +20,6 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
     const onChange = () => {
       const isFs = !!(document.fullscreenElement);
       setIsFullscreen(isFs);
-      
-      // If the iframe itself went fullscreen, request fullscreen on our container instead to pull it up
-      if (document.fullscreenElement && document.fullscreenElement.tagName === 'IFRAME') {
-        containerRef.current?.requestFullscreen().catch(() => {});
-      }
     };
     document.addEventListener('fullscreenchange', onChange);
     document.addEventListener('webkitfullscreenchange', onChange);
@@ -43,11 +38,18 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
     else document.exitFullscreen().catch(() => {});
   };
 
-  const getEmbedUrl = () => {
-    if (isTV) {
-      return `https://${server}/embed/tv/${realId}/${season}/${episode}`;
+  const getEmbedUrlForServer = (srv: string, isTvShow: boolean, id: string, s: number, e: number) => {
+    if (srv === 'vidsrc.cc') {
+      return `https://vidsrc.cc/v2/embed/${isTvShow ? 'tv' : 'movie'}/${id}${isTvShow ? `?s=${s}&e=${e}` : ''}`;
     }
-    return `https://${server}/embed/movie/${realId}`;
+    if (srv === 'vidsrc.to') {
+      return `https://vidsrc.to/embed/${isTvShow ? 'tv' : 'movie'}/${id}${isTvShow ? `/${s}/${e}` : ''}`;
+    }
+    return `https://${srv}/embed/${isTvShow ? 'tv' : 'movie'}/${id}${isTvShow ? `/${s}/${e}` : ''}`;
+  };
+
+  const getEmbedUrl = () => {
+    return getEmbedUrlForServer(activeServer, isTV, realId, season, episode);
   };
 
   const embedUrl = getEmbedUrl();
@@ -56,21 +58,35 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
     let active = true;
     const checkAvailability = async () => {
       setIsChecking(true);
-      try {
-        const checkUrl = `/api/movies/check-available?url=${encodeURIComponent(embedUrl)}`;
-        const res = await fetch(checkUrl);
-        if (res.ok) {
-          const data = await res.json();
-          if (active) {
-            setIsAvailable(data.available !== false);
+      const SERVERS = ['vidsrc.pm', 'vidsrc.to', 'vidsrc.cc', 'vidsrc.me'];
+      
+      let foundServer = null;
+      for (const srv of SERVERS) {
+        if (!active) return;
+        try {
+          const checkUrl = getEmbedUrlForServer(srv, isTV, realId, season, episode);
+          const res = await fetch(`/api/movies/check-available?url=${encodeURIComponent(checkUrl)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.available !== false) {
+              foundServer = srv;
+              break;
+            }
           }
-        } else {
-          if (active) setIsAvailable(true);
+        } catch (err) {
+          // Ignore error and check next server
         }
-      } catch (err) {
-        if (active) setIsAvailable(true); // default to true on error so we don't block
-      } finally {
-        if (active) setIsChecking(false);
+      }
+
+      if (active) {
+        if (foundServer) {
+          setActiveServer(foundServer);
+          setIsAvailable(true);
+        } else {
+          setActiveServer('vidsrc.pm');
+          setIsAvailable(false);
+        }
+        setIsChecking(false);
       }
     };
 
@@ -78,7 +94,7 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
     return () => {
       active = false;
     };
-  }, [embedUrl]);
+  }, [realId, season, episode, isTV]);
 
   // Find current season's episodes
   // Filter out season 0 (specials) usually, or include them if selected.
@@ -139,7 +155,26 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
           </div>
         )}
 
-        {/* Server Selector hidden completely per request */}
+        {/* Fullscreen button for DIH watermark mode */}
+        <button 
+          onClick={toggleFullscreen} 
+          style={{ 
+            display:'flex', 
+            alignItems:'center', 
+            gap:6, 
+            padding:'6px 12px', 
+            borderRadius:7, 
+            background:'rgba(245,158,11,0.15)', 
+            border:'1px solid rgba(245,158,11,0.3)', 
+            fontSize:11, 
+            fontWeight:700, 
+            color:'#fff', 
+            cursor:'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen (DIH Mode)'}
+        </button>
       </div>
 
       {/* Embedded Iframe */}
@@ -160,7 +195,7 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
           </div>
         ) : (
           <iframe 
-            key={`${server}-${season}-${episode}-${realId}`}
+            key={`${activeServer}-${season}-${episode}-${realId}`}
             src={getEmbedUrl()} 
             style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:'none' }} 
             allow="autoplay; encrypted-media; picture-in-picture; accelerometer; clipboard-write; gyroscope; fullscreen" 

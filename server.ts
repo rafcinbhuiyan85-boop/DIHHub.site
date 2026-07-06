@@ -2338,8 +2338,8 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         signal: AbortSignal.timeout(4000)
       });
 
-      if (response.status === 404) {
-        console.log(`[Media Check] 404 Status - UNAVAILABLE: ${url}`);
+      if (response.status === 404 || response.status === 500) {
+        console.log(`[Media Check] ${response.status} Status - UNAVAILABLE: ${url}`);
         return res.json({ available: false });
       }
 
@@ -2349,7 +2349,9 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         (text.includes("404") && (text.toLowerCase().includes("not found") || text.toLowerCase().includes("not_found") || text.toLowerCase().includes("unavailable"))) ||
         text.toLowerCase().includes("content not found") ||
         text.toLowerCase().includes("media is unavailable") ||
-        text.toLowerCase().includes("not found") && text.includes("404")
+        text.toLowerCase().includes("failed to load content") ||
+        text.toLowerCase().includes("500 failed") ||
+        (text.toLowerCase().includes("not found") && text.includes("404"))
       ) {
         console.log(`[Media Check] Content indicators - UNAVAILABLE: ${url}`);
         return res.json({ available: false });

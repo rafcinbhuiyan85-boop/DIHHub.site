@@ -13,15 +13,15 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
   const [imdbId, setImdbId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [server] = useState<string>('vidsrc.pm');
+  const [activeServer, setActiveServer] = useState<string>('vidsrc.pm');
+  const [isAvailable, setIsAvailable] = useState<boolean>(true);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onChange = () => {
-      // If the iframe itself went fullscreen, request fullscreen on our container instead to pull it up
-      if (document.fullscreenElement && document.fullscreenElement.tagName === 'IFRAME') {
-        containerRef.current?.requestFullscreen().catch(() => {});
-      }
+      setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener('fullscreenchange', onChange);
     document.addEventListener('webkitfullscreenchange', onChange);
@@ -68,43 +68,96 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
     fetchExternalId();
   }, [movieId, type, settings.tmdbApiKey]);
 
-  const getEmbedUrl = () => {
-    const vidType = type === 'series' || type === 'tv' ? 'tv' : 'movie';
-    const isMoviesApi = server.includes('moviesapi');
-    
-    // Server compatibility map: some prefer TMDB, some prefer IMDb
-    const id = (server === 'vidsrc.to' || server === 'vidsrc.cc' || isMoviesApi || !imdbId) ? movieId : imdbId;
-    
+  const getEmbedUrlForServer = (srv: string, vidType: string, id: string) => {
+    const isMoviesApi = srv.includes('moviesapi');
     if (isMoviesApi) {
       const baseUrl = `https://moviesapi.club/${vidType}/${id}`;
       return vidType === 'tv' ? `${baseUrl}-1-1` : baseUrl;
     }
-
-    if (server === 'vidsrc.to') {
-      return `https://vidsrc.to/embed/${vidType}/${id}${vidType === 'tv' ? '/1/1' : ''}`;
-    }
-
-    if (server === 'vidsrc.cc') {
+    if (srv === 'vidsrc.cc') {
       return `https://vidsrc.cc/v2/embed/${vidType}/${id}${vidType === 'tv' ? '?s=1&e=1' : ''}`;
     }
-
-    const baseUrl = `https://${server}/embed/${vidType}/${id}`;
+    if (srv === 'vidsrc.to') {
+      return `https://vidsrc.to/embed/${vidType}/${id}${vidType === 'tv' ? '/1/1' : ''}`;
+    }
+    const baseUrl = `https://${srv}/embed/${vidType}/${id}`;
     return vidType === 'tv' ? `${baseUrl}/1/1` : baseUrl;
   };
+
+  const getEmbedUrl = () => {
+    const vidType = type === 'series' || type === 'tv' ? 'tv' : 'movie';
+    const id = (activeServer === 'vidsrc.to' || activeServer === 'vidsrc.cc' || !imdbId) ? movieId : imdbId;
+    return getEmbedUrlForServer(activeServer, vidType, String(id));
+  };
+
+  useEffect(() => {
+    if (loading) return;
+    
+    let active = true;
+    const checkAvailability = async () => {
+      setIsChecking(true);
+      const SERVERS = ['vidsrc.pm', 'vidsrc.to', 'vidsrc.cc', 'vidsrc.me'];
+      const vidType = type === 'series' || type === 'tv' ? 'tv' : 'movie';
+      
+      let foundServer = null;
+      for (const srv of SERVERS) {
+        if (!active) return;
+        try {
+          const id = (srv === 'vidsrc.to' || srv === 'vidsrc.cc' || !imdbId) ? movieId : imdbId;
+          const checkUrl = getEmbedUrlForServer(srv, vidType, String(id));
+          const res = await fetch(`/api/movies/check-available?url=${encodeURIComponent(checkUrl)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.available !== false) {
+              foundServer = srv;
+              break;
+            }
+          }
+        } catch (err) {
+          // Check next server
+        }
+      }
+
+      if (active) {
+        if (foundServer) {
+          setActiveServer(foundServer);
+          setIsAvailable(true);
+        } else {
+          setActiveServer('vidsrc.pm');
+          setIsAvailable(false);
+        }
+        setIsChecking(false);
+      }
+    };
+
+    checkAvailability();
+    return () => {
+      active = false;
+    };
+  }, [loading, imdbId, movieId, type]);
 
   return (
     <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center bg-zinc-900 border-b border-zinc-800 shadow-2xl">
         <div className="flex items-center justify-between w-full sm:w-auto gap-4">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-8 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(229,9,20,0.5)]" />
+            <span className="w-2 h-8 bg-amber-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
             <h2 className="text-xl font-black tracking-tighter text-white uppercase flex items-center gap-2">
-              CINESTREAM <span className="text-primary italic">ULTRA</span>
+              DIH <span className="text-amber-500 italic">MOVIE</span>
             </h2>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(() => {});
+              else document.exitFullscreen().catch(() => {});
+            }}
+            className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded-xl transition-all text-xs font-bold uppercase tracking-wider"
+          >
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen (DIH Mode)'}
+          </button>
           {!error && (
             <div className="flex gap-2">
               <button 
@@ -134,17 +187,17 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
             <div className="flex flex-col items-center gap-6">
               <div className="relative">
                 <div className="w-16 h-16 border-4 border-zinc-800 rounded-full" />
-                <div className="absolute inset-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
               </div>
               <div className="space-y-1 text-center font-mono">
                 <p className="text-white font-bold tracking-widest text-sm uppercase">Initializing Stream</p>
-                <p className="text-zinc-500 text-[10px] uppercase">Connection: {server}</p>
+                <p className="text-zinc-500 text-[10px] uppercase">Connection: {activeServer}</p>
               </div>
             </div>
           ) : error ? (
             <div className="max-w-md w-full p-10 bg-zinc-900 border border-white/5 rounded-3xl text-center shadow-2xl">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <X size={40} className="text-primary" />
+              <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <X size={40} className="text-amber-500" />
               </div>
               <h3 className="text-2xl font-bold text-white mb-3 uppercase tracking-tighter">Connection Fault</h3>
               <p className="text-zinc-400 text-sm leading-relaxed mb-8 px-4">
@@ -159,7 +212,7 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
             </div>
           ) : (
             <iframe
-              key={server + (imdbId || movieId)}
+              key={activeServer + (imdbId || movieId)}
               src={getEmbedUrl()}
               className="w-full h-full border-none bg-black"
               allowFullScreen
