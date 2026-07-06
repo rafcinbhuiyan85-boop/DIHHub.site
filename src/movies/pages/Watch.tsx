@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, Zap, Minimize2, Tv, List } from 'lucide-react';
+import { ChevronLeft, Tv, List } from 'lucide-react';
 import { useMovieDetail } from '../use-tmdb';
 
 export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; onNavigate: (path: string) => void; onBack: () => void }) {
@@ -17,9 +17,25 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
   const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
-    const onChange = () => setIsFullscreen(!!(document.fullscreenElement));
+    const onChange = () => {
+      const isFs = !!(document.fullscreenElement);
+      setIsFullscreen(isFs);
+      
+      // If the iframe itself went fullscreen, request fullscreen on our container instead to pull it up
+      if (document.fullscreenElement && document.fullscreenElement.tagName === 'IFRAME') {
+        containerRef.current?.requestFullscreen().catch(() => {});
+      }
+    };
     document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    document.addEventListener('mozfullscreenchange', onChange);
+    document.addEventListener('MSFullscreenChange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+      document.removeEventListener('mozfullscreenchange', onChange);
+      document.removeEventListener('MSFullscreenChange', onChange);
+    };
   }, []);
 
   const toggleFullscreen = () => {
@@ -124,32 +140,6 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
         )}
 
         {/* Server Selector hidden completely per request */}
-
-        <button 
-          onClick={() => window.open(getEmbedUrl(), '_blank')} 
-          style={{ 
-            display:'flex', 
-            alignItems:'center', 
-            gap:6, 
-            padding:'5px 14px', 
-            borderRadius:20, 
-            background:'rgba(255,255,255,0.07)', 
-            border:'1px solid rgba(255,255,255,0.15)', 
-            fontSize:12, 
-            fontWeight:800, 
-            color:'#fff', 
-            cursor:'pointer',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-        >
-          Play in New Tab
-        </button>
-
-        <button onClick={toggleFullscreen} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 14px', borderRadius:20, background:'linear-gradient(135deg,rgba(245,158,11,0.18),rgba(245,158,11,0.07))', border:'1px solid rgba(245,158,11,0.35)', fontSize:12, fontWeight:800, color:'#F59E0B', cursor:'pointer' }}>
-          {isFullscreen ? <><Minimize2 size={12}/>Exit Fullscreen</> : <><Zap size={11} fill="#F59E0B"/>Ultra Server</>}
-        </button>
       </div>
 
       {/* Embedded Iframe */}
@@ -179,8 +169,23 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
             referrerPolicy="no-referrer"
           />
         )}
-        <div style={{ position:'absolute', top:8, right:0, width:110, height:34, background:'#000', zIndex:30, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:12 }}>
-          <span style={{ fontSize:10, fontWeight:900, color:'#ffffff' }}>DIH <span style={{ color:'#F59E0B' }}>MOVIE</span></span>
+        <div style={{ 
+          position:'absolute', 
+          top:0, 
+          right:0, 
+          width:130, 
+          height:40, 
+          background:'#000000', 
+          zIndex:2147483647, 
+          pointerEvents:'none', 
+          display:'flex', 
+          alignItems:'center', 
+          justifyContent:'flex-end', 
+          paddingRight:12 
+        }}>
+          <span style={{ fontSize:10, fontWeight:900, color:'#ffffff', fontFamily:'sans-serif', letterSpacing:'0.5px' }}>
+            DIH <span style={{ color:'#F59E0B' }}>MOVIE</span>
+          </span>
         </div>
       </div>
     </div>

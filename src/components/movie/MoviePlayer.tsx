@@ -1,5 +1,5 @@
 import { X, ExternalLink, RefreshCcw, Volume2, HelpCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAppSettings } from '../../hooks/useAppSettings';
 
 interface MoviePlayerProps {
@@ -14,6 +14,26 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [server] = useState<string>('vidsrc.pm');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onChange = () => {
+      // If the iframe itself went fullscreen, request fullscreen on our container instead to pull it up
+      if (document.fullscreenElement && document.fullscreenElement.tagName === 'IFRAME') {
+        containerRef.current?.requestFullscreen().catch(() => {});
+      }
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    document.addEventListener('mozfullscreenchange', onChange);
+    document.addEventListener('MSFullscreenChange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+      document.removeEventListener('mozfullscreenchange', onChange);
+      document.removeEventListener('MSFullscreenChange', onChange);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchExternalId() {
@@ -73,7 +93,7 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div ref={containerRef} className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center bg-zinc-900 border-b border-zinc-800 shadow-2xl">
         <div className="flex items-center justify-between w-full sm:w-auto gap-4">
           <div className="flex items-center gap-2">
@@ -97,15 +117,6 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
               >
                 <RefreshCcw size={18} />
               </button>
-              <a 
-                href={getEmbedUrl()} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(229,9,20,0.4)] active:scale-95"
-              >
-                <ExternalLink size={16} />
-                <span>Play in New Tab</span>
-              </a>
             </div>
           )}
           <button 
@@ -156,6 +167,26 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
               referrerPolicy="origin"
               title="CineStream Pro Player"
             />
+          )}
+          {!loading && !error && (
+            <div style={{ 
+              position:'absolute', 
+              top:0, 
+              right:0, 
+              width:130, 
+              height:40, 
+              background:'#000000', 
+              zIndex:2147483647, 
+              pointerEvents:'none', 
+              display:'flex', 
+              alignItems:'center', 
+              justifyContent:'flex-end', 
+              paddingRight:12 
+            }}>
+              <span style={{ fontSize:10, fontWeight:900, color:'#ffffff', fontFamily:'sans-serif', letterSpacing:'0.5px' }}>
+                DIH <span style={{ color:'#F59E0B' }}>MOVIE</span>
+              </span>
+            </div>
           )}
         </div>
       </div>
