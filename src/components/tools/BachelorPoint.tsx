@@ -257,7 +257,6 @@ export default function BachelorPoint() {
       active = false;
     };
   }, [contents]);
-
   const getPosterUrl = (item: ContentItem) => {
     if (item.poster_file_key && localUrls[item.poster_file_key]) {
       return localUrls[item.poster_file_key];
@@ -520,6 +519,13 @@ export default function BachelorPoint() {
   });
 
   const activeWatchItem = contents.find(c => c.id === selectedWatchId);
+
+  // Ensure player volume is at maximum by default when a new video is loaded
+  useEffect(() => {
+    if (activeWatchItem && playerRef.current) {
+      playerRef.current.volume = 1.0;
+    }
+  }, [activeWatchItem]);
   const isColorTheme = settings.bachelorEnableColorTheme !== false;
   const bpPrimary = isColorTheme ? '#e5173f' : '#3b82f6';
   const bpHover = isColorTheme ? '#b01030' : '#1d4ed8';
@@ -830,7 +836,7 @@ export default function BachelorPoint() {
               
               {/* Custom Logo overlay like HTML */}
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-slate-800 pointer-events-none">
-                <span className="text-[10px] font-black text-white/95">DIH <span className="text-[var(--bp-primary)]">HUB</span></span>
+                <span className="text-[10px] font-black text-white/95">DIH <span className="text-[#F59E0B]">MOVIE</span></span>
               </div>
             </div>
 

@@ -225,6 +225,8 @@ const processQueuedOrders = async () => {
                 
                 // Refund user balance
                 await refundUserBalance(order.userEmail, order.amount);
+                order.isRefunded = true;
+                modifiedOrders = true;
                 console.log(`[Queue Processor] Order #${order.id} cancelled. Refunded user ${order.userEmail} $${order.amount.toFixed(2)}`);
               }
             }
@@ -834,6 +836,15 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
     } else {
       ordersList = loadData(SMM_ORDERS_FILE, []);
     }
+
+    // Process manual or automated refunds for cancelled SMM orders
+    for (const order of ordersList) {
+      if (order.status === 'cancelled' && !order.isRefunded && (order.amount || 0) > 0) {
+        await refundUserBalance(order.userEmail, order.amount);
+        order.isRefunded = true;
+      }
+    }
+
     await saveData(SMM_ORDERS_FILE, ordersList);
     res.json({ status: "ok" });
     processQueuedOrders().catch(e => console.error("[Queue Processor Error]:", e));
