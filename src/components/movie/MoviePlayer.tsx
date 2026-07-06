@@ -13,9 +13,7 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
   const [imdbId, setImdbId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [server, setServer] = useState<string>(settings.moviePlayerServer || 'vidsrc.to');
-
-  const servers = (['vidsrc.to', 'vidsrc.cc', 'vidsrc.me', 'vidsrc.online', 'moviesapi.club', 'vidsrc.pro', 'vidsrc.net', 'vidsrc.pm'] as const);
+  const [server] = useState<string>('vidsrc.pm');
 
   useEffect(() => {
     async function fetchExternalId() {
@@ -84,20 +82,6 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
               CINESTREAM <span className="text-primary italic">ULTRA</span>
             </h2>
           </div>
-          
-          {(!error) && (
-            <div className="flex flex-wrap gap-1 ml-2 sm:ml-4 bg-black/40 p-1 rounded-lg border border-white/5">
-              {servers.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setServer(s)}
-                  className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all ${server === s ? 'bg-primary text-white font-black scale-105 shadow-[0_0_8px_rgba(229,9,20,0.4)]' : 'text-zinc-500 hover:text-white'}`}
-                >
-                  {s === 'moviesapi.club' ? 'CLUB' : s.split('.')[1]}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
         
         <div className="flex items-center gap-3">
@@ -134,17 +118,6 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
       </div>
 
       <div className="flex-1 w-full bg-black relative flex flex-col">
-        {!loading && !error && (
-          <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-3 text-center text-xs sm:text-sm text-red-200 font-bold flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 shadow-[0_4px_20px_rgba(229,9,20,0.15)] animate-fade-in">
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e50914] text-white text-[10px] font-black tracking-widest uppercase animate-pulse shadow-[0_0_10px_rgba(229,9,20,0.6)]">
-              🚨 DIH MOVIE NOTICE
-            </span>
-            <span>
-              Sorry, if you encounter <span className="text-[#e50914] underline font-extrabold font-mono">"404 Content Not Found / DIH MOVIE"</span> or a blank screen, it means this specific movie is unavailable on this server. Please switch the <strong>Server/Mirror (CLUB, vidsrc, etc.)</strong> in the top header, or click <strong>"Play in New Tab"</strong>!
-            </span>
-          </div>
-        )}
-
         <div className="flex-1 w-full relative flex items-center justify-center">
           {loading ? (
             <div className="flex flex-col items-center gap-6">
@@ -186,59 +159,6 @@ export default function MoviePlayer({ movieId, type, onClose }: MoviePlayerProps
           )}
         </div>
       </div>
-
-      {!loading && !error && (
-        <div className="px-6 py-4.5 bg-[#0d0f14] border-t border-zinc-850 flex flex-col gap-4">
-          {/* Bengali & English Troubleshooting Helpers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-zinc-850/60 pb-4">
-            {/* 404 Guide */}
-            <div className="bg-zinc-900/40 border border-zinc-800/40 p-3.5 rounded-2xl flex gap-3">
-              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 shrink-0 mt-0.5">
-                <HelpCircle size={16} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Movie Play হচ্ছে না? (404 Content Not Found)</h4>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  ভিডিও প্লেয়ারে <span className="text-red-400">"404 Content Not Found"</span> বা কালো স্ক্রিন দেখালে উপরে সার্ভার পরিবর্তন করুন। <strong>"CLUB"</strong> অথবা অন্য মিরর সিলেক্ট করুন অথবা <strong>"Play in New Tab"</strong>-এ ক্লিক করে উপভোগ করুন।
-                </p>
-              </div>
-            </div>
-
-            {/* Sound Booster Guide */}
-            <div className="bg-zinc-900/40 border border-zinc-800/40 p-3.5 rounded-2xl flex gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
-                <Volume2 size={16} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">সাউন্ড অনেক কম? (Full Volume Tips)</h4>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  ভিডিও প্লেয়ারের নিচের ডানদিকের <strong>Volume slider-টি টেনে full (১০০%) করে দিন</strong>। এরপরও কম মনে হলে অন্য সার্ভার (যেমন- <strong>CLUB</strong>) ব্যবহার করুন, অথবা <strong>"Play in New Tab"</strong> এ গিয়ে ব্রাউজারে Volume Booster এক্সটেনশন দিয়ে ৩০০% থেকে ৬০০% পর্যন্ত বুস্ট করতে পারবেন!
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-between items-center gap-4">
-            <div className="flex items-center gap-4 text-[10px] font-mono tracking-wider text-zinc-500">
-              <span className="uppercase font-black text-zinc-600">Source Hash:</span>
-              <span className="bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-zinc-400">
-                {imdbId || `TMDB-${movieId}`}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-               <div className="text-[9px] text-amber-500 bg-amber-500/5 border border-amber-500/10 px-3 py-1.5 rounded font-black uppercase tracking-wide hidden lg:block max-w-md leading-snug text-right">
-                 Tips: Disable AdBlock for absolute smooth and fast loading without popups.
-               </div>
-               <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-bold uppercase py-1.5 px-4 bg-zinc-900 rounded-full border border-zinc-800">
-                <span className="w-2 h-2 bg-[#e50914] rounded-full animate-pulse shadow-[0_0_8px_rgba(229,9,20,0.6)]" />
-                Primary Node: {server}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-
-
   );
 }

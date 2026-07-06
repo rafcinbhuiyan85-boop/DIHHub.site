@@ -12,7 +12,7 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
   // TV specific states
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
-  const [server, setServer] = useState('vidsrc.pm');
+  const server = 'vidsrc.pm';
   const [isAvailable, setIsAvailable] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -29,12 +29,6 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
 
   const getEmbedUrl = () => {
     if (isTV) {
-      if (server === 'vidsrc.to') {
-        return `https://vidsrc.to/embed/tv/${realId}/${season}/${episode}`;
-      }
-      if (server === 'vidsrc.cc') {
-        return `https://vidsrc.cc/v2/embed/tv/${realId}?s=${season}&e=${episode}`;
-      }
       return `https://${server}/embed/tv/${realId}/${season}/${episode}`;
     }
     return `https://${server}/embed/movie/${realId}`;
@@ -131,6 +125,28 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
 
         {/* Server Selector hidden completely per request */}
 
+        <button 
+          onClick={() => window.open(getEmbedUrl(), '_blank')} 
+          style={{ 
+            display:'flex', 
+            alignItems:'center', 
+            gap:6, 
+            padding:'5px 14px', 
+            borderRadius:20, 
+            background:'rgba(255,255,255,0.07)', 
+            border:'1px solid rgba(255,255,255,0.15)', 
+            fontSize:12, 
+            fontWeight:800, 
+            color:'#fff', 
+            cursor:'pointer',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+        >
+          Play in New Tab
+        </button>
+
         <button onClick={toggleFullscreen} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 14px', borderRadius:20, background:'linear-gradient(135deg,rgba(245,158,11,0.18),rgba(245,158,11,0.07))', border:'1px solid rgba(245,158,11,0.35)', fontSize:12, fontWeight:800, color:'#F59E0B', cursor:'pointer' }}>
           {isFullscreen ? <><Minimize2 size={12}/>Exit Fullscreen</> : <><Zap size={11} fill="#F59E0B"/>Ultra Server</>}
         </button>
@@ -144,9 +160,12 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
             <span style={{ fontSize:10, fontWeight:800, letterSpacing:2, textTransform:'uppercase', color:'rgba(255,255,255,0.5)' }}>Connecting Stream...</span>
           </div>
         ) : !isAvailable ? (
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24, textAlign:'center' }}>
-            <span style={{ color:'#ffffff', fontSize:15, fontWeight:600, letterSpacing:'0.2px', fontFamily:'sans-serif' }}>
-              This media is unavailable at the moment.
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24, textAlign:'center', gap:12 }}>
+            <span style={{ color:'#ef4444', fontSize:18, fontWeight:800, fontFamily:'sans-serif', letterSpacing:'1px' }}>
+              404 CONTENT NOT FOUND / DIH MOVIE
+            </span>
+            <span style={{ color:'rgba(255,255,255,0.6)', fontSize:12, fontFamily:'sans-serif', maxWidth:400 }}>
+              This movie/show is currently unavailable on this server. Please try switching the Server or check other titles.
             </span>
           </div>
         ) : (
@@ -154,7 +173,8 @@ export function MoviesWatch({ movieId, onNavigate, onBack }: { movieId: string; 
             key={`${server}-${season}-${episode}-${realId}`}
             src={getEmbedUrl()} 
             style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:'none' }} 
-            allow="autoplay; picture-in-picture; encrypted-media" 
+            allow="autoplay; encrypted-media; picture-in-picture; accelerometer; clipboard-write; gyroscope; fullscreen" 
+            allowFullScreen
             title={movie?.title ?? 'Player'} 
             referrerPolicy="no-referrer"
           />
