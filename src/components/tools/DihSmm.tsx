@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   LayoutDashboard, PlusCircle, List, ArrowDownToLine, Upload,
   CreditCard, Search, Link2, ChevronDown, CheckCircle2, 
-  AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu, Trash2,
+  AlertCircle, RefreshCw, X, HelpCircle, Activity, Star, Menu, Trash2, XCircle,
   TrendingUp, Users, CheckCircle, ExternalLink,
   Instagram, Facebook, Youtube, Twitter, Linkedin, Layers,
   Send, Globe, Music, MessageSquare, Video, Zap, FileText,
-  Gamepad2, ShieldCheck, Copy, Check, Mail, LogOut, ArrowLeft
+  Gamepad2, ShieldCheck, Copy, Check, Mail, LogOut, ArrowLeft, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -182,10 +182,55 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
 
   // Step-by-Step Payment Screenshot OCR Verification States
-  const [depositStep, setDepositStep] = useState<'form' | 'verify'>('form');
+  const [depositStep, setDepositStep] = useState<'form' | 'txid' | 'verify'>('form');
   const [depositScreenshot, setDepositScreenshot] = useState<string | null>(null);
   const [isVerifyingScreenshot, setIsVerifyingScreenshot] = useState<boolean>(false);
   const [verifyResponseMsg, setVerifyResponseMsg] = useState<string | null>(null);
+  const [depositTimer, setDepositTimer] = useState<number>(300); // 5 minutes countdown (300 seconds)
+  const [depositInitiatedAt, setDepositInitiatedAt] = useState<string | null>(null);
+
+  // Countdown timer for manual payments
+  useEffect(() => {
+    let interval: any = null;
+    if (depositStep !== 'form') {
+      interval = setInterval(() => {
+        setDepositTimer((prev) => {
+          if (prev <= 1) {
+            handleCancelDeposit('timeout');
+            if (interval) clearInterval(interval);
+            return 300;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setDepositTimer(300);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [depositStep]);
+
+  const handleCancelDeposit = (reason: 'user' | 'timeout') => {
+    setDepositStep('form');
+    setTransactionId('');
+    setDepositScreenshot(null);
+    setVerifyResponseMsg(null);
+    setDepositInitiatedAt(null);
+    if (reason === 'timeout') {
+      setDepError('Payment session expired (5-minute limit reached). Please try again.');
+      setDepSuccess(null);
+    } else {
+      setDepError('Payment cancelled.');
+      setDepSuccess(null);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // High quality image compression to prevent exceeding localStorage quota (resizes to 800px width max)
   const resizeAndCompressImage = (base64Str: string): Promise<string> => {
@@ -1604,6 +1649,11 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     setDepError(null);
     setDepSuccess(null);
 
+    if (!selectedMethod) {
+      setDepError('Please select a payment method first.');
+      return;
+    }
+
     const amt = parseFloat(depositAmount);
     if (!amt || amt <= 0) {
       setDepError('Please enter a valid amount.');
@@ -1618,24 +1668,33 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       return;
     }
 
-    // Clean spaces from transactionId and convert to uppercase for standard matching
-    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
+    // Advance to payment details & receipt proof step (Step 2)
+    setDepositTimer(300);
+    setDepositInitiatedAt(new Date().toISOString());
+    setDepositStep('txid');
+    setDepositScreenshot(null);
+    setVerifyResponseMsg(null);
+  };
 
+  const handleProceedToVerifyStep = () => {
+    setDepError(null);
+    setDepSuccess(null);
+    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
+    if (!cleanTxId) {
+      setDepError('Please enter the manual Transaction ID (TxID) or Referer Hash first.');
+      return;
+    }
+    setTransactionId(cleanTxId);
+    setDepositStep('verify');
+  };
+
+  const handleCompleteDeposit = async () => {
+    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
     if (!cleanTxId) {
       setDepError('Please enter the manual Transaction ID (TxID) or Referer Hash.');
       return;
     }
 
-    // Save cleaned version back
-    setTransactionId(cleanTxId);
-
-    // Advance to verification screenshot upload step
-    setDepositStep('verify');
-    setDepositScreenshot(null);
-    setVerifyResponseMsg(null);
-  };
-
-  const handleCompleteDeposit = async () => {
     if (!depositScreenshot) {
       setDepError('Please upload/provide a payment confirmation screenshot (SS).');
       return;
@@ -1647,7 +1706,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
     const amt = parseFloat(depositAmount);
     const methodStr = selectedMethod || 'bkash';
-    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
 
     const activeGate = manualGateways.find(g => g.id === selectedMethod);
     const expectedBdt = amt * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120);
@@ -1665,7 +1723,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           gatewayTitle: activeGate?.title || methodStr,
           gatewayType: activeGate?.type || 'Personal',
           gatewayNumber: activeGate?.numberOrAddress || '',
-          expectedBdt: expectedBdt
+          expectedBdt: expectedBdt,
+          sessionStartedAt: depositInitiatedAt || new Date().toISOString(),
+          clientTime: new Date().toISOString()
         })
       });
 
@@ -1728,6 +1788,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       setSenderDetails('');
       setTransactionId('');
       setDepositScreenshot(null);
+      setDepositInitiatedAt(null);
       setDepositStep('form');
     } catch (err: any) {
       console.error(err);
@@ -3061,18 +3122,24 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                 {/* FORM PANEL */}
                 <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
-                  <div className="px-5 py-4 border-b border-[#1e2336]">
+                  <div className="px-5 py-4 border-b border-[#1e2336] flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
                       <FileText size={15} className="text-blue-400" />
                       <span>Instant Wallet Receipt Verification</span>
                     </h3>
+                    {depositStep !== 'form' && (
+                      <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/15 px-3 py-1 rounded-lg text-xs font-mono font-bold text-amber-400 select-none">
+                        <Clock size={13} className="animate-pulse" />
+                        <span>{formatTime(depositTimer)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-5.5 space-y-5.5">
-                    {depositStep === 'form' ? (
+                    {depositStep === 'form' && (
                       <>
                         {/* METHODS */}
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Payment Method</label>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">1. Select Payment Method</label>
                           {(!manualGateways || manualGateways.length === 0) ? (
                             <div className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-center text-xs text-red-400 font-medium font-sans">
                               Deposits are currently disabled by the administrator. Please try again later.
@@ -3081,6 +3148,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-sans">
                               {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
                                 const brand = getGatewayBrandInfo(gate.id, gate.title, gate.logoUrl);
+                                const isSelected = selectedMethod === gate.id;
                                 return (
                                   <button
                                     key={gate.id}
@@ -3091,11 +3159,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                       setDepSuccess(null);
                                     }}
                                     className={cn(
-                                      "py-3.5 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 scale-100 outline-none select-none flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[84px] hover:scale-[1.03] active:scale-[0.97]",
-                                      brand.colorClass
+                                      "py-3 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 outline-none select-none flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[84px] hover:scale-[1.03] active:scale-[0.97]",
+                                      isSelected 
+                                        ? "bg-blue-500/15 border-blue-500 text-white shadow-lg shadow-blue-500/10" 
+                                        : "bg-slate-900/40 border-[#1e2336] text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
                                     )}
                                   >
-                                    <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200 hover:scale-110">
+                                    <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200">
                                       {brand.logo}
                                     </div>
                                     <span className="tracking-wider text-[10px] font-bold mt-0.5">{brand.label}</span>
@@ -3106,79 +3176,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           )}
                         </div>
 
-                        {/* SELECTED METHOD DETAILS */}
-                        {(() => {
-                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                          if (!activeGate) return null;
-                          return (
-                            <div className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] space-y-2.5 font-sans animate-in fade-in duration-200">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="font-extrabold text-white text-[11px] uppercase tracking-wide">Wallet details:</span>
-                                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-black text-[9px] uppercase">{activeGate.type || 'Personal'}</span>
-                              </div>
-
-                              <div className="space-y-1.5 font-sans">
-                                <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Account / Address</span>
-                                <div className="bg-[#0c0e14] border border-[#1e2336]/60 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 font-mono text-xs overflow-hidden">
-                                  <span className="text-white font-extrabold select-all break-all text-left bg-black/40 p-2.5 rounded border border-white/5 flex-1 tracking-wide leading-relaxed">
-                                    {activeGate.numberOrAddress}
-                                  </span>
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(activeGate.numberOrAddress);
-                                      setCopiedAddress(true);
-                                      setTimeout(() => setCopiedAddress(false), 2000);
-                                    }}
-                                    className={cn(
-                                      "w-full md:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 active:scale-95",
-                                      copiedAddress 
-                                        ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20" 
-                                        : "bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/15"
-                                    )}
-                                  >
-                                    {copiedAddress ? (
-                                      <>
-                                        <Check size={13} strokeWidth={3} />
-                                        <span>Copied!</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Copy size={13} strokeWidth={2.5} />
-                                        <span>Copy</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="text-[11px] text-slate-400 italic leading-relaxed bg-[#0c0e14]/40 border border-[#1e2336]/30 p-2 rounded">
-                                <span className="font-bold text-blue-400 not-italic block mb-0.5 text-[10px] uppercase">Instruction:</span>
-                                {activeGate.instructions}
-                              </div>
-
-                              {/* BD Mobile Payments Conversion UI */}
-                              {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) && (
-                                <div className="bg-amber-500/5 border border-amber-500/15 text-amber-400 p-3 rounded-lg text-xs space-y-1 mt-2 font-sans">
-                                  <div className="flex justify-between items-center font-bold">
-                                    <span>Exchange Rate:</span>
-                                    <span>1 USD = ৳{settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120} BDT</span>
-                                  </div>
-                                  {parseFloat(depositAmount) > 0 && (
-                                    <div className="flex justify-between items-center font-black text-[13px] border-t border-amber-500/10 pt-1.5 mt-1.5">
-                                      <span>Total to Send:</span>
-                                      <span>৳{((parseFloat(depositAmount) || 0) * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120)).toFixed(2)} BDT</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-
                         {/* QUICK SELECT */}
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">Quick Select</label>
+                        <div className="space-y-2 pt-1">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">2. Quick Select Amount</label>
                           <div className="grid grid-cols-6 gap-1.5">
                             {[5, 10, 20, 50, 100, 200].map(val => (
                               <button
@@ -3189,7 +3189,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   "py-2 rounded-lg border text-xs font-semibold font-mono text-center transition-all duration-150 select-none outline-none",
                                   parseFloat(depositAmount) === val
                                     ? "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/10"
-                                    : "border-[#1e2336] bg-white/5 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
+                                    : "border-[#1e2336] bg-[#0c0e14]/50 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
                                 )}
                               >
                                 ${val}
@@ -3199,15 +3199,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         </div>
 
                         {/* AMOUNT */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5 pt-1">
                           <div className="flex justify-between items-center pr-1 pl-0.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount (USD)</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">3. Enter Amount (USD)</label>
                             <span className="text-[10px] text-slate-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10">
                               Min: ${(manualGateways.find(g => g.id === selectedMethod)?.minDeposit !== undefined ? manualGateways.find(g => g.id === selectedMethod)?.minDeposit : 2.5).toFixed(2)} USD
                             </span>
                           </div>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-20px text-blue-500 font-bold pointer-events-none">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-blue-500 font-bold pointer-events-none">$</span>
                             <input
                               type="number"
                               min="1"
@@ -3215,33 +3215,43 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               placeholder="0.00"
                               value={depositAmount}
                               onChange={(e) => setDepositAmount(e.target.value)}
-                              className="w-full bg-[#141720] border border-[#1e2336] pl-8.5 pr-4 py-3.5 text-xl font-mono font-semibold text-white rounded-lg outline-none focus:border-blue-500 transition-colors"
+                              className="w-full bg-[#0c0e14] border border-[#1e2336] pl-9 pr-4 py-3 text-lg font-mono font-semibold text-white rounded-xl outline-none focus:border-blue-500 transition-colors"
                             />
                           </div>
                         </div>
 
-                        {/* USER DEPOSIT TRADING PROOF INPUTS */}
-                        <div className="space-y-1.5 text-left font-sans pt-1 animate-in fade-in duration-200">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Transaction ID (TxID) / Ref</label>
-                          <input
-                            type="text"
-                            placeholder="Enter Transaction ID (TxID) or Ref Number"
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            className="w-full bg-[#141720] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold"
-                          />
-                        </div>
+                        {/* LIVE BDT CONVERSION */}
+                        {(() => {
+                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
+                          if (!activeGate || !['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id)) return null;
+                          const amt = parseFloat(depositAmount) || 0;
+                          const rate = settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120;
+                          return (
+                            <div className="p-3.5 rounded-xl border border-amber-500/15 bg-amber-500/[0.03] space-y-1.5 font-sans animate-in fade-in duration-200">
+                              <div className="flex justify-between items-center text-xs text-slate-400">
+                                <span>Exchange Rate:</span>
+                                <span className="font-bold text-amber-500">1 USD = ৳{rate} BDT</span>
+                              </div>
+                              {amt > 0 && (
+                                <div className="flex justify-between items-center text-xs text-white border-t border-amber-500/10 pt-1.5 mt-1">
+                                  <span className="font-semibold">Estimated Total Payment:</span>
+                                  <span className="text-sm font-black text-amber-400 font-mono">৳{(amt * rate).toFixed(2)} BDT</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* DEPOSIT ALERTS */}
                         {depError && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
                             <AlertCircle size={15} className="shrink-0" />
                             {depError}
                           </div>
                         )}
 
                         {depSuccess && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed">
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
                             <CheckCircle2 size={15} className="shrink-0" />
                             {depSuccess}
                           </div>
@@ -3249,112 +3259,267 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                         <button 
                           onClick={() => handleInitiateDeposit()}
-                          disabled={isVerifyingScreenshot}
-                          className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm tracking-wide rounded-lg hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-2"
+                          disabled={!selectedMethod || isVerifyingScreenshot}
+                          className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-sm tracking-wide rounded-xl hover:shadow-lg hover:shadow-blue-500/15 transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-2 cursor-pointer"
                         >
-                          <span>Proceed to Upload Screenshot</span>
+                          <span>Proceed to Pay</span>
+                          <span className="text-xs">➔</span>
                         </button>
                       </>
-                    ) : (
+                    )}
+
+                    {depositStep === 'txid' && (
                       <div className="space-y-5 text-left animate-in fade-in duration-200">
-                        {/* SCREENSHOT UPLOAD STEP */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <label className="text-xs font-black uppercase tracking-wider text-slate-400">Upload payment screenshot (SS)</label>
+                        {/* HEADER BRANDING */}
+                        <div className="flex items-center justify-between border-b border-[#1e2336]/60 pb-3">
+                          <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Payment Gateway</span>
+                          {(() => {
+                            const activeGate = manualGateways.find(g => g.id === selectedMethod);
+                            const brand = activeGate ? getGatewayBrandInfo(activeGate.id, activeGate.title, activeGate.logoUrl) : null;
+                            return brand ? (
+                              <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/15 px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-wider shadow-md shadow-blue-500/5 animate-pulse">
+                                <span className="w-4 h-4 flex items-center justify-center">{brand.logo}</span>
+                                <span>{brand.label}</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+
+                        {/* WALLET & TRANSACTION DETAILS */}
+                        {(() => {
+                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
+                          if (!activeGate) return null;
+                          const amt = parseFloat(depositAmount) || 0;
+                          const rate = settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120;
+                          return (
+                            <div className="space-y-4 font-sans bg-[#0c0e14]/40 border border-[#1e2336]/60 rounded-xl p-4">
+                              
+                              {/* WALLET ADDRESS */}
+                              <div className="space-y-1.5">
+                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                  <span>Wallet Number ({activeGate.type || 'Personal'})</span>
+                                  <span className="text-emerald-400">Online</span>
+                                </div>
+                                <div className="bg-[#0c0e14] border border-[#1e2336]/80 rounded-xl p-3 flex items-center justify-between gap-3 font-mono text-xs overflow-hidden">
+                                  <span className="text-white font-extrabold select-all break-all text-left flex-1 tracking-wider leading-none text-sm">
+                                    {activeGate.numberOrAddress}
+                                  </span>
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(activeGate.numberOrAddress);
+                                      setCopiedAddress(true);
+                                      setTimeout(() => setCopiedAddress(false), 2000);
+                                    }}
+                                    className={cn(
+                                      "flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 active:scale-95",
+                                      copiedAddress 
+                                        ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 font-black" 
+                                        : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/15"
+                                    )}
+                                  >
+                                    {copiedAddress ? (
+                                      <>
+                                        <Check size={11} strokeWidth={3} />
+                                        <span>Copied!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={11} strokeWidth={2.5} />
+                                        <span>Copy</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* INSTRUCTIONS */}
+                              <div className="text-[11px] text-slate-400 leading-relaxed bg-[#0c0e14] border border-[#1e2336]/40 p-3 rounded-lg space-y-1">
+                                <span className="font-bold text-blue-400 not-italic block text-[10px] uppercase tracking-wider">How to pay:</span>
+                                <div className="text-slate-300 whitespace-pre-line font-medium leading-normal">
+                                  {activeGate.instructions || "Please send the exact amount to the number above."}
+                                </div>
+                              </div>
+
+                              {/* BDT TOTAL OR USD ONLY */}
+                              {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) ? (
+                                <div className="bg-blue-500/5 border border-blue-500/15 text-blue-400 p-3 rounded-xl flex items-center justify-between text-xs font-sans">
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wide">Expected Payment:</span>
+                                    <span className="text-sm font-black font-mono text-white">৳{(amt * rate).toFixed(2)} BDT <span className="text-xs text-blue-400 font-normal">(${amt.toFixed(2)} USD)</span></span>
+                                  </div>
+                                  <div className="text-right text-[10px] font-black text-blue-400 tracking-wider bg-blue-500/10 px-2 py-1 rounded border border-blue-500/10 uppercase">
+                                    Rate: 1$ = ৳{rate}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-blue-500/5 border border-blue-500/15 text-blue-400 p-3 rounded-xl flex items-center justify-between text-xs font-sans">
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wide">Expected Payment:</span>
+                                    <span className="text-sm font-black font-mono text-white">${amt.toFixed(2)} USD</span>
+                                  </div>
+                                </div>
+                              )}
+
+                            </div>
+                          );
+                        })()}
+
+                        {/* TRANSACTION ID INPUT */}
+                        <div className="space-y-1.5 font-sans">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Paste Transaction ID (TxID) / Ref</label>
+                          <input
+                            type="text"
+                            placeholder="Type or paste your Transaction ID (e.g., 8K8D8F8F)"
+                            value={transactionId}
+                            onChange={(e) => setTransactionId(e.target.value)}
+                            className="w-full bg-[#0c0e14] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold uppercase placeholder:lowercase"
+                          />
+                        </div>
+
+                        {/* DEPOSIT ALERTS */}
+                        {depError && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
+                            <AlertCircle size={15} className="shrink-0" />
+                            {depError}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3.5 font-sans pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleCancelDeposit('user')}
+                            className="py-3 bg-slate-900/80 hover:bg-slate-800 border border-[#1e2336] hover:border-slate-700 text-slate-300 hover:text-white font-extrabold text-sm tracking-wide rounded-xl transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-2 cursor-pointer group"
+                          >
+                            <ArrowLeft size={15} className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all duration-150" />
+                            <span>Back to Methods</span>
+                          </button>
+                          <button 
+                            onClick={() => handleProceedToVerifyStep()}
+                            disabled={!transactionId}
+                            className="py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-sm tracking-wide rounded-xl hover:shadow-lg hover:shadow-blue-500/15 transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <span>Verify Transaction ID</span>
+                            <span className="text-xs">➔</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {depositStep === 'verify' && (
+                      <div className="space-y-5 text-left animate-in fade-in duration-200">
+                        {/* GO BACK & CHANGE METHOD BUTTONS */}
+                        <div className="flex items-center justify-between border-b border-[#1e2336]/40 pb-3">
+                          <div className="flex items-center gap-3">
                             <button
                               type="button"
                               onClick={() => {
-                                setDepositStep('form');
+                                setDepositStep('txid');
                                 setDepError(null);
                               }}
-                              className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider cursor-pointer transition"
+                              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white font-bold uppercase tracking-wider cursor-pointer transition active:scale-95"
                             >
-                              ← Change Info
+                              <ArrowLeft size={13} />
+                              <span>Back</span>
+                            </button>
+                            <span className="text-slate-700">|</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCancelDeposit('user')}
+                              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white font-bold uppercase tracking-wider cursor-pointer transition active:scale-95 group"
+                            >
+                              <Layers size={13} className="text-slate-500 group-hover:text-white transition" />
+                              <span>Change Method</span>
                             </button>
                           </div>
-                          <p className="text-[11px] text-slate-500 leading-normal">
-                            Please upload a screenshot of your payment confirmation receipt showing your Transaction ID (<span className="font-mono text-blue-400 font-bold font-semibold">{transactionId}</span>).
-                          </p>
+                          <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-blue-400 uppercase">
+                            <span>TxID: {transactionId}</span>
+                          </div>
                         </div>
 
-                        {/* DRAG & DROP OR CHOOSE IMAGE */}
-                        <div className="border-2 border-dashed border-[#1e2336] hover:border-blue-500/40 rounded-xl p-5 bg-[#0c0e14]/50 text-center transition-all relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            id="deposit-screenshot-file"
-                            className="hidden"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onload = async (event) => {
-                                  const result = event.target?.result as string;
-                                  if (result) {
-                                    setVerifyResponseMsg("Compressing receipt image for scan...");
-                                    const compressed = await resizeAndCompressImage(result);
-                                    setDepositScreenshot(compressed);
-                                    setVerifyResponseMsg(null);
-                                  }
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                          {!depositScreenshot ? (
-                            <label htmlFor="deposit-screenshot-file" className="cursor-pointer flex flex-col items-center justify-center gap-3 py-3">
-                              <div className="w-12 h-12 rounded-full bg-blue-500/5 flex items-center justify-center border border-blue-500/10 text-blue-400 transition hover:bg-blue-500/10">
-                                <Upload size={20} />
+                        {/* SCREENSHOT UPLOAD */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Upload Payment Screenshot (SS)</label>
+                          
+                          {/* DRAG & DROP OR CHOOSE IMAGE */}
+                          <div className="border-2 border-dashed border-[#1e2336] hover:border-blue-500/40 rounded-xl p-5 bg-[#0c0e14]/50 text-center transition-all relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              id="deposit-screenshot-file"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = async (event) => {
+                                    const result = event.target?.result as string;
+                                    if (result) {
+                                      setVerifyResponseMsg("Compressing receipt image for scan...");
+                                      const compressed = await resizeAndCompressImage(result);
+                                      setDepositScreenshot(compressed);
+                                      setVerifyResponseMsg(null);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                            {!depositScreenshot ? (
+                              <label htmlFor="deposit-screenshot-file" className="cursor-pointer flex flex-col items-center justify-center gap-3 py-3 select-none">
+                                <div className="w-12 h-12 rounded-full bg-blue-500/5 flex items-center justify-center border border-blue-500/10 text-blue-400 transition hover:bg-blue-500/10">
+                                  <Upload size={20} />
+                                </div>
+                                <div>
+                                  <span className="text-xs font-bold text-slate-200 block">Click or Drag & Drop screenshot</span>
+                                  <span className="text-[10px] text-slate-500 mt-1 block font-medium">Supports official Mobile Banking receipt images</span>
+                                </div>
+                              </label>
+                            ) : (
+                              <div className="space-y-4">
+                                <div className="relative rounded-lg overflow-hidden border border-[#1e2336] max-h-[220px] bg-[#0c0e14] flex items-center justify-center">
+                                  <img
+                                    src={depositScreenshot}
+                                    alt="Payment Screenshot Preview"
+                                    className="max-h-[210px] object-contain"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setDepositScreenshot(null)}
+                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors cursor-pointer shadow-md"
+                                    title="Remove Image"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                                <span className="text-[10px] text-emerald-400 font-mono font-black block bg-emerald-500/5 py-1 rounded border border-emerald-500/10">
+                                 ✓ Screenshot loaded and ready for verification
+                                </span>
                               </div>
-                              <div>
-                                <span className="text-xs font-bold text-slate-200 block">Click to upload screenshot</span>
-                                <span className="text-[10px] text-slate-500 mt-1 block">Supports bKash, Nagad, Rocket receipt images</span>
-                              </div>
-                            </label>
-                          ) : (
-                            <div className="space-y-4">
-                              <div className="relative rounded-lg overflow-hidden border border-[#1e2336] max-h-[220px] bg-slate-950 flex items-center justify-center">
-                                <img
-                                  src={depositScreenshot}
-                                  alt="Payment Screenshot Preview"
-                                  className="max-h-[210px] object-contain"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setDepositScreenshot(null)}
-                                  className="absolute top-2 right-2 bg-red-650 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors cursor-pointer shadow-md"
-                                  title="Remove Image"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                              <span className="text-[10px] text-emerald-400 font-mono font-black block bg-emerald-500/5 py-1 rounded border border-emerald-500/10">
-                               ✓ Screenshot loaded and ready for verification
-                              </span>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
 
                         {verifyResponseMsg && (
-                          <div className="text-xs text-blue-400 bg-blue-500/5 border border-blue-500/10 rounded-lg p-3 flex items-center gap-2">
+                          <div className="text-xs text-blue-400 bg-blue-500/5 border border-blue-500/10 rounded-lg p-3 flex items-center gap-2 animate-in fade-in duration-150">
                             <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping shrink-0" />
                             <span className="font-semibold font-mono">{verifyResponseMsg}</span>
                           </div>
                         )}
 
                         {depError && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed">
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
                             <AlertCircle size={15} className="shrink-0" />
                             {depError}
                           </div>
                         )}
 
                         {/* COMPLETED ACTIONS */}
-                        <div className="space-y-2">
+                        <div className="space-y-2 pt-2">
                           <button
                             onClick={() => handleCompleteDeposit()}
-                            disabled={!depositScreenshot || isVerifyingScreenshot}
-                            className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                            disabled={!depositScreenshot || isVerifyingScreenshot || !transactionId}
+                            className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer shadow-lg shadow-blue-500/10"
                           >
                             {isVerifyingScreenshot ? (
                               <>
@@ -3362,13 +3527,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 Verifying Screenshot...
                               </>
                             ) : (
-                              "Verify & Auto-Add Balance"
+                              <>
+                                <ShieldCheck size={14} />
+                                <span>Verify & Auto-Add Balance</span>
+                              </>
                             )}
                           </button>
 
                           <button
                             onClick={async () => {
                               // Skip OCR and submit directly for manual review
+                              const cleanTxId = transactionId.replace(/\s+/g, '').trim();
+                              if (!cleanTxId) {
+                                setDepError('Please enter the manual Transaction ID before submitting.');
+                                return;
+                              }
+
                               setIsVerifyingScreenshot(true);
                               setDepError(null);
                               setVerifyResponseMsg('Submitting deposit for manual review...');
@@ -3391,7 +3565,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   amount: amt,
                                   method: methodStr,
                                   sender: 'N/A',
-                                  txid: transactionId.replace(/\s+/g, '').trim(),
+                                  txid: cleanTxId,
                                   status: 'pending',
                                   screenshot: depositScreenshot || undefined,
                                   aiReason: "Requested manual review directly.",
@@ -3414,8 +3588,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 setVerifyResponseMsg(null);
                               }
                             }}
-                            disabled={isVerifyingScreenshot}
-                            className="w-full py-2 bg-slate-900 border border-[#1e2336] hover:bg-slate-800 text-slate-400 hover:text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
+                            disabled={isVerifyingScreenshot || !transactionId}
+                            className="w-full py-2.5 bg-slate-900 border border-[#1e2336] hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400 hover:text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
                           >
                             Submit Directly for Manual Review
                           </button>

@@ -524,7 +524,9 @@ async function startServer() {
       gatewayTitle, 
       gatewayType, 
       gatewayNumber, 
-      expectedBdt 
+      expectedBdt,
+      sessionStartedAt,
+      clientTime
     } = req.body;
 
     if (!image) {
@@ -535,11 +537,20 @@ async function startServer() {
     }
 
     const cleanTxId = txid.replace(/\s+/g, '').trim();
-    const cleanGatewayId = gatewayId || 'bkash';
+    const cleanGatewayId = (gatewayId || 'bkash').toLowerCase();
     const cleanGatewayTitle = gatewayTitle || 'bKash Wallet';
     const cleanGatewayType = gatewayType || 'Personal';
     const cleanGatewayNumber = gatewayNumber || '';
     const cleanExpectedBdt = expectedBdt ? parseFloat(expectedBdt).toFixed(2) : (parseFloat(amount || 0) * 120).toFixed(2);
+
+    // Calculate dates & times in Asia/Dhaka (Bangladesh) time zone
+    const nowServer = new Date();
+    const sessionStart = sessionStartedAt ? new Date(sessionStartedAt) : new Date(nowServer.getTime() - 300 * 1000);
+    const clientNow = clientTime ? new Date(clientTime) : nowServer;
+
+    const optionsBD = { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true } as const;
+    const bdSessionStartStr = sessionStart.toLocaleString('en-US', optionsBD);
+    const bdNowStr = clientNow.toLocaleString('en-US', optionsBD);
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -585,6 +596,8 @@ Expected values to verify:
 - Expected Receiver Wallet Type: "${cleanGatewayType}"
 - Expected Transaction ID (TxID): "${cleanTxId}"
 - Expected Principal Amount: ৳${cleanExpectedBdt} BDT (Equivalent to $${amount} USD)
+- Active Payment Session Start Time (Bangladesh Time): "${bdSessionStartStr}"
+- Active Payment Session Expiry / End Time (Bangladesh Time): "${bdNowStr}"
 
 Tasks & Verification Rules:
 1. **Authenticity:** Identify if this image is an authentic and valid payment transaction confirmation or receipt screenshot. If it is a generic photo, unrelated image, or clearly edited/fake template, mark isMatch as false.
@@ -604,6 +617,16 @@ Tasks & Verification Rules:
    - Locate the Transaction ID (TxID, TxHash, or transaction reference) in the screenshot.
    - Compare the extracted TxID with the expected TxID: "${cleanTxId}". They must match (ignoring whitespace, small OCR typos, or letter casing).
    - If the Transaction ID does not match, mark isMatch as false.
+6. **Strict Transaction Date & Time Verification (Mandatory for local gateways bkash, nagad, rocket, upay):**
+   - If the payment method/gateway is "bkash", "nagad", "rocket", or "upay":
+     - Locate the transaction Date and Time from the screenshot. It is typically displayed near the top, middle, or in a table row (e.g., "07:55 PM 17/01/26" or "17-01-2026 07:55 PM" or in Bengali digits and AM/PM indicators).
+     - Compare the extracted Date and Time with the active 5-minute payment session window:
+       - Active Session Start (Bangladesh Time): "${bdSessionStartStr}"
+       - Active Session End/Expiry (Bangladesh Time): "${bdNowStr}"
+     - The payment in the screenshot MUST have been completed within this active 5-minute window!
+     - Allow a slight buffer of up to 3 minutes before the start time (for clock drift or delay) and up to 1 minute after the expiry time.
+     - If the transaction occurred on an older date/day (e.g. yesterday or last month), or earlier/later today outside this active window, it is an EXPIRED, REUSED, OR RECYCLED screenshot.
+     - CRITICAL: Old screenshots MUST be rejected. Mark isMatch as false, and clearly write in the 'reason' that the screenshot transaction date/time is outside the active 5-minute payment session window.
 
 You MUST return a JSON response matching this schema:
 {
