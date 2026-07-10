@@ -1204,6 +1204,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           setSmmProviders(updatedProvs);
           localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProvs));
           
+          // Persist the updated balance list to the server
+          await fetch('/api/smm/providers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedProvs)
+          }).catch(err => console.error("[SyncSmmBalance] Server persist failed:", err));
+          
           setSmmToast({ message: `Live SMM account balance synced! Current Funds: $${liveBal.toFixed(4)}`, type: 'success' });
           return;
         } else {
@@ -1215,7 +1222,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
     } else {
       // Mock sync for offline default panels
-      setTimeout(() => {
+      setTimeout(async () => {
         const liveBal = 500.00 - (Math.random() * 45);
         const updatedProvs = smmProviders.map(p => {
           if (p.id === prov.id) {
@@ -1225,6 +1232,14 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         });
         setSmmProviders(updatedProvs);
         localStorage.setItem('dih_smm_providers_v2', JSON.stringify(updatedProvs));
+        
+        // Persist mock balance to the server
+        await fetch('/api/smm/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedProvs)
+        }).catch(err => console.error("[SyncSmmBalance Mock] Server persist failed:", err));
+
         setSmmToast({ message: `Mock provider funds balance refreshed: $${liveBal.toFixed(4)}`, type: 'success' });
       }, 850);
     }

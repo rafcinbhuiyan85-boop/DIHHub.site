@@ -165,12 +165,14 @@ const processQueuedOrders = async () => {
       const origPrice = service.originalPrice || (service.price / (settings.smmPriceMultiplier || 1.3)) || (service.price * 0.7);
       const providerCost = (order.quantity / 1000) * origPrice;
 
-      // Check if provider has enough balance
+      // Check if provider has enough balance (Bypassed local check; let the real API response handle balance validation)
       const providerBalance = parseFloat(provider.balance) || 0;
+      /*
       if (providerBalance < providerCost) {
         console.log(`[Queue Processor] Order #${order.id} skipped. Provider ${provider.name} still has insufficient balance ($${providerBalance.toFixed(2)} vs required $${providerCost.toFixed(4)})`);
         continue;
       }
+      */
 
       // We have enough balance! Place the order via Provider API
       const hasRealApi = provider.apiUrl && provider.apiUrl.trim() !== "" && !provider.apiUrl.toLowerCase().includes("example.com") && provider.apiKey && provider.apiKey.trim() !== "";

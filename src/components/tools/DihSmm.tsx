@@ -1421,19 +1421,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     const prov = providers.find(p => p.id?.toString() === provId?.toString());
     const providerBalance = prov ? (parseFloat(prov.balance) || 0) : 0;
     const providerCost = (qty / 1000) * (selectedService.originalPrice || selectedService.price * 0.7);
-    const isProviderLowBalance = prov && providerBalance < providerCost;
+    const isProviderLowBalance = false; // Bypassed client-side local check to allow real API to process the order
     const hasRealApi = prov && prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
 
     if (isProviderLowBalance) {
       // SMM Provider has low balance! Queue it as pending instead of placing live
       const queuedOrders = updatedOrdersList.map(o => {
         if (o.id === newOrder.id) {
-          return { ...o, error: `Queued: SMM Provider has insufficient funds. Will auto-retry.`, isQueued: true, status: 'pending' as const };
+          return { ...o, error: `Queued: DIH SMM is preparing your order. Will process shortly.`, isQueued: true, status: 'pending' as const };
         }
         return o;
       });
       saveOrders(queuedOrders);
-      setOrderSuccess(`Order #${newOrder.id} is queued as PENDING because SMM Provider ${prov.name} has insufficient balance. It will be placed automatically once funds are topped up.`);
+      setOrderSuccess(`Order #${newOrder.id} has been queued as PENDING. It will be processed automatically by DIH SMM shortly.`);
       setOrderError(null);
     } else if (hasRealApi) {
       fetch('/api/admin/smm/place-order', {
@@ -1459,17 +1459,17 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
               return o;
             });
             saveOrders(successOrders);
-            setOrderSuccess(`Order #${newOrder.id} successfully placed on provider! External Order ID: #${apiData.order}`);
+            setOrderSuccess(`Order #${newOrder.id} successfully placed! It is now processing under DIH SMM.`);
           } else if (apiData.isLowBalance) {
             // Insufficient SMM balance reported by external SMM panel! Queue it as pending
             const queuedOrders = updatedOrdersList.map(o => {
               if (o.id === newOrder.id) {
-                return { ...o, error: `Queued: SMM Provider reported insufficient funds. Will auto-retry.`, isQueued: true, status: 'pending' as const };
+                return { ...o, error: `Queued: DIH SMM is preparing your order. Will process shortly.`, isQueued: true, status: 'pending' as const };
               }
               return o;
             });
             saveOrders(queuedOrders);
-            setOrderSuccess(`Order #${newOrder.id} is queued as PENDING because the SMM Provider returned an insufficient balance error. It will be placed automatically once funds are topped up.`);
+            setOrderSuccess(`Order #${newOrder.id} has been queued as PENDING. It will be processed automatically by DIH SMM shortly.`);
             setOrderError(null);
           } else if (apiData.error) {
             // Failed. Void order, mark as cancelled, refund balance
@@ -1481,19 +1481,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             });
             saveOrders(failedOrders);
             updateBalance(balance); // Refund
-            setOrderError(`SMM Provider Error: ${apiData.error}`);
+            setOrderError(`DIH SMM Error: ${apiData.error}`);
             setOrderSuccess(null);
           } else {
             const unknownMsg = apiData.response || JSON.stringify(apiData);
             const failedOrders = updatedOrdersList.map(o => {
               if (o.id === newOrder.id) {
-                return { ...o, error: `Invalid provider response: ${unknownMsg}`, status: 'cancelled' as const };
+                return { ...o, error: `Invalid response: ${unknownMsg}`, status: 'cancelled' as const };
               }
               return o;
             });
             saveOrders(failedOrders);
             updateBalance(balance); // Refund
-            setOrderError(`SMM Provider response was not structured: ${unknownMsg}`);
+            setOrderError(`DIH SMM Response was unstructured: ${unknownMsg}`);
             setOrderSuccess(null);
           }
         } else {
@@ -1502,12 +1502,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             // Queue on HTTP error indicating insufficient funds
             const queuedOrders = updatedOrdersList.map(o => {
               if (o.id === newOrder.id) {
-                return { ...o, error: `Queued: SMM Provider has insufficient funds. Will auto-retry.`, isQueued: true, status: 'pending' as const };
+                return { ...o, error: `Queued: DIH SMM is preparing your order. Will process shortly.`, isQueued: true, status: 'pending' as const };
               }
               return o;
             });
             saveOrders(queuedOrders);
-            setOrderSuccess(`Order #${newOrder.id} is queued as PENDING because SMM Provider reported low balance. It will be placed automatically.`);
+            setOrderSuccess(`Order #${newOrder.id} has been queued as PENDING. It will be processed automatically by DIH SMM shortly.`);
             setOrderError(null);
           } else {
             const failedOrders = updatedOrdersList.map(o => {
@@ -1518,7 +1518,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             });
             saveOrders(failedOrders);
             updateBalance(balance); // Refund
-            setOrderError(`Provider failed to accept order: ${errData.error || 'Connection error'}`);
+            setOrderError(`DIH SMM failed to accept order: ${errData.error || 'Connection error'}`);
             setOrderSuccess(null);
           }
         }
