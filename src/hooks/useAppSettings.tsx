@@ -167,8 +167,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'stake-hub'],
-  newTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'stake-hub'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-casino'],
+  newTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-casino'],
   newBadgeText: 'NEW',
   faviconUrl: '/favicon-dih.png',
   appLogoUrl: '',
@@ -186,7 +186,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'bachelor-point': 'Bachelor Point S-5',
     'mobile-bypass': 'Mobile Bypass Pro',
     'hosted-admin': 'DIH Templates',
-    'stake-hub': 'DIH CASINO'
+    'dih-casino': 'DIH CASINO'
   },
   toolDescriptions: {
     'qr': 'Create custom QR codes for links or text.',
@@ -202,7 +202,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'bachelor-point': 'Manually manage, upload, and stream high fidelity exclusive video contents.',
     'mobile-bypass': '100% Working Mobile FRP, MDM & Bootloader Bypass solution.',
     'hosted-admin': 'Premium quality landing page showcase and live deployment portal.',
-    'stake-hub': 'Official Stake partner portal with live simulated play, deposit guides, and manual 24/7 support.'
+    'dih-casino': 'Official Stake partner portal with live simulated play, deposit guides, and manual 24/7 support.'
   },
   bgRemoverApiKey: 'DIHTEMPLATE_FREE_KEY',
   templates: DEFAULT_TEMPLATES,
@@ -355,7 +355,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       
       const parsedVisibleTools = (Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools)
         .filter((t: string) => !DELETED_TOOLS.includes(t));
-      const healedVisibleTools = Array.from(new Set([...parsedVisibleTools, 'stake-hub']));
+      const healedVisibleTools = Array.from(new Set([...parsedVisibleTools, 'dih-casino']));
       
       // Ensure all default templates are present
       const existingIds = new Set(parsed.templates?.map((t: any) => t.id) || []);
@@ -398,7 +398,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           if (globalSettings) {
              const serverVisibleTools = (Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools)
                .filter((t: string) => !DELETED_TOOLS.includes(t));
-             const healedVisibleTools = Array.from(new Set([...serverVisibleTools, 'stake-hub']));
+             const healedVisibleTools = Array.from(new Set([...serverVisibleTools, 'dih-casino']));
 
              setSettings(prev => ({
                ...prev,
@@ -556,7 +556,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
                 return {
                   ...prev,
                   ...globalSettings,
-                  visibleTools: Array.from(new Set([...serverVisibleTools, 'stake-hub'])),
+                  visibleTools: Array.from(new Set([...serverVisibleTools, 'dih-casino'])),
                   newTools: (Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
                   templates: globalSettings.templates || prev.templates
                 };

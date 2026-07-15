@@ -33,7 +33,7 @@ const tools = [
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
   { id: 'hosted-admin', icon: Globe, label: 'DIH Templates', description: 'Premium quality landing page showcase and live deployment portal.', color: 'bg-orange-500', isNew: true },
   { id: 'dih-smm', icon: Flame, label: 'DIH SMM', description: 'Premium tier Social Media Marketing likes, views, followers booster panel.', color: 'bg-indigo-600', isNew: true },
-  { id: 'stake-hub', icon: Dices, label: 'DIH CASINO', description: 'Official Stake partner portal with live iframe game play, interactive Mines simulator and odds calculator.', color: 'bg-emerald-600', isNew: true },
+  { id: 'dih-casino', icon: Dices, label: 'DIH CASINO', description: 'Official Stake partner portal with live iframe game play, interactive Mines simulator and odds calculator.', color: 'bg-emerald-600', isNew: true },
 ];
 
 export default function Dashboard({ onSelectTool }: DashboardProps) {
@@ -216,7 +216,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
           const isDihMovies = tool.id === 'dih-movies';
           const isBachelorPoint = tool.id === 'bachelor-point';
           const isDihSmm = tool.id === 'dih-smm';
-          const isStakeHub = tool.id === 'stake-hub';
+          const isStakeHub = tool.id === 'dih-casino';
 
           return (
             <motion.button

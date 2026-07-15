@@ -716,7 +716,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 space-y-6 pb-20 animate-in fade-in duration-500">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-6 space-y-4 sm:space-y-6 pb-12 sm:pb-20 animate-in fade-in duration-500">
 
       {/* RENDER VIEW 1: LOBBY SELECTOR (if activePlatformId is null) */}
       <AnimatePresence mode="wait">
@@ -727,12 +727,12 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3 }}
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
           >
             {/* Header Banner */}
-            <div className="text-center space-y-2.5 py-4 sm:py-6 px-3 sm:px-4 relative overflow-hidden rounded-2xl sm:rounded-3xl bg-slate-900/40 border border-slate-800/80">
+            <div className="text-center space-y-1.5 sm:space-y-2.5 py-3 sm:py-6 px-2 sm:px-4 relative overflow-hidden rounded-xl sm:rounded-3xl bg-slate-900/40 border border-slate-800/80">
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 pointer-events-none" />
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] sm:text-[10px] font-black uppercase tracking-wider rounded-full select-none">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] sm:text-[10px] font-black uppercase tracking-wider rounded-full select-none">
                 {lang === 'bn' 
                   ? 'ডাবল ইনকাম হাব - অফিসিয়াল ক্যাসিনো পোর্টাল' 
                   : lang === 'hi'
@@ -741,12 +741,12 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                   ? 'دبل إنكام هاب - بوابة الكازينو الرسمية'
                   : 'DOUBLE INCOME HUB - OFFICIAL CASINO HUB'}
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight text-white uppercase select-none">
+              <h1 className="text-xl sm:text-3xl md:text-5xl font-black tracking-tight text-white uppercase select-none">
                 DIH CASINO PORTAL
               </h1>
 
               {/* Lang switcher in Lobby */}
-              <div className="pt-1.5 flex justify-center items-center gap-1 flex-wrap">
+              <div className="pt-1 flex justify-center items-center gap-1 flex-wrap">
                 {[
                   { key: 'bn', label: '🇧🇩 বাংলা' },
                   { key: 'en', label: '🇺🇸 English' },
@@ -756,7 +756,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                   <button
                     key={item.key}
                     onClick={() => setLang(item.key as LangKey)}
-                    className={`px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all active:scale-95 cursor-pointer ${
+                    className={`px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all active:scale-95 cursor-pointer ${
                       lang === item.key 
                         ? 'bg-emerald-600 text-white shadow-md' 
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -769,13 +769,13 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
             </div>
 
             {/* CATEGORIZED CASINO PLATFORMS */}
-            <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-4 sm:space-y-8">
               {/* INTERNATIONAL CASINO PLATFORMS */}
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-2.5 sm:space-y-4">
                 {/* INTERNATIONAL SECTION HEADER */}
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm font-black tracking-widest text-emerald-400 uppercase select-none">
-                    <Globe size={14} className="text-emerald-400 animate-pulse sm:w-4 sm:h-4" />
+                <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 sm:pb-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs md:text-sm font-black tracking-widest text-emerald-400 uppercase select-none">
+                    <Globe size={12} className="text-emerald-400 animate-pulse sm:w-4 sm:h-4" />
                     <span>
                       {lang === 'bn' 
                         ? 'আন্তর্জাতিক ক্যাসিনো প্ল্যাটফর্ম (International Casino)' 
@@ -788,7 +788,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
                   {platforms.filter(p => p.badge === 'INTERNATIONAL' && !settings?.disabledCasinoPlatforms?.includes(p.id)).map((p) => {
                     const tc = themeColorMap[p.themeColor] || themeColorMap.emerald;
                     return (
@@ -801,11 +801,11 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                             setLang('bn');
                           }
                         }}
-                        className={`relative overflow-hidden p-4 sm:p-6 rounded-2xl sm:rounded-3xl border text-left transition-all duration-300 hover:scale-[1.02] active:scale-95 flex flex-col gap-3 sm:gap-4 cursor-pointer group bg-slate-950/60 border-slate-800 ${tc.hoverBorder} ${tc.hoverBg}`}
+                        className={`relative overflow-hidden p-3.5 sm:p-6 rounded-xl sm:rounded-3xl border text-left transition-all duration-300 hover:scale-[1.02] active:scale-95 flex flex-col gap-2.5 sm:gap-4 cursor-pointer group bg-slate-950/60 border-slate-800 ${tc.hoverBorder} ${tc.hoverBg}`}
                       >
                         {/* Corner Ribbon for featured */}
-                        <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-wider uppercase rounded-full ${tc.badgeBg} ${tc.badgeText} border ${tc.badgeBorder}`}>
+                        <div className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4">
+                          <span className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[9px] font-black tracking-wider uppercase rounded-full ${tc.badgeBg} ${tc.badgeText} border ${tc.badgeBorder}`}>
                             {lang === 'bn' 
                               ? p.categoryBn 
                               : lang === 'hi'
@@ -817,14 +817,14 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                         </div>
 
                         {/* Dice Icon */}
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${tc.iconBg} ${tc.iconText}`}>
-                          <Dices className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${tc.iconBg} ${tc.iconText}`}>
+                          <Dices className="w-4 h-4 sm:w-6 sm:h-6" />
                         </div>
 
                         {/* Platform details */}
-                        <div className="space-y-1">
-                          <h3 className="font-black text-lg sm:text-xl text-white tracking-tight">{p.name}</h3>
-                          <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <h3 className="font-black text-sm sm:text-xl text-white tracking-tight">{p.name}</h3>
+                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 leading-relaxed">
                             {p.id === 'stake' ? (
                               lang === 'bn' 
                                 ? 'বিশ্বসেরা আন্তর্জাতিক প্রিমিয়াম ক্যাসিনো প্ল্যাটফর্ম, লাইভ গেমপ্লে এবং ২৪/৭ সুরক্ষিত পেমেন্ট সুবিধা।'
@@ -845,7 +845,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                           </p>
                         </div>
 
-                        <div className={`pt-1 sm:pt-2 flex items-center gap-1 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all ${tc.accentText}`}>
+                        <div className={`pt-0.5 sm:pt-2 flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${tc.accentText}`}>
                           <span>
                             {lang === 'bn' 
                               ? 'পোর্টালে প্রবেশ করুন' 
@@ -855,7 +855,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                               ? 'دخول البوابة'
                               : 'ENTER PORTAL'}
                           </span>
-                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
                         </div>
                       </button>
                     );
@@ -864,10 +864,10 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
               </div>
 
               {/* BANGLADESHI CASINO PLATFORMS */}
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm font-black tracking-widest text-amber-400 uppercase select-none">
-                    <Flame size={14} className="text-amber-500 animate-pulse sm:w-4 sm:h-4" />
+              <div className="space-y-2.5 sm:space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 sm:pb-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs md:text-sm font-black tracking-widest text-amber-400 uppercase select-none">
+                    <Flame size={12} className="text-amber-500 animate-pulse sm:w-4 sm:h-4" />
                     <span>
                       {lang === 'bn' 
                         ? 'বাংলাদেশী ক্যাসিনো প্ল্যাটফর্ম (BD Casino)' 
@@ -880,7 +880,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
                   {platforms.filter(p => p.badge === 'BANGLADESHI' && !settings?.disabledCasinoPlatforms?.includes(p.id)).map((p) => {
                     const tc = themeColorMap[p.themeColor] || themeColorMap.emerald;
                     return (
@@ -893,17 +893,17 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                             setLang('bn');
                           }
                         }}
-                        className={`relative overflow-hidden p-4 sm:p-6 rounded-2xl sm:rounded-3xl border text-left transition-all duration-300 hover:scale-[1.02] active:scale-95 flex flex-col gap-3 sm:gap-4 cursor-pointer group bg-slate-950/60 border-slate-800 ${tc.hoverBorder} ${tc.hoverBg}`}
+                        className={`relative overflow-hidden p-3.5 sm:p-6 rounded-xl sm:rounded-3xl border text-left transition-all duration-300 hover:scale-[1.02] active:scale-95 flex flex-col gap-2.5 sm:gap-4 cursor-pointer group bg-slate-950/60 border-slate-800 ${tc.hoverBorder} ${tc.hoverBg}`}
                       >
                         {/* Dice Icon */}
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${tc.iconBg} ${tc.iconText}`}>
-                          <Dices className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${tc.iconBg} ${tc.iconText}`}>
+                          <Dices className="w-4 h-4 sm:w-6 sm:h-6" />
                         </div>
 
                         {/* Platform details */}
-                        <div className="space-y-1">
-                          <h3 className="font-black text-lg sm:text-xl text-white tracking-tight">{p.name}</h3>
-                          <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        <div className="space-y-0.5 sm:space-y-1">
+                          <h3 className="font-black text-sm sm:text-xl text-white tracking-tight">{p.name}</h3>
+                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 leading-relaxed">
                             {p.id === 'stake' ? (
                               lang === 'bn' 
                                 ? 'বিশ্বসেরা আন্তর্জাতিক প্রিমিয়াম ক্যাসিনো প্ল্যাটফর্ম, লাইভ গেমপ্লে এবং ২৪/৭ সুরক্ষিত পেমেন্ট সুবিধা।'
@@ -924,7 +924,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                           </p>
                         </div>
 
-                        <div className={`pt-1 sm:pt-2 flex items-center gap-1 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all ${tc.accentText}`}>
+                        <div className={`pt-0.5 sm:pt-2 flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${tc.accentText}`}>
                           <span>
                             {lang === 'bn' 
                               ? 'পোর্টালে প্রবেশ করুন' 
@@ -934,7 +934,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                               ? 'دخول البوابة'
                               : 'ENTER PORTAL'}
                           </span>
-                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
                         </div>
                       </button>
                     );
@@ -951,35 +951,35 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3 }}
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
           >
             {/* Top Toolbar Bar with Back and Controls */}
-            <div className="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-2xl">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 bg-slate-900/60 border border-slate-800 rounded-xl sm:rounded-2xl gap-2.5">
+              <div className="flex items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto">
                 <button
                   onClick={() => {
                     if (soundEnabled) playSimulatedSound('click');
                     setActivePlatformId(null);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all border border-slate-800 cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 sm:px-4 sm:py-2 bg-slate-950 hover:bg-slate-800 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-lg sm:rounded-xl transition-all border border-slate-800 cursor-pointer"
                 >
-                  <ArrowRight size={14} className="rotate-180" />
-                  <span>{lang === 'bn' ? 'লবিতে ফিরুন' : 'Back to Lobby'}</span>
+                  <ArrowRight size={12} className="rotate-180 sm:w-3.5 sm:h-3.5" />
+                  <span>{lang === 'bn' ? 'লবি' : 'Lobby'}</span>
                 </button>
-                <span className="h-4 w-px bg-slate-800" />
-                <span className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
+                <span className="hidden sm:inline h-4 w-px bg-slate-800" />
+                <span className="text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                   </span>
                   {activePlatform.name} Portal Active
                 </span>
               </div>
 
               {/* Sound and Lang Controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-1.5 w-full sm:w-auto">
                 {/* Platform Lang Selector */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-lg border border-slate-800">
                   {[
                     { key: 'bn', label: '🇧🇩' },
                     { key: 'en', label: '🇺🇸' },
@@ -989,10 +989,10 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                     <button
                       key={item.key}
                       onClick={() => setLang(item.key as LangKey)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                         lang === item.key 
-                          ? 'bg-emerald-600 text-white' 
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                          ? 'bg-emerald-600 text-white shadow' 
+                          : 'text-slate-400 hover:text-white hover:bg-slate-900'
                       }`}
                     >
                       {item.label}
@@ -1003,41 +1003,41 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
             </div>
 
             {/* Platform floating banner */}
-            <div className={`relative overflow-hidden rounded-3xl border ${activePlatform.borderGlow} bg-gradient-to-r ${activePlatform.bgGradient} p-6 md:p-8`}>
+            <div className={`relative overflow-hidden rounded-2xl sm:rounded-3xl border ${activePlatform.borderGlow} bg-gradient-to-r ${activePlatform.bgGradient} p-4 sm:p-6 md:p-8`}>
               <div className="absolute -right-24 -top-24 w-72 h-72 bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
               
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="text-center md:text-left space-y-3 max-w-xl">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded-full select-none">
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
+                <div className="text-center md:text-left space-y-2 sm:space-y-3 max-w-xl">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] sm:text-[10px] font-black uppercase tracking-wider rounded-full select-none">
                     {t.partnerBadge}
                   </div>
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase select-none">
+                  <h1 className="text-xl sm:text-3xl md:text-5xl font-black tracking-tight text-white uppercase select-none">
                     {t.title}
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium select-none">
+                  <p className="text-[11px] sm:text-xs md:text-sm text-slate-300 leading-relaxed font-medium select-none">
                     {t.description}
                   </p>
                 </div>
 
                 {/* Social agent buttons */}
-                <div className="flex flex-col sm:flex-row md:flex-col justify-center gap-3 shrink-0 w-full sm:w-auto md:min-w-[260px]">
+                <div className="flex flex-col sm:flex-row md:flex-col justify-center gap-2 sm:gap-3 shrink-0 w-full md:w-auto md:min-w-[240px]">
                   <button 
                     onClick={() => startTriggerRedirect('current')}
-                    className="flex items-center justify-center gap-2 px-6 py-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer text-center w-full"
+                    className="flex items-center justify-center gap-1.5 px-4 py-3 sm:px-6 sm:py-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 active:scale-95 text-white font-black text-[10px] sm:text-xs uppercase tracking-widest rounded-xl sm:rounded-2xl transition-all cursor-pointer text-center w-full shadow-lg"
                   >
-                    <Smartphone size={15} />
+                    <Smartphone size={14} className="sm:w-3.5 sm:h-3.5" />
                     <span>{lang === 'bn' ? 'গেম খেলুন' : 'PLAY GAME'}</span>
                   </button>
 
                   {activePlatform.id === 'stake' && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       <a 
                         href="https://t.me/stake020"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 px-3 py-3 bg-[#0088cc]/90 hover:bg-[#0088cc] text-white font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-center"
+                        className="flex items-center justify-center gap-1 px-2 py-2 sm:px-3 sm:py-3 bg-[#0088cc]/90 hover:bg-[#0088cc] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-lg sm:rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-center"
                       >
-                        <Send size={13} fill="currentColor" />
+                        <Send size={12} fill="currentColor" className="sm:w-3.5 sm:h-3.5" />
                         {t.telegramBtn}
                       </a>
 
@@ -1045,9 +1045,9 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                         href="https://m.me/rafcin.b"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 px-3 py-3 bg-[#006aff]/90 hover:bg-[#006aff] text-white font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-center"
+                        className="flex items-center justify-center gap-1 px-2 py-2 sm:px-3 sm:py-3 bg-[#006aff]/90 hover:bg-[#006aff] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-lg sm:rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-center"
                       >
-                        <MessageSquare size={13} fill="currentColor" />
+                        <MessageSquare size={12} fill="currentColor" className="sm:w-3.5 sm:h-3.5" />
                         {t.messengerBtn}
                       </a>
                     </div>
@@ -1061,19 +1061,19 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
               <div className="max-w-3xl mx-auto w-full">
                 
                 {/* Local BDT Merchant agent deposit module */}
-                <div className="p-6 bg-slate-900/40 border border-slate-800 rounded-3xl space-y-4 shadow-xl text-left">
+                <div className="p-4 sm:p-6 bg-slate-900/40 border border-slate-800 rounded-2xl sm:rounded-3xl space-y-3 sm:space-y-4 shadow-xl text-left">
                   <div className="space-y-1">
-                    <h4 className="font-bold text-white flex items-center gap-2 text-sm select-none">
-                      <Smartphone size={16} className="text-emerald-400" />
+                    <h4 className="font-bold text-white flex items-center gap-2 text-xs sm:text-sm select-none">
+                      <Smartphone size={14} className="text-emerald-400 sm:w-4 sm:h-4" />
                       {t.depositTitle}
                     </h4>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider select-none">100% SECURE MANUAL DEPOSIT VIA ACTIVE MERCHANTS</p>
+                    <p className="text-[8px] sm:text-[10px] text-slate-500 uppercase tracking-wider select-none">100% SECURE MANUAL DEPOSIT VIA ACTIVE MERCHANTS</p>
                   </div>
 
-                  <div className="text-xs text-slate-300 space-y-3 leading-relaxed font-medium select-none">
+                  <div className="text-[11px] sm:text-xs text-slate-300 space-y-2 sm:space-y-3 leading-relaxed font-medium select-none">
                     {t.depositSteps.map((step, idx) => (
                       <div key={idx} className="flex gap-2.5 items-start">
-                        <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">{idx + 1}</span>
+                        <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-[9px] sm:text-[10px] font-black shrink-0 mt-0.5">{idx + 1}</span>
                         <p className="text-slate-300">{step}</p>
                       </div>
                     ))}

@@ -5,7 +5,7 @@ import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
 
-type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'stake-hub';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'dih-casino';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,7 +31,7 @@ const navItems = [
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
   { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
   { id: 'dih-smm' as ToolId, icon: Flame, label: 'DIH SMM' },
-  { id: 'stake-hub' as ToolId, icon: Dices, label: 'DIH CASINO' },
+  { id: 'dih-casino' as ToolId, icon: Dices, label: 'DIH CASINO' },
 ];
 
 declare global {
@@ -243,7 +243,7 @@ export default function Layout({
               const isDihMovies = item.id === 'dih-movies';
               const isBachelorPoint = item.id === 'bachelor-point';
               const isDihSmm = item.id === 'dih-smm';
-              const isStakeHub = item.id === 'stake-hub';
+              const isStakeHub = item.id === 'dih-casino';
               const isBachelorPointThemedItem = isBachelorPoint && settings.bachelorEnableColorTheme !== false;
               const isStreamingTool = isDihMovies || isBachelorPointThemedItem;
 

@@ -37,7 +37,7 @@ import BachelorPoint from './components/tools/BachelorPoint';
 import DihSmm from './components/tools/DihSmm';
 import StakeHub from './components/tools/StakeHub';
 
-type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration' | 'stake-hub';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration' | 'dih-casino';
 
 function MainApp() {
   const { settings } = useAppSettings();
@@ -76,7 +76,7 @@ function MainApp() {
           'qr', 'encryption', 'to-base64', 'bg-remover', 
           'video', 'lib-encryptor', 
           'dex-protector', 'apk-store', 
-          'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'stake-hub'
+          'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'dih-casino'
         ];
         if (toolIds.includes(cleanPath as ToolId)) {
           return cleanPath as ToolId;
@@ -175,7 +175,7 @@ function MainApp() {
       'qr', 'encryption', 'to-base64', 'bg-remover', 
       'video', 'lib-encryptor', 
       'dex-protector', 'apk-store', 
-      'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'stake-hub'
+      'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'dih-casino'
     ];
 
     if (toolIds.includes(cleanPath as ToolId)) {
@@ -279,7 +279,7 @@ function MainApp() {
       case 'dih-movies': return <DihMoviesApp />;
       case 'bachelor-point': return <BachelorPoint />;
       case 'dih-smm': return <DihSmm currentUser={currentUser} onAuthClick={() => setIsAuthModalOpen(true)} />;
-      case 'stake-hub': return <StakeHub currentUser={currentUser} />;
+      case 'dih-casino': return <StakeHub currentUser={currentUser} />;
       case 'hosted-admin': return <TemplatesGallery onBack={() => setActiveToolWithNavigation('dashboard')} />;
       case 'admin-login': return (
         <AdminLogin onLogin={() => {
