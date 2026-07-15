@@ -136,6 +136,144 @@ const refundUserBalance = async (email: string, amount: number) => {
   }
 };
 
+let lastSmmStatusSyncTime = 0;
+
+const syncSmmOrderStatuses = async () => {
+  try {
+    const now = Date.now();
+    // Throttle status checks to once every 15 seconds to respect provider rate limits
+    if (now - lastSmmStatusSyncTime < 15000) {
+      return;
+    }
+    lastSmmStatusSyncTime = now;
+
+    const orders = loadData(SMM_ORDERS_FILE, []);
+    const services = loadData(SMM_SERVICES_FILE, []);
+    const providers = loadData(SMM_PROVIDERS_FILE, []);
+
+    // Find orders that are active (pending or processing) and have a real provider apiOrderId
+    const activeOrders = orders.filter((o: any) => 
+      (o.status === 'pending' || o.status === 'processing') && 
+      o.apiOrderId && 
+      !String(o.apiOrderId).startsWith('mock_')
+    );
+
+    if (activeOrders.length === 0) return;
+
+    let modifiedOrders = false;
+    console.log(`[SMM Status Sync] Checking status for ${activeOrders.length} active orders on provider panels...`);
+
+    for (const order of activeOrders) {
+      // Find associated service to know which provider it belongs to
+      const service = services.find((s: any) => s.id === order.serviceId);
+      if (!service) continue;
+
+      const provider = providers.find((p: any) => p.id?.toString() === service.providerId?.toString());
+      if (!provider) continue;
+
+      const hasRealApi = provider.apiUrl && provider.apiUrl.trim() !== "" && !provider.apiUrl.toLowerCase().includes("example.com") && provider.apiKey && provider.apiKey.trim() !== "";
+      if (!hasRealApi) continue;
+
+      try {
+        let normalizedUrl = provider.apiUrl.trim();
+        if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+          normalizedUrl = "https://" + normalizedUrl;
+        }
+
+        const params = new URLSearchParams();
+        params.append('key', provider.apiKey.trim());
+        params.append('action', 'status');
+        params.append('order', String(order.apiOrderId).trim());
+
+        let response;
+        try {
+          response = await axios.post(normalizedUrl, params.toString(), {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+            },
+            timeout: 10000
+          });
+        } catch (postErr: any) {
+          console.log(`[SMM Status Sync] POST failed for Order #${order.id} status check, trying GET fallback... Error: ${postErr.message}`);
+          const separator = normalizedUrl.includes('?') ? '&' : '?';
+          const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(provider.apiKey.trim())}&action=status&order=${encodeURIComponent(String(order.apiOrderId).trim())}`;
+          response = await axios.get(getUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+            },
+            timeout: 10000
+          });
+        }
+
+        const rawData = response.data;
+        if (rawData && typeof rawData === 'object' && !rawData.error) {
+          const provStatus = String(rawData.status || '').toLowerCase().trim();
+          let nextStatus = order.status;
+          
+          if (provStatus.includes('complete')) {
+            nextStatus = 'completed';
+          } else if (provStatus.includes('fail') || provStatus.includes('cancel')) {
+            nextStatus = 'cancelled';
+          } else if (provStatus.includes('pend')) {
+            nextStatus = 'pending';
+          } else if (provStatus.includes('part')) {
+            nextStatus = 'partial';
+          } else if (provStatus.includes('process') || provStatus.includes('progress') || provStatus.includes('active')) {
+            nextStatus = 'processing';
+          }
+
+          let updated = false;
+          if (order.status !== nextStatus) {
+            console.log(`[SMM Status Sync] Order #${order.id} status changed: ${order.status} -> ${nextStatus}`);
+            order.status = nextStatus;
+            updated = true;
+          }
+
+          if (rawData.remains !== undefined) {
+            const parsedRemains = parseInt(rawData.remains);
+            if (!isNaN(parsedRemains) && order.remains !== parsedRemains) {
+              order.remains = parsedRemains;
+              updated = true;
+            }
+          }
+
+          if (rawData.start_count !== undefined) {
+            const parsedStart = parseInt(rawData.start_count);
+            if (!isNaN(parsedStart) && order.startCount !== parsedStart) {
+              order.startCount = parsedStart;
+              updated = true;
+            }
+          }
+
+          // If the order got cancelled, process user refund automatically
+          if (nextStatus === 'cancelled' && !order.isRefunded && (order.amount || 0) > 0) {
+            console.log(`[SMM Status Sync] Order #${order.id} cancelled. Refunding $${order.amount} to ${order.userEmail}...`);
+            await refundUserBalance(order.userEmail, order.amount);
+            order.isRefunded = true;
+            updated = true;
+          }
+
+          if (updated) {
+            modifiedOrders = true;
+          }
+        } else if (rawData && rawData.error) {
+          console.log(`[SMM Status Sync] Provider API returned error for Order #${order.id}: ${rawData.error}`);
+        }
+      } catch (err: any) {
+        console.error(`[SMM Status Sync] Failed to fetch status for order #${order.id}:`, err.message);
+      }
+    }
+
+    if (modifiedOrders) {
+      await saveData(SMM_ORDERS_FILE, orders);
+      console.log("[SMM Status Sync] Saved updated order statuses successfully.");
+    }
+  } catch (error) {
+    console.error("[SMM Status Sync] Error in status sync process:", error);
+  }
+};
+
 const processQueuedOrders = async () => {
   try {
     const orders = loadData(SMM_ORDERS_FILE, []);
@@ -192,13 +330,26 @@ const processQueuedOrders = async () => {
           params.append('quantity', String(order.quantity).trim());
 
           console.log(`[Queue Processor] Retrying/Placing queued Order #${order.id} on Provider ${provider.name}...`);
-          const response = await axios.post(normalizedUrl, params.toString(), {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
-            },
-            timeout: 15000
-          });
+          let response;
+          try {
+            response = await axios.post(normalizedUrl, params.toString(), {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+              },
+              timeout: 15000
+            });
+          } catch (postErr: any) {
+            console.log(`[Queue Processor] POST failed for Order #${order.id}, trying GET fallback... Error: ${postErr.message}`);
+            const separator = normalizedUrl.includes('?') ? '&' : '?';
+            const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(provider.apiKey.trim())}&action=add&service=${encodeURIComponent(String(service.providerServiceId || service.id).trim())}&link=${encodeURIComponent(String(order.link).trim())}&quantity=${encodeURIComponent(String(order.quantity).trim())}`;
+            response = await axios.get(getUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+              },
+              timeout: 15000
+            });
+          }
 
           const rawData = response.data;
           if (rawData && typeof rawData === 'object') {
@@ -218,10 +369,13 @@ const processQueuedOrders = async () => {
               const errMsg = String(rawData.error).toLowerCase();
               if (errMsg.includes("balance") || errMsg.includes("funds") || errMsg.includes("money") || errMsg.includes("credit") || errMsg.includes("insufficient")) {
                 console.log(`[Queue Processor] Order #${order.id} placement returned low balance error: ${rawData.error}`);
+                order.error = "Queued: DIH SMM is preparing your order. Will process shortly.";
+                order.isQueued = true;
+                modifiedOrders = true;
               } else {
                 // Critical failure, cancel order & refund DIH user
                 order.status = 'cancelled';
-                order.error = `Provider API error: ${rawData.error}`;
+                order.error = `DIH SMM Error: ${rawData.error}`;
                 order.isQueued = false;
                 modifiedOrders = true;
                 
@@ -347,6 +501,30 @@ async function startServer() {
         syncFileWithCloud(BACHELOR_POINT_FILE, { categories: [], contents: [] })
       ]);
       console.log("🚀 [CloudSync] Startup databases synchronized and persistent fallback loaded successfully.");
+      
+      // Clean up order errors to hide provider details / low balance messages from old orders
+      try {
+        const orders = loadData(SMM_ORDERS_FILE, []);
+        let modified = false;
+        orders.forEach((o: any) => {
+          if (o.error && (
+            o.error.includes("SMM Provider") || 
+            o.error.includes("insufficient funds") || 
+            o.error.includes("low balance") || 
+            o.error.includes("SMMGEN") ||
+            o.error.includes("TRENDWE")
+          )) {
+            o.error = "Queued: DIH SMM is preparing your order. Will process shortly.";
+            modified = true;
+          }
+        });
+        if (modified) {
+          await saveData(SMM_ORDERS_FILE, orders);
+          console.log("🧹 [SMM Order Cleanup] Cleaned up provider details from existing SMM orders on startup.");
+        }
+      } catch (e) {
+        console.error("🧹 [SMM Order Cleanup] Error during startup SMM order cleanup:", e);
+      }
     } catch (err) {
       console.error("⚠️ [CloudSync] Error in startup database synchronization:", err);
     }
@@ -820,6 +998,8 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   app.get("/api/smm/orders", (req, res) => {
     const orders = loadData(SMM_ORDERS_FILE, []);
     res.json(orders);
+    // Non-blocking background sync of SMM active order statuses
+    syncSmmOrderStatuses().catch(e => console.error("[SMM Order Sync Error]:", e));
   });
 
   app.post("/api/smm/orders", async (req, res) => {
@@ -1409,13 +1589,26 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       params.append('quantity', String(quantity).trim());
 
       console.log(`[SMM Order Proxy] Forwarding order to SMM provider: ${normalizedUrl} with service: ${service}`);
-      const response = await axios.post(normalizedUrl, params.toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
-        },
-        timeout: 15000
-      });
+      let response;
+      try {
+        response = await axios.post(normalizedUrl, params.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 15000
+        });
+      } catch (postErr: any) {
+        console.log(`[SMM Order Proxy] POST request failed, trying GET fallback... Error: ${postErr.message}`);
+        const separator = normalizedUrl.includes('?') ? '&' : '?';
+        const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(key.trim())}&action=add&service=${encodeURIComponent(String(service).trim())}&link=${encodeURIComponent(String(link).trim())}&quantity=${encodeURIComponent(String(quantity).trim())}`;
+        response = await axios.get(getUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+          },
+          timeout: 15000
+        });
+      }
 
       const rawData = response.data;
       if (rawData && typeof rawData === 'object') {
@@ -3957,6 +4150,15 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       setInterval(() => {
         processQueuedOrders().catch(err => console.error("[Queue Processor] Error in background task:", err));
       }, 15000);
+
+      // Start SMM automatic active order status sync (runs every 45s)
+      console.log("[SMM Status Sync] Initializing background task (runs every 45s)...");
+      setTimeout(() => {
+        syncSmmOrderStatuses().catch(err => console.error("[SMM Status Sync] Error in initial status sync:", err));
+      }, 5000); // 5s delay
+      setInterval(() => {
+        syncSmmOrderStatuses().catch(err => console.error("[SMM Status Sync] Error in background status sync:", err));
+      }, 45000);
 
       // Start SMM automatic provider services & pricing sync
       console.log("[SMM Background Sync] Initializing background auto-sync task (runs every 30 minutes)...");

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame, Zap } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame, Zap, Coins, Dices } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
 
-type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'stake-hub';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,6 +31,7 @@ const navItems = [
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
   { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
   { id: 'dih-smm' as ToolId, icon: Flame, label: 'DIH SMM' },
+  { id: 'stake-hub' as ToolId, icon: Dices, label: 'DIH CASINO' },
 ];
 
 declare global {
@@ -242,6 +243,7 @@ export default function Layout({
               const isDihMovies = item.id === 'dih-movies';
               const isBachelorPoint = item.id === 'bachelor-point';
               const isDihSmm = item.id === 'dih-smm';
+              const isStakeHub = item.id === 'stake-hub';
               const isBachelorPointThemedItem = isBachelorPoint && settings.bachelorEnableColorTheme !== false;
               const isStreamingTool = isDihMovies || isBachelorPointThemedItem;
 
@@ -290,6 +292,15 @@ export default function Layout({
                     </div>
                   )}
 
+                  {isStakeHub && (
+                    <div className="px-3 pt-4 pb-1 mt-2">
+                      <p className="text-[9px] font-black tracking-[0.2em] text-emerald-500 dark:text-emerald-400 uppercase flex items-center gap-1.5 select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                        DIH CASINO
+                      </p>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => {
                       setActiveTool(item.id);
@@ -316,9 +327,13 @@ export default function Layout({
                               : settings.smmEnableColorTheme !== false
                                 ? "text-[#7c3aed] dark:text-violet-350 hover:text-white dark:hover:text-white bg-violet-500/5 hover:bg-gradient-to-r hover:from-white/[0.02] hover:to-white/[0.04] border border-[#7c3aed]/15 hover:border-[#8b5cf6]/40 font-extrabold hover:translate-x-1"
                                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1"
-                            : isActive 
-                              ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
-                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
+                            : isStakeHub
+                              ? isActive
+                                ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 text-white font-black shadow-lg shadow-emerald-500/35 scale-[1.01]"
+                                : "text-emerald-700 dark:text-emerald-400 hover:text-emerald-300 dark:hover:text-emerald-200 bg-emerald-500/5 hover:bg-emerald-500/10 dark:bg-emerald-500/5 dark:hover:bg-emerald-500/15 border border-emerald-500/10 hover:border-emerald-500/30 font-extrabold hover:translate-x-1"
+                              : isActive 
+                                ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
+                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
                       isDisabled && !isActive && "opacity-75 hover:opacity-100 text-rose-600/80 dark:text-rose-500/80 hover:text-rose-600 dark:hover:text-rose-500 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10"
                     )}
                   >
@@ -327,10 +342,11 @@ export default function Layout({
                         "transition-transform", 
                         isActive ? "scale-110" : "group-hover/item:scale-110", 
                         isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse",
-                        isDihSmm && !isActive && (settings.smmEnableColorTheme !== false ? "text-violet-500 dark:text-violet-400 animate-pulse" : "text-slate-400")
+                        isDihSmm && !isActive && (settings.smmEnableColorTheme !== false ? "text-violet-500 dark:text-violet-400 animate-pulse" : "text-slate-400"),
+                        isStakeHub && !isActive && "text-emerald-500 dark:text-emerald-400 animate-pulse"
                       )} />
                     )}
-                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm) && "tracking-wide")}>{label}</span>
+                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm || isStakeHub) && "tracking-wide")}>{label}</span>
                     {isDisabled ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.6)]" title="Under Management / Offline" />
                     ) : isDihMovies ? (
@@ -347,8 +363,12 @@ export default function Layout({
                           SMM
                         </span>
                       )
+                    ) : isStakeHub ? (
+                      <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
+                        777
+                      </span>
                     ) : null}
-                    {isActive && !isStreamingTool && (
+                    {isActive && !isStreamingTool && !isDihSmm && !isStakeHub && (
                       <motion.div 
                         layoutId="active-pill"
                         className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"
@@ -578,7 +598,7 @@ export default function Layout({
 
                 {/* Disclaimer Content - Warm, Professional and Human-written */}
                 <p className="text-[10.5px] text-slate-400/90 dark:text-slate-500 max-w-3xl leading-relaxed font-medium">
-                  Hey there! DIH Hub is an independent, personal toolbox built and maintained by Rafcin. This platform is a passion project created to host hand-crafted web utilities, media experiments, and security tools for educational, development, and day-to-day productivity. Since this is a personal workspace, we don't host, upload, or own any of the media, files, or external streams processed through these pages. We’re just here to make cool tools and keep things running smoothly. Got an idea, a question, or just want to chat? Reach out to me directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub&body=Dear%20DIH%20Hub%20Support%20Team%2C%0A%0AI%20am%20reaching%20out%20to%20you%20regarding%20the%2520following%2520inquiry%3A%0A%0A%5BPlease%20type%20your%20message%20here%5D%0A%0AThank%20you%2C%0A%5BYour%20Name%5D" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a> — let's build a more useful web together!
+                  DIH Hub is an independent, personal workspace designed and maintained by Rafcin. This platform hosts lightweight web utility tools, secure productivity experiments, and handy web solutions built for daily use. Have feedback, questions, or ideas? Reach out directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a> — let's build a more useful web together!
                 </p>
 
                 {/* Subtle Divider */}

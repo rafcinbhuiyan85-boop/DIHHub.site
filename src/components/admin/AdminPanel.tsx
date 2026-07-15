@@ -4,7 +4,7 @@ import {
   Trash2, Save, LogOut, ChevronRight, Activity, Menu,
   LayoutDashboard, Palette, QrCode, ShieldCheck, Download, Image, ShieldAlert, Cpu, Smartphone, Mail, MessageSquare, Film, Scissors, Cloud,
   Users, ListFilter, Calendar, Clock, Upload, Package, Star, ArrowUp, ArrowDown, Layout, Calculator, RefreshCcw, Globe, Edit2, Code2, Settings2, ExternalLink, Zap, Search, X, Copy, Check, Shield, DollarSign, Rocket,
-  Tv, Video, Flame
+  Tv, Video, Flame, Dices
 } from 'lucide-react';
 import { 
   collection, 
@@ -2232,6 +2232,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             { id: 'config-movies', icon: Film, label: 'Dih Movie Pro' },
             { id: 'config-bachelor-point', icon: Film, label: 'Bachelor Point' },
             { id: 'config-smm', icon: Flame, label: 'DIH SMM PRO' },
+            { id: 'config-casino', icon: Dices, label: 'DIH Casino' },
             { id: 'config-ai', icon: Star, label: 'Advanced Engine Tools' },
             { id: 'config-ads', icon: MessageSquare, label: 'Ads Management' },
             
@@ -7773,6 +7774,127 @@ service cloud.firestore {
                     </div>
                   );
                 })()}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'config-casino' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Header Box */}
+              <div className="bg-[#0d0f14] border border-slate-800/80 rounded-3xl p-6 text-left relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded-full select-none">
+                      DIH Casino Operations
+                    </div>
+                    <h2 className="text-2xl font-black italic tracking-tight text-white uppercase">
+                      Casino Platform Configurator
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium max-w-2xl">
+                      Toggle specific casino games or portals on or off. Disabled platforms will be immediately hidden from the main user-facing DIH Casino lobby.
+                    </p>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-black/40 rounded-2xl border border-white/5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider font-mono">
+                      System Online
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Casino Platforms List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                {[
+                  { id: 'stake', name: 'Stake Portal', category: 'INTERNATIONAL', theme: 'emerald', desc: 'Official premium partner portal with live simulated Mines game.' },
+                  { id: 'playtok', name: 'PlayTok Portal', category: 'BANGLADESHI', theme: 'sky', desc: 'Fast local platform optimized for direct bkash/nagad deposit.' },
+                  { id: '77bd', name: '77BD Portal', category: 'BANGLADESHI', theme: 'rose', desc: 'High payout Bangladeshi casino portal with manual checkout support.' },
+                  { id: '99xo', name: '99XO Portal', category: 'BANGLADESHI', theme: 'amber', desc: 'Popular premium arcade and slot entry lobby for local gamers.' },
+                  { id: '678bd', name: '678BD Portal', category: 'BANGLADESHI', theme: 'indigo', desc: 'One-click Bangladeshi gateway with 24/7 dedicated local agents.' }
+                ].map((plat) => {
+                  const isDisabled = settings.disabledCasinoPlatforms?.includes(plat.id);
+                  const isEnabled = !isDisabled;
+                  
+                  return (
+                    <div 
+                      key={plat.id}
+                      className={cn(
+                        "p-6 rounded-3xl border transition-all duration-300 flex flex-col justify-between gap-6 relative overflow-hidden group",
+                        isEnabled 
+                          ? "bg-slate-950/60 border-slate-800 hover:border-slate-700/80" 
+                          : "bg-slate-950/20 border-slate-900/50 opacity-60"
+                      )}
+                    >
+                      {/* Badge and Title */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "px-2 py-0.5 text-[8px] font-black tracking-widest rounded-full uppercase border",
+                              plat.category === 'INTERNATIONAL' 
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            )}>
+                              {plat.category}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
+                              ID: {plat.id}
+                            </span>
+                          </div>
+                          <h3 className="font-extrabold text-lg text-white group-hover:text-primary duration-150">
+                            {plat.name}
+                          </h3>
+                          <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+                            {plat.desc}
+                          </p>
+                        </div>
+
+                        {/* Custom Slide Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentDisabled = settings.disabledCasinoPlatforms || [];
+                            let nextDisabled;
+                            if (currentDisabled.includes(plat.id)) {
+                              nextDisabled = currentDisabled.filter(id => id !== plat.id);
+                            } else {
+                              nextDisabled = [...currentDisabled, plat.id];
+                            }
+                            updateSettings({ disabledCasinoPlatforms: nextDisabled });
+                          }}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-0 select-none mt-1",
+                            isEnabled ? "bg-emerald-500" : "bg-slate-800"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              isEnabled ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Status row */}
+                      <div className="pt-4 border-t border-slate-900/60 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            "w-1.5 h-1.5 rounded-full animate-pulse",
+                            isEnabled ? "bg-emerald-500" : "bg-red-500"
+                          )} />
+                          <span className={cn(
+                            "font-black tracking-wider uppercase font-mono text-[9px]",
+                            isEnabled ? "text-emerald-400" : "text-red-400"
+                          )}>
+                            {isEnabled ? "VISIBLE IN LOBBY" : "HIDDEN / DEACTIVATED"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
