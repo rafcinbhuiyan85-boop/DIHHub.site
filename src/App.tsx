@@ -48,25 +48,13 @@ function MainApp() {
     if (typeof window !== 'undefined') {
       const rawPath = window.location.pathname;
       const cleanPath = rawPath.replace(/^\//, '').replace(/\/$/, '');
-      
-      try {
-        const savedUser = localStorage.getItem('dihhub_user');
-        if (savedUser && savedUser !== "undefined") {
-          const parsedUser = JSON.parse(savedUser);
-          if (parsedUser?.role === 'admin' || parsedUser?.isAdmin || parsedUser?.email === 'rafcin.b') {
-            return 'admin-panel';
-          }
-        }
-      } catch (err) {
-        console.error('Failed to parse admin session:', err);
-      }
 
       const ignorePaths = ['templates', 'movies', 'migration', 'payment'];
       if (!ignorePaths.some(p => cleanPath.startsWith(p)) && !rawPath.startsWith('/rb/')) {
         if (cleanPath === 'admin' || cleanPath === 'admin-login') {
           return 'admin-login';
         }
-        if (cleanPath === 'admin-panel') {
+        if (cleanPath === 'rb-admin-panel' || cleanPath === 'admin-panel') {
           return 'admin-panel';
         }
         if (cleanPath === 'dih-templates') {
@@ -156,23 +144,16 @@ function MainApp() {
       return;
     }
 
-    const isAdmin = currentUser?.role === 'admin' || currentUser?.isAdmin || currentUser?.email === 'rafcin.b';
-    if (isAdmin) {
-      if (cleanPath !== 'admin-panel') {
-        setActiveTool('admin-panel');
-        navigate('/admin-panel', { replace: true });
-        return;
-      }
-      return;
-    }
-
     if (cleanPath === 'admin' || cleanPath === 'admin-login') {
       setActiveTool('admin-login');
       return;
     }
 
-    if (cleanPath === 'admin-panel') {
+    if (cleanPath === 'rb-admin-panel' || cleanPath === 'admin-panel') {
       setActiveTool('admin-panel');
+      if (cleanPath === 'admin-panel') {
+        navigate('/rb-admin-panel', { replace: true });
+      }
       return;
     }
 
@@ -222,6 +203,9 @@ function MainApp() {
     } else if (id === 'dashboard') {
       setActiveTool('dashboard');
       navigate('/');
+    } else if (id === 'admin-panel') {
+      setActiveTool('admin-panel');
+      navigate('/rb-admin-panel');
     } else {
       setActiveTool(id);
       navigate('/' + id);

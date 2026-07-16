@@ -473,6 +473,18 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   // SMM Sync Effect
   useEffect(() => {
+    // Intercept window.alert inside the AdminPanel context to use non-blocking toast notifications
+    const originalAlert = window.alert;
+    window.alert = (message: string) => {
+      console.log('🛡️ Intercepted alert inside sandboxed AdminPanel iframe:', message);
+      setSmmToast({ message, type: 'info' });
+    };
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
+  useEffect(() => {
     if (smmToast) {
       const t = setTimeout(() => setSmmToast(null), 4000);
       return () => clearTimeout(t);
@@ -2073,9 +2085,10 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
       });
-      alert('Settings synchronized to server!');
+      setSmmToast({ message: 'Settings saved and synchronized in real-time!', type: 'success' });
     } catch (err) {
       console.error('Sync failed:', err);
+      setSmmToast({ message: 'Failed to sync settings with server.', type: 'error' });
     }
   };
 

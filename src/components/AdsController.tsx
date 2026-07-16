@@ -59,6 +59,19 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
     // Clean up SMM hider when on other tools
     cleanup(hiderId);
 
+    if (!settings.enableAds) {
+      cleanup('dh-header-ads');
+      cleanup('dh-footer-ads');
+      cleanup('dh-content1-scripts');
+      cleanup('dh-content2-scripts');
+      cleanup('dh-adsterra-h');
+      cleanup('dh-adsterra-f');
+      cleanup('dh-adsense-h');
+      cleanup('dh-forced-adsterra-1');
+      cleanup('dh-forced-adsterra-2');
+      return;
+    }
+
     // Inject the two specific Adsterra script tags provided by the user on all non-SMM pages
     // ONLY if enableAdsterra is enabled and they don't already exist in the DOM
     const injectScriptSrc = (src: string, id: string, targetNode: HTMLElement) => {
@@ -71,25 +84,6 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
       script.async = true;
       targetNode.appendChild(script);
     };
-
-    if (settings.enableAdsterra) {
-      injectScriptSrc('https://pl29726384.effectivecpmnetwork.com/9c/20/d3/9c20d3c58eae216ba9be7731295b9ec9.js', 'dh-forced-adsterra-1', document.head);
-      injectScriptSrc('https://pl29726386.effectivecpmnetwork.com/3c/6f/b3/3c6fb36b5d327b9524294f3251d4e7ea.js', 'dh-forced-adsterra-2', document.body);
-    } else {
-      cleanup('dh-forced-adsterra-1');
-      cleanup('dh-forced-adsterra-2');
-    }
-
-    if (!settings.enableAds) {
-      cleanup('dh-header-ads');
-      cleanup('dh-footer-ads');
-      cleanup('dh-content1-scripts');
-      cleanup('dh-content2-scripts');
-      cleanup('dh-adsterra-h');
-      cleanup('dh-adsterra-f');
-      cleanup('dh-adsense-h');
-      return;
-    }
 
     const injectScripts = (content: string, targetId: string, targetNode: HTMLElement) => {
       if (!content) return;
@@ -122,9 +116,13 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
     };
 
     if (settings.enableAdsterra) {
+      injectScriptSrc('https://pl29726384.effectivecpmnetwork.com/9c/20/d3/9c20d3c58eae216ba9be7731295b9ec9.js', 'dh-forced-adsterra-1', document.head);
+      injectScriptSrc('https://pl29726386.effectivecpmnetwork.com/3c/6f/b3/3c6fb36b5d327b9524294f3251d4e7ea.js', 'dh-forced-adsterra-2', document.body);
       injectScripts(settings.adsterraHeader, 'dh-adsterra-h', document.head);
       injectScripts(settings.adsterraFooter, 'dh-adsterra-f', document.body);
     } else {
+      cleanup('dh-forced-adsterra-1');
+      cleanup('dh-forced-adsterra-2');
       cleanup('dh-adsterra-h');
       cleanup('dh-adsterra-f');
     }

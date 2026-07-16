@@ -459,7 +459,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       }).catch(err => {
         console.error('Failed to auto-save settings to server:', err);
       });
-    }, 1200);
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [settings, isLoaded]);
