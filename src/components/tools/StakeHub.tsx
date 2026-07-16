@@ -11,6 +11,8 @@ import { useAppSettings } from '../../hooks/useAppSettings';
 
 interface StakeHubProps {
   currentUser?: any;
+  onAuthClick?: () => void;
+  onUserUpdate?: (user: any) => void;
 }
 
 type LangKey = 'bn' | 'en' | 'hi' | 'ar';
@@ -100,6 +102,34 @@ const platforms: CasinoPlatform[] = [
     themeColor: 'blue',
     bgGradient: 'from-blue-950/45 via-slate-950 to-blue-950/45',
     borderGlow: 'shadow-[0_0_50px_rgba(59,130,246,0.15)] border-blue-500/30'
+  },
+  {
+    id: '999bd',
+    name: '999BD',
+    referralLink: 'https://www.999-bd.com/?dl=9u6krh',
+    promoCode: 'DIH777',
+    badge: 'BANGLADESHI',
+    categoryBn: 'জনপ্রিয় বাংলাদেশী ক্যাসিনো গেম',
+    categoryEn: 'Popular Bangladeshi Casino Game',
+    categoryHi: 'लोकप्रिय बांग्लादेशी कैसीनो गेम',
+    categoryAr: 'لعبة كازينو بنغلاديشية شهيرة',
+    themeColor: 'emerald',
+    bgGradient: 'from-emerald-950/45 via-slate-950 to-emerald-950/45',
+    borderGlow: 'shadow-[0_0_50px_rgba(16,185,129,0.15)] border-emerald-500/30'
+  },
+  {
+    id: 'f111',
+    name: 'F111',
+    referralLink: 'https://www.f111.pro/?dl=c5545y',
+    promoCode: 'DIH777',
+    badge: 'BANGLADESHI',
+    categoryBn: 'জনপ্রিয় বাংলাদেশী ক্যাসিনো গেম',
+    categoryEn: 'Popular Bangladeshi Casino Game',
+    categoryHi: 'लोकप्रिय बांग्लादेशी कैसीनो गेम',
+    categoryAr: 'لعبة كازينو بنغلاديشية شهيرة',
+    themeColor: 'violet',
+    bgGradient: 'from-violet-950/45 via-slate-950 to-violet-950/45',
+    borderGlow: 'shadow-[0_0_50px_rgba(139,92,246,0.15)] border-violet-500/30'
   }
 ];
 
@@ -273,7 +303,7 @@ const playSimulatedSound = (type: 'click' | 'diamond' | 'bomb' | 'win' | 'start'
   }
 };
 
-export default function StakeHub({ currentUser }: StakeHubProps) {
+export default function StakeHub({ currentUser, onAuthClick, onUserUpdate }: StakeHubProps) {
   const { settings } = useAppSettings();
   const [lang, setLang] = useState<LangKey>('bn');
   const [activePlatformId, setActivePlatformId] = useState<string | null>(null);
@@ -1042,7 +1072,7 @@ export default function StakeHub({ currentUser }: StakeHubProps) {
                       </a>
 
                       <a 
-                        href="https://m.me/rafcin.b"
+                        href="https://m.me/61592177180590"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-1 px-2 py-2 sm:px-3 sm:py-3 bg-[#006aff]/90 hover:bg-[#006aff] text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider rounded-lg sm:rounded-xl transition-all shadow-md active:scale-95 cursor-pointer text-center"

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, 
   UserSquare2, Download, Palette, ArrowRight, CreditCard, 
   ShieldAlert, Cpu, Package, Users, Star, Film, Smartphone,
-  FileArchive, RefreshCcw, Globe, Server, Volume2, Tv, Flame, Zap, Dices
+  FileArchive, RefreshCcw, Globe, Server, Volume2, Tv, Flame, Zap, Dices, Coins, TrendingUp
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -34,6 +34,7 @@ const tools = [
   { id: 'hosted-admin', icon: Globe, label: 'DIH Templates', description: 'Premium quality landing page showcase and live deployment portal.', color: 'bg-orange-500', isNew: true },
   { id: 'dih-smm', icon: Flame, label: 'DIH SMM', description: 'Premium tier Social Media Marketing likes, views, followers booster panel.', color: 'bg-indigo-600', isNew: true },
   { id: 'dih-casino', icon: Dices, label: 'DIH CASINO', description: 'Official Stake partner portal with live iframe game play, interactive Mines simulator and odds calculator.', color: 'bg-emerald-600', isNew: true },
+  { id: 'dih-invest', icon: Coins, label: 'DIH INVEST', description: 'Premium automated trading & investment pools with dynamic ROI calculator & live simulated returns.', color: 'bg-amber-600', isNew: true },
 ];
 
 export default function Dashboard({ onSelectTool }: DashboardProps) {

@@ -628,7 +628,64 @@ async function startServer() {
     const users = loadData(USERS_FILE, []);
     const user = users.find((u: any) => u.id === req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ id: user.id, name: user.name, email: user.email, balance: user.balance || 0 });
+    const { password, ...safeUser } = user;
+    res.json(safeUser);
+  });
+
+  app.post("/api/auth/kyc/submit", async (req, res) => {
+    const { userId, kycType, kycDocumentNumber, kycDetails, kycFrontImage, kycBackImage } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.kycStatus = 'pending';
+    user.kycType = kycType;
+    user.kycDocumentNumber = kycDocumentNumber;
+    user.kycDetails = kycDetails || '';
+    user.kycFrontImage = kycFrontImage || '';
+    user.kycBackImage = kycBackImage || '';
+    user.kycSubmittedAt = new Date().toISOString();
+
+    await saveData(USERS_FILE, users);
+    const { password, ...safeUser } = user;
+    res.json({ status: 'ok', user: safeUser });
+  });
+
+  app.post("/api/auth/kyc/action", async (req, res) => {
+    const { userId, action } = req.body; // action: 'approve' | 'reject'
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (action === 'approve') {
+      user.kycStatus = 'verified';
+    } else {
+      user.kycStatus = 'rejected';
+    }
+
+    await saveData(USERS_FILE, users);
+    const { password, ...safeUser } = user;
+    res.json({ status: 'ok', user: safeUser });
+  });
+
+  app.post("/api/users/balance/update", async (req, res) => {
+    const { userId, amountChangeUsd } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.balance = (parseFloat(user.balance) || 0) + parseFloat(amountChangeUsd);
+    if (user.balance < 0) user.balance = 0; // Prevent negative balance
+
+    await saveData(USERS_FILE, users);
+    const { password, ...safeUser } = user;
+    res.json({ status: 'ok', user: safeUser });
   });
 
   app.get("/api/admin/users", (req, res) => {

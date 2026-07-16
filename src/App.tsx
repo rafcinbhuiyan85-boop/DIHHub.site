@@ -36,8 +36,9 @@ import TenminAI from './components/tools/TenminAI';
 import BachelorPoint from './components/tools/BachelorPoint';
 import DihSmm from './components/tools/DihSmm';
 import StakeHub from './components/tools/StakeHub';
+import DihInvest from './components/tools/DihInvest';
 
-type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration' | 'dih-casino';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'migration' | 'dih-casino' | 'dih-invest';
 
 function MainApp() {
   const { settings } = useAppSettings();
@@ -76,7 +77,7 @@ function MainApp() {
           'qr', 'encryption', 'to-base64', 'bg-remover', 
           'video', 'lib-encryptor', 
           'dex-protector', 'apk-store', 
-          'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'dih-casino'
+          'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'dih-casino', 'dih-invest'
         ];
         if (toolIds.includes(cleanPath as ToolId)) {
           return cleanPath as ToolId;
@@ -130,6 +131,20 @@ function MainApp() {
     }
   }, []);
 
+  useEffect(() => {
+    if (currentUser?.id && !currentUser.id.startsWith('admin_') && currentUser.id !== 'rafcin_admin') {
+      fetch(`/api/auth/me/${currentUser.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            setCurrentUser(data);
+            localStorage.setItem('dihhub_user', JSON.stringify(data));
+          }
+        })
+        .catch(err => console.error("Error syncing user data:", err));
+    }
+  }, [activeTool]);
+
   // Sync URL pathname -> activeTool on mount & path changes
   useEffect(() => {
     const rawPath = location.pathname;
@@ -175,7 +190,7 @@ function MainApp() {
       'qr', 'encryption', 'to-base64', 'bg-remover', 
       'video', 'lib-encryptor', 
       'dex-protector', 'apk-store', 
-      'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'dih-casino'
+      'mobile-bypass', 'dih-movies', 'bachelor-point', 'dih-smm', 'dih-casino', 'dih-invest'
     ];
 
     if (toolIds.includes(cleanPath as ToolId)) {
@@ -278,8 +293,36 @@ function MainApp() {
       case 'mobile-bypass': return <MobileBypass />;
       case 'dih-movies': return <DihMoviesApp />;
       case 'bachelor-point': return <BachelorPoint />;
-      case 'dih-smm': return <DihSmm currentUser={currentUser} onAuthClick={() => setIsAuthModalOpen(true)} />;
-      case 'dih-casino': return <StakeHub currentUser={currentUser} />;
+      case 'dih-smm': return (
+        <DihSmm 
+          currentUser={currentUser} 
+          onAuthClick={() => setIsAuthModalOpen(true)} 
+          onUserUpdate={(updatedUser: any) => {
+            setCurrentUser(updatedUser);
+            localStorage.setItem('dihhub_user', JSON.stringify(updatedUser));
+          }} 
+        />
+      );
+      case 'dih-casino': return (
+        <StakeHub 
+          currentUser={currentUser} 
+          onAuthClick={() => setIsAuthModalOpen(true)} 
+          onUserUpdate={(updatedUser: any) => {
+            setCurrentUser(updatedUser);
+            localStorage.setItem('dihhub_user', JSON.stringify(updatedUser));
+          }} 
+        />
+      );
+      case 'dih-invest': return (
+        <DihInvest 
+          currentUser={currentUser} 
+          onAuthClick={() => setIsAuthModalOpen(true)} 
+          onUserUpdate={(updatedUser: any) => {
+            setCurrentUser(updatedUser);
+            localStorage.setItem('dihhub_user', JSON.stringify(updatedUser));
+          }} 
+        />
+      );
       case 'hosted-admin': return <TemplatesGallery onBack={() => setActiveToolWithNavigation('dashboard')} />;
       case 'admin-login': return (
         <AdminLogin onLogin={() => {

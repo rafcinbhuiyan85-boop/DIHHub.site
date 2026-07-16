@@ -4,7 +4,7 @@ import {
   Trash2, Save, LogOut, ChevronRight, Activity, Menu,
   LayoutDashboard, Palette, QrCode, ShieldCheck, Download, Image, ShieldAlert, Cpu, Smartphone, Mail, MessageSquare, Film, Scissors, Cloud,
   Users, ListFilter, Calendar, Clock, Upload, Package, Star, ArrowUp, ArrowDown, Layout, Calculator, RefreshCcw, Globe, Edit2, Code2, Settings2, ExternalLink, Zap, Search, X, Copy, Check, Shield, DollarSign, Rocket,
-  Tv, Video, Flame, Dices
+  Tv, Video, Flame, Dices, Coins
 } from 'lucide-react';
 import { 
   collection, 
@@ -2990,6 +2990,8 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   { id: 'mobile-bypass', label: 'Mobile Bypass Pro', icon: ShieldAlert },
                   { id: 'hosted-admin', label: 'DIH TEMPLATE (Hosted)', icon: Globe },
                   { id: 'dih-smm', label: 'DIH SMM (Social Media)', icon: Flame },
+                  { id: 'dih-casino', label: 'DIH CASINO', icon: Dices },
+                  { id: 'dih-invest', label: 'DIH INVEST', icon: Coins },
                 ].map(tool => (
                   <div key={tool.id} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">

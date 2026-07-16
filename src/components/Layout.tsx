@@ -5,7 +5,7 @@ import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
 
-type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'dih-casino';
+type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'dih-casino' | 'dih-invest';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -32,6 +32,7 @@ const navItems = [
   { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
   { id: 'dih-smm' as ToolId, icon: Flame, label: 'DIH SMM' },
   { id: 'dih-casino' as ToolId, icon: Dices, label: 'DIH CASINO' },
+  { id: 'dih-invest' as ToolId, icon: Coins, label: 'DIH INVEST' },
 ];
 
 declare global {
@@ -244,6 +245,7 @@ export default function Layout({
               const isBachelorPoint = item.id === 'bachelor-point';
               const isDihSmm = item.id === 'dih-smm';
               const isStakeHub = item.id === 'dih-casino';
+              const isDihInvest = item.id === 'dih-invest';
               const isBachelorPointThemedItem = isBachelorPoint && settings.bachelorEnableColorTheme !== false;
               const isStreamingTool = isDihMovies || isBachelorPointThemedItem;
 
@@ -301,6 +303,15 @@ export default function Layout({
                     </div>
                   )}
 
+                  {isDihInvest && (
+                    <div className="px-3 pt-4 pb-1 mt-2">
+                      <p className="text-[9px] font-black tracking-[0.2em] text-amber-500 dark:text-amber-400 uppercase flex items-center gap-1.5 select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                        DIH WEALTH
+                      </p>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => {
                       setActiveTool(item.id);
@@ -331,6 +342,10 @@ export default function Layout({
                               ? isActive
                                 ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 text-white font-black shadow-lg shadow-emerald-500/35 scale-[1.01]"
                                 : "text-emerald-700 dark:text-emerald-400 hover:text-emerald-300 dark:hover:text-emerald-200 bg-emerald-500/5 hover:bg-emerald-500/10 dark:bg-emerald-500/5 dark:hover:bg-emerald-500/15 border border-emerald-500/10 hover:border-emerald-500/30 font-extrabold hover:translate-x-1"
+                            : isDihInvest
+                              ? isActive
+                                ? "bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-500/35 scale-[1.01]"
+                                : "text-amber-700 dark:text-amber-400 hover:text-amber-300 dark:hover:text-amber-200 bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/5 dark:hover:bg-amber-500/15 border border-amber-500/10 hover:border-amber-500/30 font-extrabold hover:translate-x-1"
                               : isActive 
                                 ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
                                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
@@ -343,10 +358,11 @@ export default function Layout({
                         isActive ? "scale-110" : "group-hover/item:scale-110", 
                         isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse",
                         isDihSmm && !isActive && (settings.smmEnableColorTheme !== false ? "text-violet-500 dark:text-violet-400 animate-pulse" : "text-slate-400"),
-                        isStakeHub && !isActive && "text-emerald-500 dark:text-emerald-400 animate-pulse"
+                        isStakeHub && !isActive && "text-emerald-500 dark:text-emerald-400 animate-pulse",
+                        isDihInvest && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse"
                       )} />
                     )}
-                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm || isStakeHub) && "tracking-wide")}>{label}</span>
+                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm || isStakeHub || isDihInvest) && "tracking-wide")}>{label}</span>
                     {isDisabled ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.6)]" title="Under Management / Offline" />
                     ) : isDihMovies ? (
@@ -367,8 +383,12 @@ export default function Layout({
                       <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
                         777
                       </span>
+                    ) : isDihInvest ? (
+                      <span className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
+                        WEALTH
+                      </span>
                     ) : null}
-                    {isActive && !isStreamingTool && !isDihSmm && !isStakeHub && (
+                    {isActive && !isStreamingTool && !isDihSmm && !isStakeHub && !isDihInvest && (
                       <motion.div 
                         layoutId="active-pill"
                         className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"

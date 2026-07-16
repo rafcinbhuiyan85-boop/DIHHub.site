@@ -92,6 +92,7 @@ const CATEGORIES = [
 interface DihSmmProps {
   currentUser?: any;
   onAuthClick?: () => void;
+  onUserUpdate?: (user: any) => void;
 }
 
 export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
