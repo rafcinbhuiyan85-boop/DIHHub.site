@@ -105,7 +105,7 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
   const isSpecialTester = currentUser?.email === 'rafcinbhuiyan85@gmail.com' || currentUser?.email === 'rafcin.b' || currentUser?.role === 'admin' || currentUser?.isAdmin;
 
   const unfilteredVisibleTools = tools.filter(t => {
-    return isSpecialTester || settings.visibleTools.includes(t.id);
+    return settings.visibleTools.includes(t.id);
   });
 
   const dihMoviesTool = unfilteredVisibleTools.find(t => t.id === 'dih-movies');

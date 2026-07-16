@@ -357,7 +357,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       
       const parsedVisibleTools = (Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools)
         .filter((t: string) => !DELETED_TOOLS.includes(t));
-      const healedVisibleTools = Array.from(new Set([...parsedVisibleTools, 'dih-casino', 'dih-invest']));
+      const healedVisibleTools = Array.from(new Set([...parsedVisibleTools]));
       
       // Ensure all default templates are present
       const existingIds = new Set(parsed.templates?.map((t: any) => t.id) || []);
@@ -400,7 +400,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           if (globalSettings) {
              const serverVisibleTools = (Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools)
                .filter((t: string) => !DELETED_TOOLS.includes(t));
-             const healedVisibleTools = Array.from(new Set([...serverVisibleTools, 'dih-casino', 'dih-invest']));
+             const healedVisibleTools = Array.from(new Set([...serverVisibleTools]));
 
              setSettings(prev => ({
                ...prev,
@@ -558,7 +558,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
                 return {
                   ...prev,
                   ...globalSettings,
-                  visibleTools: Array.from(new Set([...serverVisibleTools, 'dih-casino', 'dih-invest'])),
+                  visibleTools: Array.from(new Set([...serverVisibleTools])),
                   newTools: (Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
                   templates: globalSettings.templates || prev.templates
                 };

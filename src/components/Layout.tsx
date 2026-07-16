@@ -157,11 +157,9 @@ export default function Layout({
 
   const isSpecialTester = currentUser?.email === 'rafcinbhuiyan85@gmail.com' || currentUser?.email === 'rafcin.b' || currentUser?.role === 'admin' || currentUser?.isAdmin;
 
-  const unfilteredNavItems = isSpecialTester
-    ? navItems.filter(item => item.id !== 'dashboard')
-    : settings.visibleTools
-        .map(id => navItems.find(i => i.id === id))
-        .filter((item): item is typeof navItems[0] => !!item && item.id !== 'dashboard');
+  const unfilteredNavItems = settings.visibleTools
+    .map(id => navItems.find(i => i.id === id))
+    .filter((item): item is typeof navItems[0] => !!item && item.id !== 'dashboard');
 
   const dihMoviesNavItem = unfilteredNavItems.find(i => i.id === 'dih-movies');
   const bachelorPointNavItem = unfilteredNavItems.find(i => i.id === 'bachelor-point');
@@ -616,9 +614,9 @@ export default function Layout({
                   </a>
                 </div>
 
-                {/* Disclaimer Content - Warm, Professional and Human-written */}
-                <p className="text-[10.5px] text-slate-400/90 dark:text-slate-500 max-w-3xl leading-relaxed font-medium">
-                  DIH Hub is an independent, personal workspace designed and maintained by Rafcin. This platform hosts lightweight web utility tools, secure productivity experiments, and handy web solutions built for daily use. Have feedback, questions, or ideas? Reach out directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a> — let's build a more useful web together!
+                {/* Disclaimer Content - Warm, Professional and Enterprise-grade */}
+                <p className="text-[10.5px] text-slate-400/90 dark:text-slate-500 max-w-3xl leading-relaxed font-medium text-center">
+                  DIH Hub is an enterprise-grade digital services and utility suite. This platform hosts premium web applications, optimized productivity tools, and secure cloud modules built for ultimate performance and operational efficiency. All tools are intended for general, professional, and educational usage under our strict compliance guidelines. For support, enterprise partnerships, or developer inquiries, contact us directly at <a href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub" className="text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold transition-all underline decoration-dotted underline-offset-2">contact@dihhub.site</a>.
                 </p>
 
                 {/* Subtle Divider */}
