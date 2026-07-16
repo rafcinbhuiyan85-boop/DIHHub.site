@@ -688,6 +688,26 @@ async function startServer() {
     res.json({ status: 'ok', user: safeUser });
   });
 
+  app.post("/api/users/investments/update", async (req, res) => {
+    const { userId, investments, balance } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+
+    const users = loadData(USERS_FILE, []);
+    const user = users.find((u: any) => u.id === userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (Array.isArray(investments)) {
+      user.investments = investments;
+    }
+    if (balance !== undefined && balance !== null) {
+      user.balance = parseFloat(balance) || 0;
+    }
+
+    await saveData(USERS_FILE, users);
+    const { password, ...safeUser } = user;
+    res.json({ status: 'ok', user: safeUser });
+  });
+
   app.get("/api/admin/users", (req, res) => {
     const users = loadData(USERS_FILE, []);
     res.json(users);

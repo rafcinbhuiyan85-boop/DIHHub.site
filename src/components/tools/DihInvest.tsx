@@ -549,6 +549,20 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
   const [binanceAccountId, setBinanceAccountId] = useState('495331860');
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Synchronize simInvestments with currentUser portfolio when logged in or out
+  useEffect(() => {
+    if (currentUser) {
+      if (Array.isArray(currentUser.investments)) {
+        setSimInvestments(currentUser.investments);
+      } else {
+        setSimInvestments([]);
+      }
+    } else {
+      const saved = localStorage.getItem('dih_sim_invests_v2');
+      setSimInvestments(saved ? JSON.parse(saved) : []);
+    }
+  }, [currentUser?.id, JSON.stringify(currentUser?.investments || [])]);
+
   // Live ticking effect for investments - updates values every 2 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -571,19 +585,58 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         
         localStorage.setItem('dih_sim_invests_v2', JSON.stringify(updated));
         
-        // Accumulate returns directly into wallet balance
-        setSimBalance(b => {
-          const nextBal = b + earningsAdded;
-          localStorage.setItem('dih_sim_balance_v2', nextBal.toFixed(2));
-          return nextBal;
-        });
+        const curr = CURRENCIES[currency];
+        if (currentUser) {
+          const earningsUsd = earningsAdded / curr.rate;
+          const updatedUser = {
+            ...currentUser,
+            balance: parseFloat(((currentUser.balance || 0) + earningsUsd).toFixed(4)),
+            investments: updated
+          };
+          if (onUserUpdate) {
+            onUserUpdate(updatedUser);
+          }
+        } else {
+          // Accumulate returns directly into wallet balance
+          setSimBalance(b => {
+            const nextBal = b + earningsAdded;
+            localStorage.setItem('dih_sim_balance_v2', nextBal.toFixed(2));
+            return nextBal;
+          });
+        }
         
         return updated;
       });
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [simInvestments.length]);
+  }, [simInvestments.length, currentUser?.id, currency]);
+
+  // Auto-save investments and balance to the server periodically (every 10 seconds)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const syncInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/users/investments/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentUser.id,
+            investments: currentUser.investments || [],
+            balance: currentUser.balance || 0
+          })
+        });
+        if (!res.ok) {
+          console.error('Failed to auto-sync investments and balance to cloud');
+        }
+      } catch (err) {
+        console.error('Error auto-syncing to cloud:', err);
+      }
+    }, 10000);
+
+    return () => clearInterval(syncInterval);
+  }, [currentUser?.id, currentUser?.balance, JSON.stringify(currentUser?.investments || [])]);
 
   // Adjust calculator default value when plan or currency shifts
   useEffect(() => {
@@ -831,8 +884,6 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         const data = await res.json();
         setIsProcessing(false);
         if (res.ok) {
-          if (onUserUpdate) onUserUpdate(data.user);
-          
           const newInv = {
             id: Date.now(),
             planId: plan.id,
@@ -848,6 +899,31 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
           const nextInvests = [newInv, ...simInvestments];
           setSimInvestments(nextInvests);
           localStorage.setItem('dih_sim_invests_v2', JSON.stringify(nextInvests));
+
+          // Sync immediately to the database
+          fetch('/api/users/investments/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              investments: nextInvests,
+              balance: data.user.balance
+            })
+          }).then(syncRes => {
+            if (syncRes.ok) return syncRes.json();
+          }).then(syncData => {
+            if (syncData && onUserUpdate) {
+              onUserUpdate(syncData.user);
+            } else if (onUserUpdate) {
+              onUserUpdate({
+                ...data.user,
+                investments: nextInvests
+              });
+            }
+          }).catch(err => {
+            console.error('Error syncing package purchase to database:', err);
+            if (onUserUpdate) onUserUpdate({ ...data.user, investments: nextInvests });
+          });
 
           triggerAlert('success', lang === 'bn' 
             ? `অভিনন্দন! ${getPlanName(plan, lang)} পোর্টফোলিও সফলভাবে সক্রিয় করা হয়েছে।`
@@ -895,6 +971,25 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
     localStorage.removeItem('dih_sim_invests_v2');
     setSimBalance(5000.0);
     setSimInvestments([]);
+
+    if (currentUser) {
+      // Clear database record too!
+      fetch('/api/users/investments/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          investments: [],
+          balance: 5000.0
+        })
+      }).then(res => res.json())
+        .then(data => {
+          if (data.status === 'ok' && onUserUpdate) {
+            onUserUpdate(data.user);
+          }
+        }).catch(err => console.error('Error resetting cloud investments:', err));
+    }
+
     triggerAlert('success', lang === 'bn' ? 'সিমুলেটর ওয়ালেট সফলভাবে রিসেট করা হয়েছে।' : 'Simulator wallet database reset successfully.');
   };
 

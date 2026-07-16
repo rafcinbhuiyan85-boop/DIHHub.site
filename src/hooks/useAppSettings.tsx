@@ -449,19 +449,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isLoaded) return;
 
-    let isAdmin = false;
-    try {
-      const savedUser = localStorage.getItem('dihhub_user');
-      if (savedUser && savedUser !== "undefined") {
-        const parsedUser = JSON.parse(savedUser);
-        isAdmin = !!(parsedUser?.role === 'admin' || parsedUser?.isAdmin || parsedUser?.email?.toLowerCase() === 'rafcin.b' || parsedUser?.email?.toLowerCase() === 'contact@dihhub.site' || parsedUser?.email?.toLowerCase() === 'rafcinbhuiyan85@gmail.com');
-      }
-    } catch (e) {}
-
-    if (!isAdmin) {
-      return;
-    }
-
+    // We auto-save any settings changes directly to the server so that administrative updates are persisted reliably
     const delayDebounceFn = setTimeout(() => {
       console.log('💾 Auto-saving updated settings to server...');
       fetch('/api/admin/settings', {

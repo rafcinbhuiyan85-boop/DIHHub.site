@@ -59,8 +59,8 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
     // Clean up SMM hider when on other tools
     cleanup(hiderId);
 
-    // Unconditionally inject the two specific Adsterra script tags provided by the user on all non-SMM pages
-    // ONLY if they don't already exist in the DOM (to avoid continuous reloading and breaking execution)
+    // Inject the two specific Adsterra script tags provided by the user on all non-SMM pages
+    // ONLY if enableAdsterra is enabled and they don't already exist in the DOM
     const injectScriptSrc = (src: string, id: string, targetNode: HTMLElement) => {
       if (document.getElementById(id)) {
         return; // Already injected and running! Do not reload or interrupt!
@@ -72,8 +72,13 @@ export default function AdsController({ activeTool }: AdsControllerProps) {
       targetNode.appendChild(script);
     };
 
-    injectScriptSrc('https://pl29726384.effectivecpmnetwork.com/9c/20/d3/9c20d3c58eae216ba9be7731295b9ec9.js', 'dh-forced-adsterra-1', document.head);
-    injectScriptSrc('https://pl29726386.effectivecpmnetwork.com/3c/6f/b3/3c6fb36b5d327b9524294f3251d4e7ea.js', 'dh-forced-adsterra-2', document.body);
+    if (settings.enableAdsterra) {
+      injectScriptSrc('https://pl29726384.effectivecpmnetwork.com/9c/20/d3/9c20d3c58eae216ba9be7731295b9ec9.js', 'dh-forced-adsterra-1', document.head);
+      injectScriptSrc('https://pl29726386.effectivecpmnetwork.com/3c/6f/b3/3c6fb36b5d327b9524294f3251d4e7ea.js', 'dh-forced-adsterra-2', document.body);
+    } else {
+      cleanup('dh-forced-adsterra-1');
+      cleanup('dh-forced-adsterra-2');
+    }
 
     if (!settings.enableAds) {
       cleanup('dh-header-ads');
