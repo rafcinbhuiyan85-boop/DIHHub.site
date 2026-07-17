@@ -1467,13 +1467,13 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
               <div className="flex items-center gap-1.5 pt-1.5">
                 <button 
                   onClick={() => setIsDepositOpen(true)}
-                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:brightness-110 active:scale-95 text-slate-950 font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center cyber-glow-btn"
+                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:brightness-110 active:scale-95 text-slate-950 font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center cursor-pointer shadow-md shadow-emerald-500/10"
                 >
                   + {t.depositBtn}
                 </button>
                 <button 
                   onClick={() => setIsWithdrawOpen(true)}
-                  className="flex-1 py-1.5 px-3 bg-slate-900/60 hover:bg-slate-800/80 active:scale-95 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center border border-white/5"
+                  className="flex-1 py-1.5 px-3 bg-slate-900/60 hover:bg-slate-800/80 active:scale-95 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center border border-white/5 cursor-pointer"
                 >
                   - {t.withdrawBtn}
                 </button>
@@ -1501,7 +1501,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
           </div>
         </div>
 
-        {/* User Account Verification / Security Status (Replaced Fast Action panel) */}
+        {/* User Account Verification / Security Status */}
         <div className="lg:col-span-4 p-5 rounded-2xl sm:rounded-3xl cyber-card border border-white/5 text-left flex flex-col justify-between">
           <div className="space-y-4">
             <h4 className="font-black text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
@@ -1514,311 +1514,216 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                 <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
                   {lang === 'bn'
                     ? 'আসল বিনিয়োগ এবং পোর্টফোলিও সক্রিয় করতে এবং রিয়েল-টাইম ডিপোজিট করতে অনুগ্রহ করে লগইন করুন।'
-                    : 'To track live portfolios, perform direct multi-currency deposits and request withdrawals, please sign in.'}
+                    : 'To track live portfolio, access deposits, and activate investments, please log in first.'}
                 </p>
-                <button
-                  onClick={onAuthClick}
-                  className="w-full py-1.5 px-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 active:scale-95 text-slate-950 font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center cursor-pointer"
-                >
-                  {lang === 'bn' ? 'লগইন / রেজিস্টার করুন' : 'Sign In / Register'}
-                </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">{lang === 'bn' ? 'ব্যবহারকারী' : 'User'}:</span>
-                  <span className="text-[11px] text-white font-mono font-black">{currentUser.name}</span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase">{lang === 'bn' ? 'সিকিউরিটি স্ট্যাটাস' : 'Security Status'}:</span>
-                    {currentUser.kycStatus === 'verified' ? (
-                      <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-[9px] font-black uppercase tracking-wider">
-                        {lang === 'bn' ? 'ভেরিফাইড' : 'Verified'}
-                      </span>
-                    ) : currentUser.kycStatus === 'pending' ? (
-                      <span className="px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-400 text-[9px] font-black uppercase tracking-wider animate-pulse">
-                        {lang === 'bn' ? 'পেন্ডিং' : 'Pending'}
-                      </span>
-                    ) : currentUser.kycStatus === 'rejected' ? (
-                      <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-[9px] font-black uppercase tracking-wider">
-                        {lang === 'bn' ? 'রিজেক্টেড' : 'Rejected'}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-[9px] font-black uppercase tracking-wider">
-                        {lang === 'bn' ? 'আনভেরিফাইড' : 'Unverified'}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                    {currentUser.kycStatus === 'verified'
-                      ? (lang === 'bn' ? 'আপনার NID/লাইসেন্স ভেরিফিকেশন সফল হয়েছে। আপনার অ্যাকাউন্টটি নিরাপদ।' : 'Your NID/License verification is successfully verified. Your account is fully secured.')
-                      : currentUser.kycStatus === 'pending'
-                      ? (lang === 'bn' ? 'আপনার ডকুমেন্টস পরীক্ষা করা হচ্ছে। সাধারণত ৫-১০ মিনিট সময় লাগবে।' : 'Our verification agents are reviewing your uploaded documents. Usually takes 5-10 minutes.')
-                      : currentUser.kycStatus === 'rejected'
-                      ? (lang === 'bn' ? 'আপনার পূর্ববর্তী আবেদনটি প্রত্যাখ্যাত হয়েছে। অনুগ্রহ করে সঠিক তথ্যাদি দিয়ে পুনরায় সাবমিট করুন।' : 'Your document submission was rejected. Please resubmit valid details.')
-                      : (lang === 'bn' ? 'বিনিয়োগ পোর্টফোলিও সক্রিয় করার পূর্বে NID বা ড্রাইভিং লাইসেন্স দিয়ে কেওয়াইসি সাবমিট করতে হবে।' : 'National ID (NID) or Driving License KYC document submission is required to activate investment portfolios.')}
-                  </p>
-
-                  {/* Submit KYC button */}
-                  {(currentUser.kycStatus !== 'verified' && currentUser.kycStatus !== 'pending') && (
-                    <button
-                      onClick={() => {
-                        setKycForm({
-                          documentType: 'NID',
-                          documentNumber: '',
-                          fullName: currentUser.name || '',
-                          dob: '',
-                          frontImage: null,
-                          backImage: null
-                        });
-                        setKycError('');
-                        setIsKycModalOpen(true);
-                      }}
-                      className="w-full mt-2 py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center cursor-pointer active:scale-95 shadow-md shadow-blue-500/10"
-                    >
-                      {lang === 'bn' ? 'ভেরিফিকেশন সাবমিট করুন' : 'Submit ID Verification'}
-                    </button>
-                  )}
-
-                  {/* Bypass / Demo action button for Pending Approval */}
-                  {currentUser.kycStatus === 'pending' && (
-                    <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-1.5">
-                      <span className="text-[8px] text-slate-500 uppercase font-black tracking-widest block text-center">DEMO BYPASS OPTIONS</span>
-                      <div className="flex gap-1.5">
-                        <button
-                          onClick={() => handleInstantKycBypass('approve')}
-                          className="flex-1 py-1 px-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold uppercase text-[9px] rounded transition-all active:scale-95 cursor-pointer"
-                        >
-                          {lang === 'bn' ? 'তাত্ক্ষণিক অনুমোদন' : 'Instant Approve'}
-                        </button>
-                        <button
-                          onClick={() => handleInstantKycBypass('reject')}
-                          className="flex-1 py-1 px-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 font-bold uppercase text-[9px] rounded transition-all active:scale-95 cursor-pointer"
-                        >
-                          {lang === 'bn' ? 'প্রত্যাখ্যান করুন' : 'Reject Submission'}
-                        </button>
-                      </div>
-                    </div>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between p-2.5 bg-slate-900/40 rounded-xl border border-white/5">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'bn' ? 'কেওয়াইসি স্ট্যাটাস' : 'KYC Verification'}</span>
+                  {currentUser.kycStatus === 'verified' ? (
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 font-black tracking-widest uppercase flex items-center gap-1">
+                      <ShieldCheck size={11} /> {lang === 'bn' ? 'ভেরিফাইড' : 'Verified'}
+                    </span>
+                  ) : currentUser.kycStatus === 'pending' ? (
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-amber-500/10 text-amber-400 font-black tracking-widest uppercase flex items-center gap-1">
+                      <RefreshCw size={10} className="animate-spin" /> {lang === 'bn' ? 'পেন্ডিং' : 'Pending'}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-rose-500/10 text-rose-400 font-black tracking-widest uppercase">
+                      {lang === 'bn' ? 'আনভেরিফাইড' : 'Unverified'}
+                    </span>
                   )}
                 </div>
+                {currentUser.kycStatus !== 'verified' && (
+                  <button
+                    onClick={() => setIsKycModalOpen(true)}
+                    className="w-full py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:brightness-110 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center cursor-pointer flex items-center justify-center gap-1 shadow shadow-blue-500/15 active:scale-[0.98]"
+                  >
+                    <ShieldCheck size={12} />
+                    <span>{lang === 'bn' ? 'কেওয়াইসি ভেরিফাই করুন' : 'Verify Identity Now'}</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
-
       </div>
 
-      {/* Interactive Forms (AnimatePresence Modals) */}
       <AnimatePresence>
         {isDepositOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-2 overflow-hidden">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-3xl text-left shadow-2xl relative overflow-hidden max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-48px)] flex flex-col"
+              className="bg-[#0b0e17] border border-white/5 rounded-2xl w-full max-w-md text-left shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden max-h-[92vh] flex flex-col"
             >
-              {/* Header */}
-              <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
-                <h3 className="text-md sm:text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
-                  <Wallet className="text-emerald-400" size={18} />
-                  <span>Deposit</span>
-                </h3>
+              {/* Header with balance display built in */}
+              <div className="p-3 sm:p-4 flex justify-between items-center relative border-b border-white/5 shrink-0 bg-[#070910]">
+                <div className="flex items-center gap-1.5 select-none">
+                  <Wallet className="text-emerald-500" size={16} />
+                  <span className="text-xs font-black text-white tracking-wider uppercase">Make a Deposit</span>
+                </div>
                 <button 
                   onClick={() => {
                     setIsDepositOpen(false);
                     setSelectedDepMethod(null);
-                  }} 
+                  }}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
 
               {!selectedDepMethod ? (
-                /* Method Selection Layout */
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="grid grid-cols-1 md:grid-cols-12 min-h-[280px] md:min-h-[380px]">
-                    
-                    {/* Left Sidebar Categories */}
-                    <div className="md:col-span-4 bg-[#0a0d15] p-3 sm:p-4 border-r border-slate-800/60 space-y-2">
-                      {[
-                        { id: 'POPULAR', label: 'POPULAR', sub: '9 methods', bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', activeBg: 'bg-emerald-600 text-white', icons: ['🪙', '⚡', '💳'] },
-                        { id: 'EPAY', label: 'E-PAY', sub: '2 methods', bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', activeBg: 'bg-rose-600 text-white', icons: ['📱', '🔥'] },
-                        { id: 'BANKS', label: 'BANKS', sub: '1 methods', bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20', activeBg: 'bg-blue-600 text-white', icons: ['🏦'] },
-                        { id: 'CRYPTO', label: 'CRYPTO', sub: '18 methods', bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', activeBg: 'bg-amber-600 text-white', icons: ['₿', '♦', '₮'] }
-                      ].map((tab) => {
-                        const isActive = activeDepTab === tab.id;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActiveDepTab(tab.id as any)}
-                            className={`w-full p-2.5 sm:p-3 rounded-xl border text-left transition-all cursor-pointer block select-none ${
-                              isActive 
-                                ? `${tab.activeBg} border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.3)]` 
-                                : 'bg-[#111524]/60 border-slate-800/80 hover:bg-[#111524] hover:border-slate-700 text-slate-300'
-                            }`}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <span className="text-[10px] font-black uppercase tracking-wider block opacity-75">{tab.label}</span>
-                                <span className={`text-[10px] block font-semibold mt-0.5 ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
-                                  {tab.sub}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 text-[11px] opacity-80">
-                                {tab.icons.map((ic, i) => <span key={i}>{ic}</span>)}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
+                /* Step 1: Choose a deposit method list */
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="p-3 bg-[#0a0d15] border-b border-white/5 shrink-0">
+                    <div className="flex bg-[#070910] p-1 rounded-xl gap-1">
+                      {(['POPULAR', 'EPAY', 'BANKS', 'CRYPTO'] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveDepTab(tab)}
+                          className={`flex-1 py-1 text-[9px] font-black uppercase rounded-lg transition-all cursor-pointer ${
+                            activeDepTab === tab 
+                              ? 'bg-slate-900 text-white shadow' 
+                              : 'text-slate-500 hover:text-slate-300'
+                          }`}
+                        >
+                          {tab === 'POPULAR' ? 'Popular' : tab === 'EPAY' ? 'E-Wallet' : tab === 'BANKS' ? 'Bank' : 'Crypto'}
+                        </button>
+                      ))}
                     </div>
+                  </div>
 
-                    {/* Right Content Area */}
-                    <div className="md:col-span-8 p-4 sm:p-5 space-y-3">
-                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">
-                        {activeDepTab === 'POPULAR' && `Popular in your region (9)`}
-                        {activeDepTab === 'EPAY' && `E-Pay (2)`}
-                        {activeDepTab === 'BANKS' && `Banks (1)`}
-                        {activeDepTab === 'CRYPTO' && `Crypto (18)`}
-                      </h4>
+                  {/* Scrollable Methods list */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+                    <div className="grid grid-cols-1 gap-2">
+                      {/* Popular Methods List */}
+                      {activeDepTab === 'POPULAR' && [
+                        { id: 'binance_pay', name: 'Binance Pay', min: 10, logoBg: 'bg-amber-500/10 text-amber-500' },
+                        { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
+                        { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' },
+                        { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
+                        { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
+                        { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
+                        { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
+                        { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' }
+                      ].map((method) => {
+                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                        return {
+                          ...method,
+                          isLastUsed: isActualLast,
+                          hasRepeat: isActualLast
+                        };
+                      }).map((method, idx) => renderDepositMethod(method, idx))}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* Popular Methods List */}
-                        {activeDepTab === 'POPULAR' && [
-                          { id: 'binance_pay', name: 'Binance Pay', min: 10, logoBg: 'bg-amber-500/10 text-amber-500' },
-                          { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
-                          { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' },
-                          { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
-                          { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
-                          { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
-                          { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
-                          { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' }
-                        ].reduce((acc: any[], method) => {
-                          if (!lastDepMethodId && method.id === 'binance_pay') {
-                            acc.push({ ...method, id: 'binance_pay_repeat', isLastUsed: true, hasRepeat: true });
-                          }
-                          const isActualLast = lastDepMethodId 
-                            ? (method.id === lastDepMethodId || method.name === lastDepName)
-                            : false;
-                          acc.push({
-                            ...method,
-                            isLastUsed: isActualLast || (!lastDepMethodId && method.id === 'binance_pay_repeat'),
-                            hasRepeat: isActualLast || (!lastDepMethodId && method.id === 'binance_pay_repeat')
-                          });
-                          return acc;
-                        }, []).map((method, idx) => renderDepositMethod(method, idx))}
+                      {/* E-Pay Methods List */}
+                      {activeDepTab === 'EPAY' && [
+                        { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
+                        { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' }
+                      ].map((method) => {
+                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                        return {
+                          ...method,
+                          isLastUsed: isActualLast,
+                          hasRepeat: isActualLast
+                        };
+                      }).map((method, idx) => renderDepositMethod(method, idx))}
 
-                        {/* E-Pay Methods List */}
-                        {activeDepTab === 'EPAY' && [
-                          { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
-                          { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' }
-                        ].map((method) => {
-                          const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
-                          return {
-                            ...method,
-                            isLastUsed: isActualLast,
-                            hasRepeat: isActualLast
-                          };
-                        }).map((method, idx) => renderDepositMethod(method, idx))}
+                      {/* Banks List */}
+                      {activeDepTab === 'BANKS' && [
+                        { id: 'mastercard', name: 'Mastercard / Bank', min: 20, logoBg: 'bg-blue-500/10 text-blue-500' }
+                      ].map((method) => {
+                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                        return {
+                          ...method,
+                          isLastUsed: isActualLast,
+                          hasRepeat: isActualLast
+                        };
+                      }).map((method, idx) => renderDepositMethod(method, idx))}
 
-                        {/* Banks List */}
-                        {activeDepTab === 'BANKS' && [
-                          { id: 'mastercard', name: 'Mastercard / Bank', min: 20, logoBg: 'bg-blue-500/10 text-blue-500' }
-                        ].map((method) => {
-                          const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
-                          return {
-                            ...method,
-                            isLastUsed: isActualLast,
-                            hasRepeat: isActualLast
-                          };
-                        }).map((method, idx) => renderDepositMethod(method, idx))}
-
-                        {/* Crypto List */}
-                        {activeDepTab === 'CRYPTO' && [
-                          { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
-                          { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
-                          { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
-                          { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
-                          { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' },
-                          { id: 'btc', name: 'Bitcoin (BTC)', min: 50, logoBg: 'bg-amber-500/10 text-amber-500' },
-                          { id: 'eth', name: 'Ethereum (ETH)', min: 50, logoBg: 'bg-purple-500/10 text-purple-500' },
-                          { id: 'ltc', name: 'Litecoin (LTC)', min: 10, logoBg: 'bg-slate-400/10 text-slate-300' },
-                          { id: 'xrp', name: 'Ripple (XRP)', min: 10, logoBg: 'bg-indigo-500/10 text-indigo-400' },
-                          { id: 'sol', name: 'Solana (SOL)', min: 20, logoBg: 'bg-pink-500/10 text-pink-500' },
-                          { id: 'ada', name: 'Cardano (ADA)', min: 15, logoBg: 'bg-blue-500/10 text-blue-500' },
-                          { id: 'dot', name: 'Polkadot (DOT)', min: 15, logoBg: 'bg-rose-500/10 text-rose-500' },
-                          { id: 'shib', name: 'Shiba Inu (SHIB)', min: 15, logoBg: 'bg-red-500/10 text-red-400' },
-                          { id: 'matic', name: 'Polygon (MATIC)', min: 15, logoBg: 'bg-violet-500/10 text-violet-400' },
-                          { id: 'atom', name: 'Cosmos (ATOM)', min: 15, logoBg: 'bg-indigo-600/10 text-indigo-300' },
-                          { id: 'link', name: 'Chainlink (LINK)', min: 20, logoBg: 'bg-blue-600/10 text-blue-400' },
-                          { id: 'uni', name: 'Uniswap (UNI)', min: 20, logoBg: 'bg-pink-600/10 text-pink-400' },
-                          { id: 'xlm', name: 'Stellar (XLM)', min: 10, logoBg: 'bg-slate-500/10 text-slate-300' }
-                        ].map((method) => {
-                          const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
-                          return {
-                            ...method,
-                            isLastUsed: isActualLast,
-                            hasRepeat: isActualLast
-                          };
-                        }).map((method, idx) => renderDepositMethod(method, idx))}
-                      </div>
+                      {/* Crypto List */}
+                      {activeDepTab === 'CRYPTO' && [
+                        { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
+                        { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
+                        { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
+                        { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
+                        { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' },
+                        { id: 'btc', name: 'Bitcoin (BTC)', min: 50, logoBg: 'bg-amber-500/10 text-amber-500' },
+                        { id: 'eth', name: 'Ethereum (ETH)', min: 50, logoBg: 'bg-purple-500/10 text-purple-500' },
+                        { id: 'ltc', name: 'Litecoin (LTC)', min: 10, logoBg: 'bg-slate-400/10 text-slate-300' },
+                        { id: 'xrp', name: 'Ripple (XRP)', min: 10, logoBg: 'bg-indigo-500/10 text-indigo-400' },
+                        { id: 'sol', name: 'Solana (SOL)', min: 20, logoBg: 'bg-pink-500/10 text-pink-500' },
+                        { id: 'ada', name: 'Cardano (ADA)', min: 15, logoBg: 'bg-blue-500/10 text-blue-500' },
+                        { id: 'dot', name: 'Polkadot (DOT)', min: 15, logoBg: 'bg-rose-500/10 text-rose-500' },
+                        { id: 'shib', name: 'Shiba Inu (SHIB)', min: 15, logoBg: 'bg-red-500/10 text-red-400' },
+                        { id: 'matic', name: 'Polygon (MATIC)', min: 15, logoBg: 'bg-violet-500/10 text-violet-400' },
+                        { id: 'atom', name: 'Cosmos (ATOM)', min: 15, logoBg: 'bg-indigo-600/10 text-indigo-300' },
+                        { id: 'link', name: 'Chainlink (LINK)', min: 20, logoBg: 'bg-blue-600/10 text-blue-400' },
+                        { id: 'uni', name: 'Uniswap (UNI)', min: 20, logoBg: 'bg-pink-600/10 text-pink-400' },
+                        { id: 'xlm', name: 'Stellar (XLM)', min: 10, logoBg: 'bg-slate-500/10 text-slate-300' }
+                      ].map((method) => {
+                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                        return {
+                          ...method,
+                          isLastUsed: isActualLast,
+                          hasRepeat: isActualLast
+                        };
+                      }).map((method, idx) => renderDepositMethod(method, idx))}
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Step 2: Payment input form */
-                <form onSubmit={handleDeposit} className="flex-1 flex flex-col overflow-hidden">
+                /* Step 2: Payment input form (Ultra compact) */
+                <form onSubmit={handleDeposit} className="flex-1 flex flex-col overflow-hidden bg-[#070910]/20">
                   {/* Scrollable Form Body */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-800 rounded-xl">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm ${selectedDepMethod.logoBg}`}>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                    <div className="flex items-center gap-2.5 p-2 bg-[#0d101a] border border-white/5 rounded-xl">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${selectedDepMethod.logoBg}`}>
                         {selectedDepMethod.name.includes('Binance') ? 'B' : selectedDepMethod.name.includes('Bkash') ? 'bK' : selectedDepMethod.name.includes('Nagad') ? 'Ng' : 'C'}
                       </div>
                       <div className="text-left">
-                        <h4 className="font-black text-sm text-white">{selectedDepMethod.name}</h4>
-                        <p className="text-xs text-slate-500">Min deposit: {curr.symbol}{Math.round(selectedDepMethod.min * curr.rate)} ({selectedDepMethod.min} USD)</p>
+                        <h4 className="font-black text-xs text-white">{selectedDepMethod.name}</h4>
+                        <p className="text-[10px] text-slate-500">Min deposit: {curr.symbol}{Math.round(selectedDepMethod.min * curr.rate)} ({selectedDepMethod.min} USD)</p>
                       </div>
                     </div>
 
-                    {/* Manual Instructions */}
-                    <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-300 space-y-1.5 text-left">
-                      <p className="font-bold uppercase tracking-wider text-[10px]">Payment Instructions:</p>
+                    {/* Manual Instructions - Highly compact */}
+                    <div className="p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[10px] text-emerald-300 space-y-1 text-left leading-relaxed">
+                      <p className="font-black uppercase tracking-wider text-[9px] text-emerald-400">Payment Steps:</p>
                       {selectedDepMethod.name.includes('Bkash') || selectedDepMethod.name.includes('Nagad') ? (
-                        <p>Please cash-out to our official manual agent wallet number: <span className="font-mono text-white font-black underline">01783-999333</span>. Then provide your personal mobile number and the Transaction ID (TxID) below.</p>
+                        <p>Cash-out to official manual agent: <span className="font-mono text-white font-black underline">01783-999333</span>. Then submit your personal mobile & TxID below.</p>
                       ) : selectedDepMethod.name.includes('Binance') ? (
-                        <p>Send simulated funds directly to Binance Pay ID: <span className="font-mono text-white font-black underline">495331860</span>. Input your Binance ID and confirm.</p>
+                        <p>Send simulated funds directly to Pay ID: <span className="font-mono text-white font-black underline">495331860</span>. Provide your Binance ID below to confirm.</p>
                       ) : (
-                        <p>Transfer {selectedDepMethod.name} to address: <span className="font-mono text-white font-black underline">TLZqD9q5v8V5Y77Xh88N9</span>. Enter wallet address/hash below to submit.</p>
+                        <p>Transfer {selectedDepMethod.name} to address: <span className="font-mono text-white font-black underline">TLZqD9q5v8V5Y77Xh88N9</span>. Enter wallet address/hash below.</p>
                       )}
                     </div>
 
                     {/* Amount */}
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] text-slate-500 uppercase font-black">Amount ({curr.label})</label>
-                      <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-3">
-                        <span className="text-emerald-400 font-black font-mono text-sm">{curr.symbol}</span>
+                      <label className="text-[9px] text-slate-500 uppercase font-black tracking-wider">Amount ({curr.label})</label>
+                      <div className="flex items-center gap-2 bg-[#070910] border border-white/5 rounded-xl px-3 py-2">
+                        <span className="text-emerald-400 font-black font-mono text-xs">{curr.symbol}</span>
                         <input 
                           type="number"
                           required
                           min={Math.round(selectedDepMethod.min * curr.rate)}
                           value={transAmount}
                           onChange={(e) => setTransAmount(parseFloat(e.target.value) || 0)}
-                          className="bg-transparent border-none outline-none text-white font-mono font-black text-sm flex-1"
+                          className="bg-transparent border-none outline-none text-white font-mono font-black text-xs flex-1"
                         />
                       </div>
-                      <span className="text-[10px] text-slate-500 block pt-0.5">
+                      <span className="text-[9px] text-slate-500 block">
                         Equivalent to: ${(transAmount / curr.rate).toFixed(2)} USD
                       </span>
                     </div>
 
                     {/* Account Details */}
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] text-slate-500 uppercase font-black">
+                      <label className="text-[9px] text-slate-500 uppercase font-black tracking-wider">
                         {selectedDepMethod.name.includes('Bkash') || selectedDepMethod.name.includes('Nagad') ? 'Your Mobile & Transaction ID' : 'Wallet Address / Pay ID'}
                       </label>
                       <input 
@@ -1827,28 +1732,28 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                         placeholder={selectedDepMethod.name.includes('Bkash') || selectedDepMethod.name.includes('Nagad') ? 'e.g., 01712345678, TxID: Ax892kJ' : 'e.g., Binance ID / TRC20 Address'}
                         value={accountDetail}
                         onChange={(e) => setAccountDetail(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white font-bold outline-none placeholder-slate-600"
+                        className="w-full bg-[#070910] border border-white/5 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none placeholder-slate-600"
                       />
                     </div>
                   </div>
 
                   {/* Sticky Footer */}
-                  <div className="p-4 bg-[#0a0d15] border-t border-slate-800/80 shrink-0 flex gap-3">
+                  <div className="p-3 bg-[#070910] border-t border-white/5 shrink-0 flex gap-2">
                     <button 
                       type="button" 
                       onClick={() => setSelectedDepMethod(null)}
-                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer text-center"
+                      className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg font-bold text-xs uppercase cursor-pointer text-center"
                     >
                       Back
                     </button>
                     <button 
                       type="submit"
                       disabled={isProcessing}
-                      className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-slate-950 font-black rounded-xl text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5"
+                      className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 text-slate-950 font-black rounded-lg text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 hover:brightness-110 transition-all"
                     >
                       {isProcessing ? (
                         <>
-                          <RefreshCw size={13} className="animate-spin" />
+                          <RefreshCw size={12} className="animate-spin" />
                           <span>Processing...</span>
                         </>
                       ) : (
@@ -1861,246 +1766,212 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
+      <AnimatePresence>
         {isWithdrawOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-2 overflow-hidden">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-4xl text-left shadow-2xl relative overflow-hidden max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-48px)] flex flex-col"
+              className="bg-[#0b0e17] border border-white/5 rounded-2xl w-full max-w-md text-left shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden max-h-[92vh] flex flex-col"
             >
-              {/* Header */}
-              <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
-                <h3 className="text-md sm:text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
-                  <TrendingUp className="text-blue-500" size={18} />
-                  <span>Withdrawal Portal</span>
-                </h3>
-                <button 
-                  onClick={() => setIsWithdrawOpen(false)}
-                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
+              {/* Header with balance display built in */}
+              <div className="p-3 sm:p-4 flex justify-between items-center relative border-b border-white/5 shrink-0 bg-[#070910]">
+                <div className="flex items-center gap-1.5 select-none">
+                  <TrendingUp className="text-blue-500" size={16} />
+                  <span className="text-xs font-black text-white tracking-wider uppercase">Withdrawal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-slate-500 uppercase font-black tracking-wider">Avail:</span>
+                  <span className="text-xs font-mono font-black text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded-lg">
+                    {curr.symbol}{currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <button 
+                    type="button"
+                    onClick={() => setIsWithdrawOpen(false)}
+                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer ml-1"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Form wrapping body and sticky footer */}
-              <form onSubmit={handleWithdraw} className="flex-1 flex flex-col overflow-hidden">
+              <form onSubmit={handleWithdraw} className="flex-1 flex flex-col overflow-hidden bg-[#070910]/20">
                 {/* Scrollable grid content */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="grid grid-cols-1 md:grid-cols-12 items-stretch divide-y md:divide-y-0 md:divide-x divide-slate-800/60 divide-dashed h-full">
-                    
-                    {/* Left Column: Account Details */}
-                    <div className="md:col-span-5 p-5 sm:p-6 space-y-5 flex flex-col justify-center bg-[#0a0d15]/60">
-                      <h3 className="text-sm font-black text-white tracking-wide uppercase select-none border-b border-slate-800/80 pb-2">
-                        Account:
-                      </h3>
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 text-left">
+                  {/* Info card */}
+                  <div className="p-2.5 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] text-blue-300 space-y-1 leading-relaxed">
+                    <p className="font-black uppercase tracking-wider text-[9px] text-blue-400">Security Guard:</p>
+                    <p>Withdrawals are simulated immediately in sandbox mode. For real-time funds routing, ensure your ID is approved.</p>
+                  </div>
 
-                      <div className="space-y-4">
-                        {/* In the account */}
-                        <div className="space-y-1">
-                          <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider block">
-                            In the account:
-                          </span>
-                          <h4 className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
-                            {currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <span className="text-sm text-slate-400 font-sans ml-1">{curr.symbol}</span>
-                          </h4>
-                        </div>
-
-                        {/* Available for withdrawal */}
-                        <div className="space-y-1 pt-1">
-                          <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider block">
-                            Available for withdrawal:
-                          </span>
-                          <h4 className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
-                            {currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <span className="text-sm text-slate-400 font-sans ml-1">{curr.symbol}</span>
-                          </h4>
-                        </div>
+                  {/* Row 1: Amount & Payment Method */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Amount */}
+                    <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
+                      <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block">
+                        Amount ({curr.label})
+                      </label>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <input 
+                          type="number"
+                          required
+                          min={10}
+                          value={transAmount}
+                          onChange={(e) => setTransAmount(parseFloat(e.target.value) || 0)}
+                          className="bg-transparent border-none outline-none text-white font-mono font-black text-xs flex-1"
+                        />
                       </div>
+                      <span className="text-[9px] text-slate-500 block">
+                        Equivalent to: ${(transAmount / curr.rate).toFixed(2)} USD
+                      </span>
                     </div>
 
-                    {/* Right Column: Withdrawal form inputs */}
-                    <div className="md:col-span-7 p-5 sm:p-6 space-y-4 text-left">
-                      <h3 className="text-sm font-black text-white tracking-wide uppercase select-none border-b border-slate-800/80 pb-2">
-                        Withdrawal Details:
-                      </h3>
+                    {/* Method select */}
+                    <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
+                      <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block mb-0.5">
+                        Payment Method
+                      </label>
+                      <select 
+                        value={paymentChannel}
+                        disabled={!!lastDepName}
+                        onChange={(e) => {
+                          setPaymentChannel(e.target.value);
+                          if (e.target.value.includes('BKASH') || e.target.value.includes('NAGAD')) {
+                            setReceiveType('bKash Personal Number');
+                          } else {
+                            setReceiveType('Binance account ID');
+                          }
+                        }}
+                        className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer disabled:text-slate-500 disabled:cursor-not-allowed"
+                      >
+                        <option value="BINANCE" className="bg-[#0b0e17] text-white">Binance Pay</option>
+                        <option value="BKASH" className="bg-[#0b0e17] text-white">bKash Personal</option>
+                        <option value="NAGAD" className="bg-[#0b0e17] text-white">Nagad Personal</option>
+                        <option value="CRYPTO_USDT" className="bg-[#0b0e17] text-white">USDT (TRC-20)</option>
+                        <option value="LITECOIN" className="bg-[#0b0e17] text-white">Litecoin (LTC)</option>
+                      </select>
+                    </div>
+                  </div>
 
-                      <div className="space-y-3">
-                        {/* Amount input */}
-                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                            Amount
-                          </label>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <input 
-                              type="number"
-                              required
-                              min={10}
-                              value={transAmount}
-                              onChange={(e) => setTransAmount(parseFloat(e.target.value) || 0)}
-                              className="bg-transparent border-none outline-none text-white font-mono font-black text-sm flex-1"
-                            />
-                            <span className="text-xs font-black text-slate-400 font-mono tracking-wider">
-                              {curr.label}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Payment Method Selector */}
-                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">
-                            Payment method
-                          </label>
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 flex-1">
-                              <span className="text-[11px]">🪙</span>
-                              <select 
-                                value={paymentChannel}
-                                disabled={!!lastDepName}
-                                onChange={(e) => {
-                                  setPaymentChannel(e.target.value);
-                                  if (e.target.value.includes('BKASH') || e.target.value.includes('NAGAD')) {
-                                    setReceiveType('bKash Personal Number');
-                                  } else {
-                                    setReceiveType('Binance account ID');
-                                  }
-                                }}
-                                className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer disabled:text-slate-400 disabled:cursor-not-allowed"
-                              >
-                                <option value="BINANCE" className="bg-[#111422] text-white font-bold">Binance Pay</option>
-                                <option value="BKASH" className="bg-[#111422] text-white font-bold">bKash (BD Local)</option>
-                                <option value="NAGAD" className="bg-[#111422] text-white font-bold">Nagad (BD Local)</option>
-                                <option value="CRYPTO_USDT" className="bg-[#111422] text-white font-bold">USDT (TRC-20)</option>
-                                <option value="LITECOIN" className="bg-[#111422] text-white font-bold">Litecoin (LTC)</option>
-                              </select>
-                            </div>
-                            {!!lastDepName && (
-                              <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-black uppercase tracking-wide flex items-center gap-1 shrink-0">
-                                <ShieldCheck size={10} />
-                                {lang === 'bn' ? 'ডিপোজিটের সাথে মিল রয়েছে' : 'Matched with deposit'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* First name & Last name */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* First name */}
-                          <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                            <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                              First name
-                            </label>
-                            <div className="flex items-center gap-1.5">
-                              <input 
-                                type="text"
-                                required
-                                readOnly={currentUser?.kycStatus === 'verified'}
-                                value={firstName}
-                                onChange={(e) => setFirstName(e.target.value)}
-                                className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
-                              />
-                              {currentUser?.kycStatus === 'verified' && (
-                                <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Last name */}
-                          <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                            <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                              Last name
-                            </label>
-                            <div className="flex items-center gap-1.5">
-                              <input 
-                                type="text"
-                                required
-                                readOnly={currentUser?.kycStatus === 'verified'}
-                                value={lastName}
-                                onChange={(e) => setLastName(e.target.value)}
-                                className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
-                              />
-                              {currentUser?.kycStatus === 'verified' && (
-                                <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Receive type */}
-                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">
-                            Receive type
-                          </label>
-                          <select 
-                            value={receiveType}
-                            onChange={(e) => setReceiveType(e.target.value)}
-                            className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
-                          >
-                            <option value="Binance account ID" className="bg-[#111422] text-white font-bold">Binance account ID</option>
-                            <option value="Binance Pay ID" className="bg-[#111422] text-white font-bold">Binance Pay ID</option>
-                            <option value="bKash Personal Number" className="bg-[#111422] text-white font-bold">bKash Personal Number</option>
-                            <option value="Nagad Personal Number" className="bg-[#111422] text-white font-bold">Nagad Personal Number</option>
-                            <option value="TRC20 Wallet Address" className="bg-[#111422] text-white font-bold">TRC20 Wallet Address</option>
-                          </select>
-                        </div>
-
-                        {/* Binance account ID (or selected Receive ID) */}
-                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                            {receiveType}
-                          </label>
+                    {/* Row 2: First Name & Last Name */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* First Name */}
+                      <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
+                        <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block">
+                          First Name
+                        </label>
+                        <div className="flex items-center gap-1.5">
                           <input 
                             type="text"
                             required
-                            value={binanceAccountId}
-                            onChange={(e) => setBinanceAccountId(e.target.value)}
-                            className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
+                            readOnly={currentUser?.kycStatus === 'verified'}
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
                           />
+                          {currentUser?.kycStatus === 'verified' && (
+                            <ShieldCheck size={12} className="text-emerald-400 shrink-0 mt-0.5" />
+                          )}
                         </div>
+                      </div>
 
-                        {/* Red validation help text */}
-                        {receiveType === 'Binance account ID' && (binanceAccountId.length < 8 || binanceAccountId.length > 10 || !/^\d+$/.test(binanceAccountId)) && (
-                          <p className="text-[10px] text-red-500 font-bold leading-tight">
-                            Enter a Binance account number consisting of 8 to 10 digits.
-                          </p>
-                        )}
-
-                        {receiveType.includes('bKash') && (binanceAccountId.length !== 11 || !/^\d+$/.test(binanceAccountId)) && (
-                          <p className="text-[10px] text-red-500 font-bold leading-tight">
-                            Enter a valid 11-digit mobile number.
-                          </p>
-                        )}
+                      {/* Last Name */}
+                      <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
+                        <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block">
+                          Last Name
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input 
+                            type="text"
+                            required
+                            readOnly={currentUser?.kycStatus === 'verified'}
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
+                          />
+                          {currentUser?.kycStatus === 'verified' && (
+                            <ShieldCheck size={12} className="text-emerald-400 shrink-0 mt-0.5" />
+                          )}
+                        </div>
                       </div>
                     </div>
 
+                  {/* Row 3: Receive Type & Detail Account ID */}
+                  <div className="space-y-2">
+                    {/* Receive type */}
+                    <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
+                      <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block mb-0.5">
+                        Receive Type
+                      </label>
+                      <select 
+                        value={receiveType}
+                        onChange={(e) => setReceiveType(e.target.value)}
+                        className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
+                      >
+                        <option value="Binance account ID" className="bg-[#0b0e17] text-white">Binance account ID</option>
+                        <option value="Binance Pay ID" className="bg-[#0b0e17] text-white">Binance Pay ID</option>
+                        <option value="bKash Personal Number" className="bg-[#0b0e17] text-white">bKash Personal Number</option>
+                        <option value="Nagad Personal Number" className="bg-[#0b0e17] text-white">Nagad Personal Number</option>
+                        <option value="TRC20 Wallet Address" className="bg-[#0b0e17] text-white">TRC20 Wallet Address</option>
+                      </select>
+                    </div>
+
+                    {/* Detail Account Number */}
+                    <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
+                      <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block">
+                        {receiveType}
+                      </label>
+                      <input 
+                        type="text"
+                        required
+                        value={binanceAccountId}
+                        onChange={(e) => setBinanceAccountId(e.target.value)}
+                        className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
+                      />
+                    </div>
                   </div>
+
+                  {/* Red validation help text */}
+                  {receiveType === 'Binance account ID' && (binanceAccountId.length < 8 || binanceAccountId.length > 10 || !/^\d+$/.test(binanceAccountId)) && (
+                    <p className="text-[10px] text-red-500 font-bold leading-tight">
+                      Enter a Binance account number consisting of 8 to 10 digits.
+                    </p>
+                  )}
+
+                  {receiveType.includes('bKash') && (binanceAccountId.length !== 11 || !/^\d+$/.test(binanceAccountId)) && (
+                    <p className="text-[10px] text-red-500 font-bold leading-tight">
+                      Enter a valid 11-digit mobile number.
+                    </p>
+                  )}
                 </div>
 
                 {/* Sticky bottom footer containing action buttons */}
-                <div className="p-4 bg-[#0a0d15] border-t border-slate-800/80 shrink-0 flex gap-3 justify-end">
+                <div className="p-3 bg-[#070910] border-t border-white/5 shrink-0 flex gap-2">
                   <button 
                     type="button" 
                     onClick={() => setIsWithdrawOpen(false)}
-                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer text-center"
+                    className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg font-bold text-xs uppercase cursor-pointer text-center"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isProcessing}
-                    className="px-6 py-2.5 bg-[#0070f3] hover:bg-blue-500 disabled:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(0,112,243,0.3)] active:scale-95"
+                    className="flex-1 py-2 bg-gradient-to-r from-blue-600 to-blue-500 disabled:from-blue-900 disabled:to-blue-950 text-white font-black text-xs uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 hover:brightness-110 active:scale-95"
                   >
                     {isProcessing ? (
                       <>
-                        <RefreshCw size={13} className="animate-spin" />
+                        <RefreshCw size={12} className="animate-spin" />
                         <span>Processing...</span>
                       </>
                     ) : (
                       <>
                         <span>Confirm</span>
-                        <ArrowRight size={13} />
+                        <ArrowRight size={12} />
                       </>
                     )}
                   </button>
@@ -2111,24 +1982,26 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         )}
 
         {isKycModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-2 overflow-hidden">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-xl text-left shadow-2xl relative overflow-hidden max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-48px)] flex flex-col"
+              className="bg-[#0b0e17] border border-white/5 rounded-2xl w-full max-w-md text-left shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative overflow-hidden max-h-[92vh] flex flex-col"
             >
               {/* Header */}
-              <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
-                <h3 className="text-md sm:text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
-                  <ShieldCheck className="text-blue-500" size={18} />
-                  <span>{lang === 'bn' ? 'কেওয়াইসি অ্যাকাউন্ট ভেরিফিকেশন' : 'KYC Account Verification'}</span>
-                </h3>
+              <div className="p-3 sm:p-4 flex justify-between items-center relative border-b border-white/5 shrink-0 bg-[#070910]">
+                <div className="flex items-center gap-1.5 select-none">
+                  <ShieldCheck className="text-blue-500" size={16} />
+                  <span className="text-xs font-black text-white tracking-wider uppercase">
+                    {lang === 'bn' ? 'কেওয়াইসি ভেরিফিকেশন' : 'KYC Verification'}
+                  </span>
+                </div>
                 <button 
                   onClick={() => setIsKycModalOpen(false)}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
 
@@ -2149,31 +2022,34 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
               />
 
               {/* Form wrapping body and footer */}
-              <form onSubmit={handleKycSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <form onSubmit={handleKycSubmit} className="flex-1 flex flex-col overflow-hidden bg-[#070910]/20">
                 {/* Scrollable Form Body */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 text-left">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 text-left">
                   {kycError && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold flex items-center gap-2">
-                      <AlertCircle size={14} />
+                    <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-bold flex items-center gap-1.5">
+                      <AlertCircle size={12} />
                       <span>{kycError}</span>
                     </div>
                   )}
 
-                  <div className="space-y-3.5">
-                    {/* ID Document Type */}
-                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
-                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">
-                        {lang === 'bn' ? 'ডকুমেন্ট টাইপ' : 'Document Type'}
-                      </label>
-                      <select 
-                        value={kycForm.documentType}
-                        onChange={(e) => setKycForm(p => ({ ...p, documentType: e.target.value as any }))}
-                        className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
-                      >
-                        <option value="NID" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'জাতীয় পরিচয়পত্র (NID Card)' : 'National ID Card (NID)'}</option>
-                        <option value="Passport" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'পাসপোর্ট (Passport)' : 'Passport'}</option>
-                        <option value="Driving License" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'ড্রাইভিং লাইসেন্স (Driving License)' : 'Driving License'}</option>
-                      </select>
+                  <div className="space-y-2.5">
+                    {/* Row 1: Document Type & Full Name */}
+                    <div className="grid grid-cols-1 gap-2">
+                      {/* ID Document Type */}
+                      <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all text-left">
+                        <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">
+                          {lang === 'bn' ? 'ডকুমেন্ট টাইপ' : 'Document Type'}
+                        </label>
+                        <select 
+                          value={kycForm.documentType}
+                          onChange={(e) => setKycForm(p => ({ ...p, documentType: e.target.value as any }))}
+                          className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
+                        >
+                          <option value="NID" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'জাতীয় পরিচয়পত্র (NID)' : 'National ID (NID)'}</option>
+                          <option value="Passport" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'পাসপোর্ট (Passport)' : 'Passport'}</option>
+                          <option value="Driving License" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'ড্রাইভিং লাইসেন্স' : 'Driving License'}</option>
+                        </select>
+                      </div>
                     </div>
 
                     {/* Full Name */}
