@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TrendingUp, ShieldCheck, DollarSign, ArrowRight, Smartphone, Send, 
   MessageSquare, Calculator, Activity, Star, Clock, AlertCircle, Coins,
@@ -523,6 +523,10 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
 
   // KYC Verification States
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+
+  // React refs for programmatic file upload trigger
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
   const [kycForm, setKycForm] = useState({
     documentType: 'NID' as 'NID' | 'Passport' | 'Driving License',
     documentNumber: '',
@@ -613,6 +617,18 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
   // State controls for Deposit/Withdraw Forms
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+
+  // Prevent background scrolling when modals are open
+  useEffect(() => {
+    if (isDepositOpen || isWithdrawOpen || isKycModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDepositOpen, isWithdrawOpen, isKycModalOpen]);
   const [transAmount, setTransAmount] = useState<number>(500);
   const [paymentChannel, setPaymentChannel] = useState<string>('BKASH');
   const [accountDetail, setAccountDetail] = useState<string>('');
@@ -1273,8 +1289,12 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 sm:px-6 space-y-5 sm:space-y-6 pb-12 sm:pb-20 animate-in fade-in duration-500">
-      {/* High-visibility Custom Scrollbars */}
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-6 space-y-5 sm:space-y-6 pb-12 sm:pb-20 animate-in fade-in duration-500 relative overflow-hidden">
+      {/* Decorative Drifting Neon Cyber Blobs */}
+      <div className="absolute top-1/4 left-10 w-96 h-96 bg-purple-600/15 rounded-full blur-[100px] pointer-events-none bg-drift-1 z-0" />
+      <div className="absolute bottom-1/4 right-10 w-[450px] h-[450px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none bg-drift-2 z-0" />
+
+      {/* High-visibility Custom Scrollbars and Premium Cyber Styles */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -1291,6 +1311,42 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #10b981;
+        }
+        @keyframes drift-slow-1 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(40px, -60px) scale(1.15); }
+          66% { transform: translate(-30px, 30px) scale(0.92); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes drift-slow-2 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(-50px, 40px) scale(0.9); }
+          66% { transform: translate(50px, -30px) scale(1.2); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .bg-drift-1 {
+          animation: drift-slow-1 22s infinite ease-in-out;
+        }
+        .bg-drift-2 {
+          animation: drift-slow-2 26s infinite ease-in-out;
+        }
+        .cyber-card {
+          background: rgba(13, 17, 30, 0.55);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+        }
+        .cyber-card-glow {
+          box-shadow: 0 0 35px rgba(245, 158, 11, 0.08);
+          border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+        .cyber-glow-btn {
+          box-shadow: 0 0 15px rgba(245, 158, 11, 0.22);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cyber-glow-btn:hover {
+          box-shadow: 0 0 25px rgba(245, 158, 11, 0.45);
+          transform: translateY(-1px);
         }
       `}</style>
       
@@ -1319,7 +1375,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
       </AnimatePresence>
 
       {/* Top Hero Header Block */}
-      <div className="text-center space-y-2.5 py-5 sm:py-8 px-3 sm:px-6 relative overflow-hidden rounded-2xl sm:rounded-3xl bg-slate-900/40 border border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+      <div className="text-center space-y-2.5 py-5 sm:py-8 px-3 sm:px-6 relative overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0f1322]/50 backdrop-blur-md border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.6)] z-10">
         <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-purple-500/10 pointer-events-none" />
         
         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] sm:text-[10px] font-black uppercase tracking-wider rounded-full select-none">
@@ -1377,13 +1433,13 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
       </div>
 
       {/* Premium Simulator Wallet Dashboard (Fully Consolidated at top) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch relative z-10">
         
         {/* Core Wallet Dashboard Stats card */}
-        <div className="lg:col-span-8 p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#0c0f1a] via-[#101424] to-[#070912] border border-slate-800/80 shadow-2xl space-y-5 text-left relative overflow-hidden">
+        <div className="lg:col-span-8 p-5 rounded-2xl sm:rounded-3xl cyber-card border border-white/5 space-y-5 text-left relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="flex justify-between items-center border-b border-slate-800/80 pb-3">
+          <div className="flex justify-between items-center border-b border-white/5 pb-3">
             <div className="flex items-center gap-2">
               <Wallet className="text-amber-400 shrink-0" size={18} />
               <span className="text-[10px] sm:text-xs font-black tracking-widest uppercase text-slate-400">
@@ -1411,13 +1467,13 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
               <div className="flex items-center gap-1.5 pt-1.5">
                 <button 
                   onClick={() => setIsDepositOpen(true)}
-                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:brightness-110 active:scale-95 text-slate-950 font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center"
+                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:brightness-110 active:scale-95 text-slate-950 font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center cyber-glow-btn"
                 >
                   + {t.depositBtn}
                 </button>
                 <button 
                   onClick={() => setIsWithdrawOpen(true)}
-                  className="flex-1 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center border border-slate-800"
+                  className="flex-1 py-1.5 px-3 bg-slate-900/60 hover:bg-slate-800/80 active:scale-95 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-all text-center border border-white/5"
                 >
                   - {t.withdrawBtn}
                 </button>
@@ -1425,7 +1481,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
             </div>
 
             {/* Total Invested Volume */}
-            <div className="p-3 bg-slate-950/40 border border-slate-900 rounded-xl space-y-1 flex flex-col justify-center">
+            <div className="p-3 bg-white/5 border border-white/5 rounded-xl space-y-1 flex flex-col justify-center">
               <span className="text-[9px] text-slate-500 uppercase font-black tracking-wide block">{t.activeInvested}</span>
               <h4 className="text-xl font-black text-white font-mono">
                 {curr.symbol}{activeInvestmentsTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1434,7 +1490,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
             </div>
 
             {/* Accumulated Ticking Earnings */}
-            <div className="p-3 bg-slate-950/40 border border-slate-900 rounded-xl space-y-1 flex flex-col justify-center relative overflow-hidden">
+            <div className="p-3 bg-white/5 border border-white/5 rounded-xl space-y-1 flex flex-col justify-center relative overflow-hidden">
               <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
               <span className="text-[9px] text-emerald-400 uppercase font-black tracking-wide block">{t.totalEarned}</span>
               <h4 className="text-xl font-black text-emerald-400 font-mono">
@@ -1446,7 +1502,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         </div>
 
         {/* User Account Verification / Security Status (Replaced Fast Action panel) */}
-        <div className="lg:col-span-4 p-5 rounded-2xl sm:rounded-3xl bg-slate-900/30 border border-slate-800 rounded-2xl text-left flex flex-col justify-between">
+        <div className="lg:col-span-4 p-5 rounded-2xl sm:rounded-3xl cyber-card border border-white/5 text-left flex flex-col justify-between">
           <div className="space-y-4">
             <h4 className="font-black text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck size={16} className="text-amber-500" />
@@ -1558,12 +1614,12 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
       {/* Interactive Forms (AnimatePresence Modals) */}
       <AnimatePresence>
         {isDepositOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-3xl text-left shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col"
+              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-3xl text-left shadow-2xl relative overflow-hidden max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-48px)] flex flex-col"
             >
               {/* Header */}
               <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
@@ -1807,12 +1863,12 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         )}
 
         {isWithdrawOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-4xl text-left shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col"
+              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-4xl text-left shadow-2xl relative overflow-hidden max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-48px)] flex flex-col"
             >
               {/* Header */}
               <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
@@ -2055,12 +2111,12 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
         )}
 
         {isKycModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-xl text-left shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col"
+              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-xl text-left shadow-2xl relative overflow-hidden max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-48px)] flex flex-col"
             >
               {/* Header */}
               <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
@@ -2076,17 +2132,17 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                 </button>
               </div>
 
-              {/* Hidden file inputs */}
+              {/* Hidden file inputs using React Refs */}
               <input
                 type="file"
-                id="kyc-front-upload"
+                ref={frontInputRef}
                 accept="image/*"
                 onChange={handleFrontFileChange}
                 className="hidden"
               />
               <input
                 type="file"
-                id="kyc-back-upload"
+                ref={backInputRef}
                 accept="image/*"
                 onChange={handleBackFileChange}
                 className="hidden"
@@ -2176,7 +2232,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                               ? 'border-emerald-800 bg-[#0c121e]/40' 
                               : 'border-slate-800 hover:border-slate-700 bg-[#0c0e18]'
                         }`}
-                        onClick={() => document.getElementById('kyc-front-upload')?.click()}
+                        onClick={() => frontInputRef.current?.click()}
                         onDragOver={handleDragOver}
                         onDragEnter={() => setIsFrontDragging(true)}
                         onDragLeave={() => setIsFrontDragging(false)}
@@ -2196,7 +2252,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                             <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                               <CheckCircle2 className="text-emerald-500" size={14} />
                               <span className="text-[7px] text-white font-bold uppercase">
-                                {lang === 'bn' ? 'পরিবর্তন করুন' : 'Change Image'}
+                                {lang === 'bn' ? 'পরিবর্তن করুন' : 'Change Image'}
                               </span>
                             </div>
                           </div>
@@ -2217,7 +2273,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                               ? 'border-emerald-800 bg-[#0c121e]/40' 
                               : 'border-slate-800 hover:border-slate-700 bg-[#0c0e18]'
                         }`}
-                        onClick={() => document.getElementById('kyc-back-upload')?.click()}
+                        onClick={() => backInputRef.current?.click()}
                         onDragOver={handleDragOver}
                         onDragEnter={() => setIsBackDragging(true)}
                         onDragLeave={() => setIsBackDragging(false)}
