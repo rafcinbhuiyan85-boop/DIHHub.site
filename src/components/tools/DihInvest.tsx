@@ -1558,16 +1558,16 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
       {/* Interactive Forms (AnimatePresence Modals) */}
       <AnimatePresence>
         {isDepositOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-3xl text-left shadow-2xl relative overflow-hidden max-h-[90vh] md:max-h-[85vh] flex flex-col"
+              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-3xl text-left shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col"
             >
               {/* Header */}
-              <div className="p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
-                <h3 className="text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
+              <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
+                <h3 className="text-md sm:text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
                   <Wallet className="text-emerald-400" size={18} />
                   <span>Deposit</span>
                 </h3>
@@ -1582,163 +1582,165 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {!selectedDepMethod ? (
-                /* Method Selection Layout (Direct replica of user's screenshot) */
-                <div className="grid grid-cols-1 md:grid-cols-12 min-h-[280px] md:min-h-[380px]">
-                  
-                  {/* Left Sidebar Categories */}
-                  <div className="md:col-span-4 bg-[#0a0d15] p-2.5 sm:p-4 border-r border-slate-800/60 space-y-1.5 sm:space-y-2.5">
-                    {[
-                      { id: 'POPULAR', label: 'POPULAR', sub: '9 methods', bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', activeBg: 'bg-emerald-600 text-white', icons: ['🪙', '⚡', '💳'] },
-                      { id: 'EPAY', label: 'E-PAY', sub: '2 methods', bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', activeBg: 'bg-rose-600 text-white', icons: ['📱', '🔥'] },
-                      { id: 'BANKS', label: 'BANKS', sub: '1 methods', bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20', activeBg: 'bg-blue-600 text-white', icons: ['🏦'] },
-                      { id: 'CRYPTO', label: 'CRYPTO', sub: '18 methods', bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', activeBg: 'bg-amber-600 text-white', icons: ['₿', '♦', '₮'] }
-                    ].map((tab) => {
-                      const isActive = activeDepTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          onClick={() => setActiveDepTab(tab.id as any)}
-                          className={`w-full p-2.5 sm:p-3 rounded-xl border text-left transition-all cursor-pointer block select-none ${
-                            isActive 
-                              ? `${tab.activeBg} border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.3)]` 
-                              : 'bg-[#111524]/60 border-slate-800/80 hover:bg-[#111524] hover:border-slate-700 text-slate-300'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <span className="text-[10px] font-black uppercase tracking-wider block opacity-75">{tab.label}</span>
-                              <span className={`text-[10px] block font-semibold mt-0.5 ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
-                                {tab.sub}
-                              </span>
+              {!selectedDepMethod ? (
+                /* Method Selection Layout */
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-1 md:grid-cols-12 min-h-[280px] md:min-h-[380px]">
+                    
+                    {/* Left Sidebar Categories */}
+                    <div className="md:col-span-4 bg-[#0a0d15] p-3 sm:p-4 border-r border-slate-800/60 space-y-2">
+                      {[
+                        { id: 'POPULAR', label: 'POPULAR', sub: '9 methods', bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', activeBg: 'bg-emerald-600 text-white', icons: ['🪙', '⚡', '💳'] },
+                        { id: 'EPAY', label: 'E-PAY', sub: '2 methods', bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', activeBg: 'bg-rose-600 text-white', icons: ['📱', '🔥'] },
+                        { id: 'BANKS', label: 'BANKS', sub: '1 methods', bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20', activeBg: 'bg-blue-600 text-white', icons: ['🏦'] },
+                        { id: 'CRYPTO', label: 'CRYPTO', sub: '18 methods', bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', activeBg: 'bg-amber-600 text-white', icons: ['₿', '♦', '₮'] }
+                      ].map((tab) => {
+                        const isActive = activeDepTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveDepTab(tab.id as any)}
+                            className={`w-full p-2.5 sm:p-3 rounded-xl border text-left transition-all cursor-pointer block select-none ${
+                              isActive 
+                                ? `${tab.activeBg} border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.3)]` 
+                                : 'bg-[#111524]/60 border-slate-800/80 hover:bg-[#111524] hover:border-slate-700 text-slate-300'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[10px] font-black uppercase tracking-wider block opacity-75">{tab.label}</span>
+                                <span className={`text-[10px] block font-semibold mt-0.5 ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
+                                  {tab.sub}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] opacity-80">
+                                {tab.icons.map((ic, i) => <span key={i}>{ic}</span>)}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1 text-[11px] opacity-80">
-                              {tab.icons.map((ic, i) => <span key={i}>{ic}</span>)}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                  {/* Right Content Area */}
-                  <div className="md:col-span-8 p-3.5 sm:p-5 space-y-3 max-h-[340px] md:max-h-[440px] overflow-y-auto custom-scrollbar">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">
-                      {activeDepTab === 'POPULAR' && `Popular in your region (9)`}
-                      {activeDepTab === 'EPAY' && `E-Pay (2)`}
-                      {activeDepTab === 'BANKS' && `Banks (1)`}
-                      {activeDepTab === 'CRYPTO' && `Crypto (18)`}
-                    </h4>
+                    {/* Right Content Area */}
+                    <div className="md:col-span-8 p-4 sm:p-5 space-y-3">
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">
+                        {activeDepTab === 'POPULAR' && `Popular in your region (9)`}
+                        {activeDepTab === 'EPAY' && `E-Pay (2)`}
+                        {activeDepTab === 'BANKS' && `Banks (1)`}
+                        {activeDepTab === 'CRYPTO' && `Crypto (18)`}
+                      </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Popular Methods List */}
-                      {activeDepTab === 'POPULAR' && [
-                        { id: 'binance_pay', name: 'Binance Pay', min: 10, logoBg: 'bg-amber-500/10 text-amber-500' },
-                        { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
-                        { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' },
-                        { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
-                        { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
-                        { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
-                        { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
-                        { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' }
-                      ].reduce((acc: any[], method) => {
-                        if (!lastDepMethodId && method.id === 'binance_pay') {
-                          acc.push({ ...method, id: 'binance_pay_repeat', isLastUsed: true, hasRepeat: true });
-                        }
-                        const isActualLast = lastDepMethodId 
-                          ? (method.id === lastDepMethodId || method.name === lastDepName)
-                          : false;
-                        acc.push({
-                          ...method,
-                          isLastUsed: isActualLast || (!lastDepMethodId && method.id === 'binance_pay_repeat'),
-                          hasRepeat: isActualLast || (!lastDepMethodId && method.id === 'binance_pay_repeat')
-                        });
-                        return acc;
-                      }, []).map((method, idx) => renderDepositMethod(method, idx))}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Popular Methods List */}
+                        {activeDepTab === 'POPULAR' && [
+                          { id: 'binance_pay', name: 'Binance Pay', min: 10, logoBg: 'bg-amber-500/10 text-amber-500' },
+                          { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
+                          { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' },
+                          { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
+                          { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
+                          { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
+                          { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
+                          { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' }
+                        ].reduce((acc: any[], method) => {
+                          if (!lastDepMethodId && method.id === 'binance_pay') {
+                            acc.push({ ...method, id: 'binance_pay_repeat', isLastUsed: true, hasRepeat: true });
+                          }
+                          const isActualLast = lastDepMethodId 
+                            ? (method.id === lastDepMethodId || method.name === lastDepName)
+                            : false;
+                          acc.push({
+                            ...method,
+                            isLastUsed: isActualLast || (!lastDepMethodId && method.id === 'binance_pay_repeat'),
+                            hasRepeat: isActualLast || (!lastDepMethodId && method.id === 'binance_pay_repeat')
+                          });
+                          return acc;
+                        }, []).map((method, idx) => renderDepositMethod(method, idx))}
 
-                      {/* E-Pay Methods List */}
-                      {activeDepTab === 'EPAY' && [
-                        { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
-                        { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' }
-                      ].map((method) => {
-                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
-                        return {
-                          ...method,
-                          isLastUsed: isActualLast,
-                          hasRepeat: isActualLast
-                        };
-                      }).map((method, idx) => renderDepositMethod(method, idx))}
+                        {/* E-Pay Methods List */}
+                        {activeDepTab === 'EPAY' && [
+                          { id: 'bkash_p2c', name: 'Bkash (P2C)', min: 10, logoBg: 'bg-pink-500/10 text-pink-500' },
+                          { id: 'nagad_p2c', name: 'Nagad (P2C)', min: 10, logoBg: 'bg-orange-500/10 text-orange-500' }
+                        ].map((method) => {
+                          const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                          return {
+                            ...method,
+                            isLastUsed: isActualLast,
+                            hasRepeat: isActualLast
+                          };
+                        }).map((method, idx) => renderDepositMethod(method, idx))}
 
-                      {/* Banks List */}
-                      {activeDepTab === 'BANKS' && [
-                        { id: 'mastercard', name: 'Mastercard / Bank', min: 20, logoBg: 'bg-blue-500/10 text-blue-500' }
-                      ].map((method) => {
-                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
-                        return {
-                          ...method,
-                          isLastUsed: isActualLast,
-                          hasRepeat: isActualLast
-                        };
-                      }).map((method, idx) => renderDepositMethod(method, idx))}
+                        {/* Banks List */}
+                        {activeDepTab === 'BANKS' && [
+                          { id: 'mastercard', name: 'Mastercard / Bank', min: 20, logoBg: 'bg-blue-500/10 text-blue-500' }
+                        ].map((method) => {
+                          const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                          return {
+                            ...method,
+                            isLastUsed: isActualLast,
+                            hasRepeat: isActualLast
+                          };
+                        }).map((method, idx) => renderDepositMethod(method, idx))}
 
-                      {/* Crypto List */}
-                      {activeDepTab === 'CRYPTO' && [
-                        { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
-                        { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
-                        { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
-                        { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
-                        { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' },
-                        { id: 'btc', name: 'Bitcoin (BTC)', min: 50, logoBg: 'bg-amber-500/10 text-amber-500' },
-                        { id: 'eth', name: 'Ethereum (ETH)', min: 50, logoBg: 'bg-purple-500/10 text-purple-500' },
-                        { id: 'ltc', name: 'Litecoin (LTC)', min: 10, logoBg: 'bg-slate-400/10 text-slate-300' },
-                        { id: 'xrp', name: 'Ripple (XRP)', min: 10, logoBg: 'bg-indigo-500/10 text-indigo-400' },
-                        { id: 'sol', name: 'Solana (SOL)', min: 20, logoBg: 'bg-pink-500/10 text-pink-500' },
-                        { id: 'ada', name: 'Cardano (ADA)', min: 15, logoBg: 'bg-blue-500/10 text-blue-500' },
-                        { id: 'dot', name: 'Polkadot (DOT)', min: 15, logoBg: 'bg-rose-500/10 text-rose-500' },
-                        { id: 'shib', name: 'Shiba Inu (SHIB)', min: 15, logoBg: 'bg-red-500/10 text-red-400' },
-                        { id: 'matic', name: 'Polygon (MATIC)', min: 15, logoBg: 'bg-violet-500/10 text-violet-400' },
-                        { id: 'atom', name: 'Cosmos (ATOM)', min: 15, logoBg: 'bg-indigo-600/10 text-indigo-300' },
-                        { id: 'link', name: 'Chainlink (LINK)', min: 20, logoBg: 'bg-blue-600/10 text-blue-400' },
-                        { id: 'uni', name: 'Uniswap (UNI)', min: 20, logoBg: 'bg-pink-600/10 text-pink-400' },
-                        { id: 'xlm', name: 'Stellar (XLM)', min: 10, logoBg: 'bg-slate-500/10 text-slate-300' }
-                      ].map((method) => {
-                        const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
-                        return {
-                          ...method,
-                          isLastUsed: isActualLast,
-                          hasRepeat: isActualLast
-                        };
-                      }).map((method, idx) => renderDepositMethod(method, idx))}
+                        {/* Crypto List */}
+                        {activeDepTab === 'CRYPTO' && [
+                          { id: 'usdt_bep20', name: 'USDT (BEP-20)', min: 20, logoBg: 'bg-teal-500/10 text-teal-500' },
+                          { id: 'usdt_trc20', name: 'USDT (TRC-20)', min: 15, logoBg: 'bg-teal-500/10 text-teal-500' },
+                          { id: 'doge', name: 'Dogecoin', min: 15, logoBg: 'bg-yellow-500/10 text-yellow-500' },
+                          { id: 'tron_trx', name: 'Tron (TRX)', min: 15, logoBg: 'bg-red-500/10 text-red-500' },
+                          { id: 'kucoin_pay', name: 'Kucoin Pay', min: 10, logoBg: 'bg-emerald-500/10 text-emerald-500' },
+                          { id: 'btc', name: 'Bitcoin (BTC)', min: 50, logoBg: 'bg-amber-500/10 text-amber-500' },
+                          { id: 'eth', name: 'Ethereum (ETH)', min: 50, logoBg: 'bg-purple-500/10 text-purple-500' },
+                          { id: 'ltc', name: 'Litecoin (LTC)', min: 10, logoBg: 'bg-slate-400/10 text-slate-300' },
+                          { id: 'xrp', name: 'Ripple (XRP)', min: 10, logoBg: 'bg-indigo-500/10 text-indigo-400' },
+                          { id: 'sol', name: 'Solana (SOL)', min: 20, logoBg: 'bg-pink-500/10 text-pink-500' },
+                          { id: 'ada', name: 'Cardano (ADA)', min: 15, logoBg: 'bg-blue-500/10 text-blue-500' },
+                          { id: 'dot', name: 'Polkadot (DOT)', min: 15, logoBg: 'bg-rose-500/10 text-rose-500' },
+                          { id: 'shib', name: 'Shiba Inu (SHIB)', min: 15, logoBg: 'bg-red-500/10 text-red-400' },
+                          { id: 'matic', name: 'Polygon (MATIC)', min: 15, logoBg: 'bg-violet-500/10 text-violet-400' },
+                          { id: 'atom', name: 'Cosmos (ATOM)', min: 15, logoBg: 'bg-indigo-600/10 text-indigo-300' },
+                          { id: 'link', name: 'Chainlink (LINK)', min: 20, logoBg: 'bg-blue-600/10 text-blue-400' },
+                          { id: 'uni', name: 'Uniswap (UNI)', min: 20, logoBg: 'bg-pink-600/10 text-pink-400' },
+                          { id: 'xlm', name: 'Stellar (XLM)', min: 10, logoBg: 'bg-slate-500/10 text-slate-300' }
+                        ].map((method) => {
+                          const isActualLast = lastDepMethodId ? (method.id === lastDepMethodId || method.name === lastDepName) : false;
+                          return {
+                            ...method,
+                            isLastUsed: isActualLast,
+                            hasRepeat: isActualLast
+                          };
+                        }).map((method, idx) => renderDepositMethod(method, idx))}
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : (
                 /* Step 2: Payment input form */
-                <div className="p-6 max-w-md mx-auto space-y-5">
-                  <div className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-800 rounded-xl">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm ${selectedDepMethod.logoBg}`}>
-                      {selectedDepMethod.name.includes('Binance') ? 'B' : selectedDepMethod.name.includes('Bkash') ? 'bK' : selectedDepMethod.name.includes('Nagad') ? 'Ng' : 'C'}
+                <form onSubmit={handleDeposit} className="flex-1 flex flex-col overflow-hidden">
+                  {/* Scrollable Form Body */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-800 rounded-xl">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm ${selectedDepMethod.logoBg}`}>
+                        {selectedDepMethod.name.includes('Binance') ? 'B' : selectedDepMethod.name.includes('Bkash') ? 'bK' : selectedDepMethod.name.includes('Nagad') ? 'Ng' : 'C'}
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-black text-sm text-white">{selectedDepMethod.name}</h4>
+                        <p className="text-xs text-slate-500">Min deposit: {curr.symbol}{Math.round(selectedDepMethod.min * curr.rate)} ({selectedDepMethod.min} USD)</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <h4 className="font-black text-sm text-white">{selectedDepMethod.name}</h4>
-                      <p className="text-xs text-slate-500">Min deposit: {curr.symbol}{Math.round(selectedDepMethod.min * curr.rate)} ({selectedDepMethod.min} USD)</p>
+
+                    {/* Manual Instructions */}
+                    <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-300 space-y-1.5 text-left">
+                      <p className="font-bold uppercase tracking-wider text-[10px]">Payment Instructions:</p>
+                      {selectedDepMethod.name.includes('Bkash') || selectedDepMethod.name.includes('Nagad') ? (
+                        <p>Please cash-out to our official manual agent wallet number: <span className="font-mono text-white font-black underline">01783-999333</span>. Then provide your personal mobile number and the Transaction ID (TxID) below.</p>
+                      ) : selectedDepMethod.name.includes('Binance') ? (
+                        <p>Send simulated funds directly to Binance Pay ID: <span className="font-mono text-white font-black underline">495331860</span>. Input your Binance ID and confirm.</p>
+                      ) : (
+                        <p>Transfer {selectedDepMethod.name} to address: <span className="font-mono text-white font-black underline">TLZqD9q5v8V5Y77Xh88N9</span>. Enter wallet address/hash below to submit.</p>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Manual Instructions */}
-                  <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-300 space-y-1.5 text-left">
-                    <p className="font-bold uppercase tracking-wider text-[10px]">Payment Instructions:</p>
-                    {selectedDepMethod.name.includes('Bkash') || selectedDepMethod.name.includes('Nagad') ? (
-                      <p>Please cash-out to our official manual agent wallet number: <span className="font-mono text-white font-black underline">01783-999333</span>. Then provide your personal mobile number and the Transaction ID (TxID) below.</p>
-                    ) : selectedDepMethod.name.includes('Binance') ? (
-                      <p>Send simulated funds directly to Binance Pay ID: <span className="font-mono text-white font-black underline">495331860</span>. Input your Binance ID and confirm.</p>
-                    ) : (
-                      <p>Transfer {selectedDepMethod.name} to address: <span className="font-mono text-white font-black underline">TLZqD9q5v8V5Y77Xh88N9</span>. Enter wallet address/hash below to submit.</p>
-                    )}
-                  </div>
-
-                  <form onSubmit={handleDeposit} className="space-y-4">
                     {/* Amount */}
                     <div className="space-y-1 text-left">
                       <label className="text-[10px] text-slate-500 uppercase font-black">Amount ({curr.label})</label>
@@ -1772,289 +1774,303 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white font-bold outline-none placeholder-slate-600"
                       />
                     </div>
+                  </div>
 
-                    {/* Action buttons */}
-                    <div className="flex gap-2.5 pt-2">
-                      <button 
-                        type="button" 
-                        onClick={() => setSelectedDepMethod(null)}
-                        className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer text-center"
-                      >
-                        Back
-                      </button>
-                      <button 
-                        type="submit"
-                        disabled={isProcessing}
-                        className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-slate-950 font-black rounded-xl text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <RefreshCw size={13} className="animate-spin" />
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          <span>Deposit</span>
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                  {/* Sticky Footer */}
+                  <div className="p-4 bg-[#0a0d15] border-t border-slate-800/80 shrink-0 flex gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setSelectedDepMethod(null)}
+                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer text-center"
+                    >
+                      Back
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isProcessing}
+                      className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-slate-950 font-black rounded-xl text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <RefreshCw size={13} className="animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <span>Deposit</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
               )}
-              </div>
             </motion.div>
           </div>
         )}
 
         {isWithdrawOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-4xl text-left shadow-2xl relative overflow-hidden max-h-[90vh] md:max-h-[85vh] flex flex-col"
+              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-4xl text-left shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col"
             >
-              {/* Header Close Icon */}
-              <button 
-                onClick={() => setIsWithdrawOpen(false)}
-                className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-white transition-all cursor-pointer z-10"
-              >
-                <X size={18} />
-              </button>
+              {/* Header */}
+              <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
+                <h3 className="text-md sm:text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
+                  <TrendingUp className="text-blue-500" size={18} />
+                  <span>Withdrawal Portal</span>
+                </h3>
+                <button 
+                  onClick={() => setIsWithdrawOpen(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {/* Two Column Layout directly replicated from screenshot 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-12 items-stretch divide-y md:divide-y-0 md:divide-x divide-slate-800/60 divide-dashed">
-                
-                {/* Left Column: Account Details */}
-                <div className="md:col-span-5 p-6 sm:p-8 space-y-6 flex flex-col justify-center bg-[#0a0d15]/60">
-                  <h3 className="text-lg font-black text-white tracking-wide uppercase select-none border-b border-slate-800/80 pb-2">
-                    Account:
-                  </h3>
+              {/* Form wrapping body and sticky footer */}
+              <form onSubmit={handleWithdraw} className="flex-1 flex flex-col overflow-hidden">
+                {/* Scrollable grid content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-1 md:grid-cols-12 items-stretch divide-y md:divide-y-0 md:divide-x divide-slate-800/60 divide-dashed h-full">
+                    
+                    {/* Left Column: Account Details */}
+                    <div className="md:col-span-5 p-5 sm:p-6 space-y-5 flex flex-col justify-center bg-[#0a0d15]/60">
+                      <h3 className="text-sm font-black text-white tracking-wide uppercase select-none border-b border-slate-800/80 pb-2">
+                        Account:
+                      </h3>
 
-                  <div className="space-y-5">
-                    {/* In the account */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider block">
-                        In the account:
-                      </span>
-                      <h4 className="text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
-                        {currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        <span className="text-lg text-slate-400 font-sans ml-1">{curr.symbol}</span>
-                      </h4>
+                      <div className="space-y-4">
+                        {/* In the account */}
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider block">
+                            In the account:
+                          </span>
+                          <h4 className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
+                            {currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="text-sm text-slate-400 font-sans ml-1">{curr.symbol}</span>
+                          </h4>
+                        </div>
+
+                        {/* Available for withdrawal */}
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider block">
+                            Available for withdrawal:
+                          </span>
+                          <h4 className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
+                            {currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="text-sm text-slate-400 font-sans ml-1">{curr.symbol}</span>
+                          </h4>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Available for withdrawal */}
-                    <div className="space-y-1 pt-1">
-                      <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider block">
-                        Available for withdrawal:
-                      </span>
-                      <h4 className="text-3xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
-                        {currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        <span className="text-lg text-slate-400 font-sans ml-1">{curr.symbol}</span>
-                      </h4>
+                    {/* Right Column: Withdrawal form inputs */}
+                    <div className="md:col-span-7 p-5 sm:p-6 space-y-4 text-left">
+                      <h3 className="text-sm font-black text-white tracking-wide uppercase select-none border-b border-slate-800/80 pb-2">
+                        Withdrawal Details:
+                      </h3>
+
+                      <div className="space-y-3">
+                        {/* Amount input */}
+                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
+                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                            Amount
+                          </label>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <input 
+                              type="number"
+                              required
+                              min={10}
+                              value={transAmount}
+                              onChange={(e) => setTransAmount(parseFloat(e.target.value) || 0)}
+                              className="bg-transparent border-none outline-none text-white font-mono font-black text-sm flex-1"
+                            />
+                            <span className="text-xs font-black text-slate-400 font-mono tracking-wider">
+                              {curr.label}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Payment Method Selector */}
+                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
+                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">
+                            Payment method
+                          </label>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1">
+                              <span className="text-[11px]">🪙</span>
+                              <select 
+                                value={paymentChannel}
+                                disabled={!!lastDepName}
+                                onChange={(e) => {
+                                  setPaymentChannel(e.target.value);
+                                  if (e.target.value.includes('BKASH') || e.target.value.includes('NAGAD')) {
+                                    setReceiveType('bKash Personal Number');
+                                  } else {
+                                    setReceiveType('Binance account ID');
+                                  }
+                                }}
+                                className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer disabled:text-slate-400 disabled:cursor-not-allowed"
+                              >
+                                <option value="BINANCE" className="bg-[#111422] text-white font-bold">Binance Pay</option>
+                                <option value="BKASH" className="bg-[#111422] text-white font-bold">bKash (BD Local)</option>
+                                <option value="NAGAD" className="bg-[#111422] text-white font-bold">Nagad (BD Local)</option>
+                                <option value="CRYPTO_USDT" className="bg-[#111422] text-white font-bold">USDT (TRC-20)</option>
+                                <option value="LITECOIN" className="bg-[#111422] text-white font-bold">Litecoin (LTC)</option>
+                              </select>
+                            </div>
+                            {!!lastDepName && (
+                              <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-black uppercase tracking-wide flex items-center gap-1 shrink-0">
+                                <ShieldCheck size={10} />
+                                {lang === 'bn' ? 'ডিপোজিটের সাথে মিল রয়েছে' : 'Matched with deposit'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* First name & Last name */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* First name */}
+                          <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
+                            <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                              First name
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <input 
+                                type="text"
+                                required
+                                readOnly={currentUser?.kycStatus === 'verified'}
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
+                              />
+                              {currentUser?.kycStatus === 'verified' && (
+                                <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Last name */}
+                          <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
+                            <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                              Last name
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <input 
+                                type="text"
+                                required
+                                readOnly={currentUser?.kycStatus === 'verified'}
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
+                              />
+                              {currentUser?.kycStatus === 'verified' && (
+                                <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Receive type */}
+                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
+                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">
+                            Receive type
+                          </label>
+                          <select 
+                            value={receiveType}
+                            onChange={(e) => setReceiveType(e.target.value)}
+                            className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
+                          >
+                            <option value="Binance account ID" className="bg-[#111422] text-white font-bold">Binance account ID</option>
+                            <option value="Binance Pay ID" className="bg-[#111422] text-white font-bold">Binance Pay ID</option>
+                            <option value="bKash Personal Number" className="bg-[#111422] text-white font-bold">bKash Personal Number</option>
+                            <option value="Nagad Personal Number" className="bg-[#111422] text-white font-bold">Nagad Personal Number</option>
+                            <option value="TRC20 Wallet Address" className="bg-[#111422] text-white font-bold">TRC20 Wallet Address</option>
+                          </select>
+                        </div>
+
+                        {/* Binance account ID (or selected Receive ID) */}
+                        <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
+                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                            {receiveType}
+                          </label>
+                          <input 
+                            type="text"
+                            required
+                            value={binanceAccountId}
+                            onChange={(e) => setBinanceAccountId(e.target.value)}
+                            className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
+                          />
+                        </div>
+
+                        {/* Red validation help text */}
+                        {receiveType === 'Binance account ID' && (binanceAccountId.length < 8 || binanceAccountId.length > 10 || !/^\d+$/.test(binanceAccountId)) && (
+                          <p className="text-[10px] text-red-500 font-bold leading-tight">
+                            Enter a Binance account number consisting of 8 to 10 digits.
+                          </p>
+                        )}
+
+                        {receiveType.includes('bKash') && (binanceAccountId.length !== 11 || !/^\d+$/.test(binanceAccountId)) && (
+                          <p className="text-[10px] text-red-500 font-bold leading-tight">
+                            Enter a valid 11-digit mobile number.
+                          </p>
+                        )}
+                      </div>
                     </div>
+
                   </div>
                 </div>
 
-                {/* Right Column: Withdrawal form */}
-                <div className="md:col-span-7 p-6 sm:p-8 space-y-5">
-                  <h3 className="text-lg font-black text-white tracking-wide uppercase select-none border-b border-slate-800/80 pb-2">
-                    Withdrawal:
-                  </h3>
-
-                  <form onSubmit={handleWithdraw} className="space-y-2.5 text-left">
-                    {/* Amount input */}
-                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                        Amount
-                      </label>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <input 
-                          type="number"
-                          required
-                          min={10}
-                          value={transAmount}
-                          onChange={(e) => setTransAmount(parseFloat(e.target.value) || 0)}
-                          className="bg-transparent border-none outline-none text-white font-mono font-black text-sm flex-1"
-                        />
-                        <span className="text-xs font-black text-slate-400 font-mono tracking-wider">
-                          {curr.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Payment Method Selector with Binance Icon as in screenshot */}
-                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">
-                        Payment method
-                      </label>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          <span className="text-[11px]">🪙</span>
-                          <select 
-                            value={paymentChannel}
-                            disabled={!!lastDepName}
-                            onChange={(e) => {
-                              setPaymentChannel(e.target.value);
-                              if (e.target.value.includes('BKASH') || e.target.value.includes('NAGAD')) {
-                                setReceiveType('bKash Personal Number');
-                              } else {
-                                setReceiveType('Binance account ID');
-                              }
-                            }}
-                            className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer disabled:text-slate-400 disabled:cursor-not-allowed"
-                          >
-                            <option value="BINANCE" className="bg-[#111422] text-white font-bold">Binance Pay</option>
-                            <option value="BKASH" className="bg-[#111422] text-white font-bold">bKash (BD Local)</option>
-                            <option value="NAGAD" className="bg-[#111422] text-white font-bold">Nagad (BD Local)</option>
-                            <option value="CRYPTO_USDT" className="bg-[#111422] text-white font-bold">USDT (TRC-20)</option>
-                            <option value="LITECOIN" className="bg-[#111422] text-white font-bold">Litecoin (LTC)</option>
-                          </select>
-                        </div>
-                        {!!lastDepName && (
-                          <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-black uppercase tracking-wide flex items-center gap-1 shrink-0">
-                            <ShieldCheck size={10} />
-                            {lang === 'bn' ? 'ডিপোজিটের সাথে মিল রয়েছে' : 'Matched with deposit'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* First name & Last name */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* First name */}
-                      <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                        <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                          First name
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <input 
-                            type="text"
-                            required
-                            readOnly={currentUser?.kycStatus === 'verified'}
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
-                          />
-                          {currentUser?.kycStatus === 'verified' && (
-                            <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Last name */}
-                      <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                        <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                          Last name
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <input 
-                            type="text"
-                            required
-                            readOnly={currentUser?.kycStatus === 'verified'}
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 read-only:text-slate-400"
-                          />
-                          {currentUser?.kycStatus === 'verified' && (
-                            <ShieldCheck size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Receive type */}
-                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">
-                        Receive type
-                      </label>
-                      <select 
-                        value={receiveType}
-                        onChange={(e) => setReceiveType(e.target.value)}
-                        className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
-                      >
-                        <option value="Binance account ID" className="bg-[#111422] text-white font-bold">Binance account ID</option>
-                        <option value="Binance Pay ID" className="bg-[#111422] text-white font-bold">Binance Pay ID</option>
-                        <option value="bKash Personal Number" className="bg-[#111422] text-white font-bold">bKash Personal Number</option>
-                        <option value="Nagad Personal Number" className="bg-[#111422] text-white font-bold">Nagad Personal Number</option>
-                        <option value="TRC20 Wallet Address" className="bg-[#111422] text-white font-bold">TRC20 Wallet Address</option>
-                      </select>
-                    </div>
-
-                    {/* Binance account ID (or selected Receive ID) */}
-                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5 focus-within:border-blue-500 transition-all">
-                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                        {receiveType}
-                      </label>
-                      <input 
-                        type="text"
-                        required
-                        value={binanceAccountId}
-                        onChange={(e) => setBinanceAccountId(e.target.value)}
-                        className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
-                      />
-                    </div>
-
-                    {/* Red validation help text replicated exactly from Screenshot 2 */}
-                    {receiveType === 'Binance account ID' && (binanceAccountId.length < 8 || binanceAccountId.length > 10 || !/^\d+$/.test(binanceAccountId)) && (
-                      <p className="text-[10px] text-red-500 font-bold leading-tight">
-                        Enter a Binance account number consisting of 8 to 10 digits.
-                      </p>
+                {/* Sticky bottom footer containing action buttons */}
+                <div className="p-4 bg-[#0a0d15] border-t border-slate-800/80 shrink-0 flex gap-3 justify-end">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsWithdrawOpen(false)}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="px-6 py-2.5 bg-[#0070f3] hover:bg-blue-500 disabled:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(0,112,243,0.3)] active:scale-95"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Confirm</span>
+                        <ArrowRight size={13} />
+                      </>
                     )}
-
-                    {receiveType.includes('bKash') && (binanceAccountId.length !== 11 || !/^\d+$/.test(binanceAccountId)) && (
-                      <p className="text-[10px] text-red-500 font-bold leading-tight">
-                        Enter a valid 11-digit mobile number.
-                      </p>
-                    )}
-
-                    {/* Confirm Blue Button with Arrow directly replicated from Screenshot 2 */}
-                    <div className="pt-3">
-                      <button
-                        type="submit"
-                        disabled={isProcessing}
-                        className="w-full sm:w-auto px-6 py-3 bg-[#0070f3] hover:bg-blue-500 disabled:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(0,112,243,0.3)] active:scale-95"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <RefreshCw size={13} className="animate-spin" />
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Confirm</span>
-                            <ArrowRight size={13} />
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                  </form>
+                  </button>
                 </div>
-
-              </div>
-              </div>
+              </form>
             </motion.div>
           </div>
         )}
 
         {isKycModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-xl text-left shadow-2xl relative overflow-hidden max-h-[90vh] md:max-h-[85vh] flex flex-col"
+              className="bg-[#111422] border border-slate-800/80 rounded-2xl w-full max-w-xl text-left shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col"
             >
               {/* Header */}
-              <div className="p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
-                <h3 className="text-md font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
+              <div className="p-4 sm:p-5 flex justify-between items-center relative border-b border-dashed border-slate-800 shrink-0">
+                <h3 className="text-md sm:text-lg font-black text-white tracking-wide uppercase flex items-center gap-2 select-none">
                   <ShieldCheck className="text-blue-500" size={18} />
                   <span>{lang === 'bn' ? 'কেওয়াইসি অ্যাকাউন্ট ভেরিফিকেশন' : 'KYC Account Verification'}</span>
                 </h3>
                 <button 
                   onClick={() => setIsKycModalOpen(false)}
-                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-white transition-all cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -2076,180 +2092,193 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                 className="hidden"
               />
 
-              {/* Form */}
-              <form onSubmit={handleKycSubmit} className="p-4 sm:p-5 space-y-3 text-left flex-1 overflow-y-auto custom-scrollbar">
-                {kycError && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold flex items-center gap-2">
-                    <AlertCircle size={14} />
-                    <span>{kycError}</span>
-                  </div>
-                )}
+              {/* Form wrapping body and footer */}
+              <form onSubmit={handleKycSubmit} className="flex-1 flex flex-col overflow-hidden">
+                {/* Scrollable Form Body */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 text-left">
+                  {kycError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold flex items-center gap-2">
+                      <AlertCircle size={14} />
+                      <span>{kycError}</span>
+                    </div>
+                  )}
 
-                <div className="space-y-2.5">
-                  {/* ID Document Type */}
-                  <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
-                    <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">
-                      {lang === 'bn' ? 'ডকুমেন্ট টাইপ' : 'Document Type'}
-                    </label>
-                    <select 
-                      value={kycForm.documentType}
-                      onChange={(e) => setKycForm(p => ({ ...p, documentType: e.target.value as any }))}
-                      className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
-                    >
-                      <option value="NID" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'জাতীয় পরিচয়পত্র (NID Card)' : 'National ID Card (NID)'}</option>
-                      <option value="Passport" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'পাসপোর্ট (Passport)' : 'Passport'}</option>
-                      <option value="Driving License" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'ড্রাইভিং লাইসেন্স (Driving License)' : 'Driving License'}</option>
-                    </select>
-                  </div>
-
-                  {/* Full Name */}
-                  <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
-                    <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                      {lang === 'bn' ? 'পূর্ণ নাম (NID অনুযায়ী)' : 'Full Name (As on ID)'}
-                    </label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="e.g. MD BAREK"
-                      value={kycForm.fullName}
-                      onChange={(e) => setKycForm(p => ({ ...p, fullName: e.target.value }))}
-                      className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
-                    />
-                  </div>
-
-                  {/* Document Number */}
-                  <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
-                    <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                      {lang === 'bn' ? 'ডকুমেন্ট নম্বর / আইডি নম্বর' : 'Document Number / ID Number'}
-                    </label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="e.g. 5542389100"
-                      value={kycForm.documentNumber}
-                      onChange={(e) => setKycForm(p => ({ ...p, documentNumber: e.target.value }))}
-                      className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
-                    />
-                  </div>
-
-                  {/* Date of Birth */}
-                  <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
-                    <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
-                      {lang === 'bn' ? 'জন্ম তারিখ' : 'Date of Birth'}
-                    </label>
-                    <input 
-                      type="date"
-                      required
-                      value={kycForm.dob}
-                      onChange={(e) => setKycForm(p => ({ ...p, dob: e.target.value }))}
-                      style={{ colorScheme: 'dark' }}
-                      className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 cursor-pointer"
-                    />
-                  </div>
-
-                  {/* ID Front & Back Photo Upload (Drag & Drop Real File Upload) */}
-                  <div className="grid grid-cols-2 gap-3 pt-0.5">
-                    {/* Front Side */}
-                    <div 
-                      className={`border border-dashed rounded-xl p-2.5 text-center cursor-pointer flex flex-col justify-center items-center gap-1.5 min-h-[95px] transition-all select-none ${
-                        isFrontDragging 
-                          ? 'border-blue-500 bg-blue-500/10' 
-                          : kycForm.frontImage 
-                            ? 'border-emerald-800 bg-[#0c121e]/40' 
-                            : 'border-slate-800 hover:border-slate-700 bg-[#0c0e18]'
-                      }`}
-                      onClick={() => document.getElementById('kyc-front-upload')?.click()}
-                      onDragOver={handleDragOver}
-                      onDragEnter={() => setIsFrontDragging(true)}
-                      onDragLeave={() => setIsFrontDragging(false)}
-                      onDrop={handleFrontDrop}
-                    >
-                      <span className="text-[9px] text-slate-500 font-bold uppercase block">
-                        {lang === 'bn' ? 'সামনের অংশ আপলোড' : 'Front Side Image'}
-                      </span>
-                      {kycForm.frontImage ? (
-                        <div className="relative w-full h-[60px] rounded-lg overflow-hidden flex items-center justify-center bg-slate-900 group">
-                          <img 
-                            src={kycForm.frontImage} 
-                            alt="ID Front" 
-                            className="object-cover w-full h-full" 
-                            referrerPolicy="no-referrer" 
-                          />
-                          <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                            <CheckCircle2 className="text-emerald-500" size={14} />
-                            <span className="text-[7px] text-white font-bold uppercase">
-                              {lang === 'bn' ? 'পরিবর্তন করুন' : 'Change Image'}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="text-slate-400 text-[10px] font-bold">+ {lang === 'bn' ? 'ফাইল নির্বাচন' : 'Choose File'}</div>
-                          <span className="text-[7px] text-slate-600 uppercase font-mono">JPG, PNG (MAX 5MB)</span>
-                        </div>
-                      )}
+                  <div className="space-y-3.5">
+                    {/* ID Document Type */}
+                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
+                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">
+                        {lang === 'bn' ? 'ডকুমেন্ট টাইপ' : 'Document Type'}
+                      </label>
+                      <select 
+                        value={kycForm.documentType}
+                        onChange={(e) => setKycForm(p => ({ ...p, documentType: e.target.value as any }))}
+                        className="w-full bg-transparent border-none outline-none text-xs text-white font-bold cursor-pointer"
+                      >
+                        <option value="NID" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'জাতীয় পরিচয়পত্র (NID Card)' : 'National ID Card (NID)'}</option>
+                        <option value="Passport" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'পাসপোর্ট (Passport)' : 'Passport'}</option>
+                        <option value="Driving License" className="bg-[#111422] text-white font-bold">{lang === 'bn' ? 'ড্রাইভিং লাইসেন্স (Driving License)' : 'Driving License'}</option>
+                      </select>
                     </div>
 
-                    {/* Back Side */}
-                    <div 
-                      className={`border border-dashed rounded-xl p-2.5 text-center cursor-pointer flex flex-col justify-center items-center gap-1.5 min-h-[95px] transition-all select-none ${
-                        isBackDragging 
-                          ? 'border-blue-500 bg-blue-500/10' 
-                          : kycForm.backImage 
-                            ? 'border-emerald-800 bg-[#0c121e]/40' 
-                            : 'border-slate-800 hover:border-slate-700 bg-[#0c0e18]'
-                      }`}
-                      onClick={() => document.getElementById('kyc-back-upload')?.click()}
-                      onDragOver={handleDragOver}
-                      onDragEnter={() => setIsBackDragging(true)}
-                      onDragLeave={() => setIsBackDragging(false)}
-                      onDrop={handleBackDrop}
-                    >
-                      <span className="text-[9px] text-slate-500 font-bold uppercase block">
-                        {lang === 'bn' ? 'পেছনের অংশ আপলোড' : 'Back Side Image'}
-                      </span>
-                      {kycForm.backImage ? (
-                        <div className="relative w-full h-[60px] rounded-lg overflow-hidden flex items-center justify-center bg-slate-900 group">
-                          <img 
-                            src={kycForm.backImage} 
-                            alt="ID Back" 
-                            className="object-cover w-full h-full" 
-                            referrerPolicy="no-referrer" 
-                          />
-                          <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                            <CheckCircle2 className="text-emerald-500" size={14} />
-                            <span className="text-[7px] text-white font-bold uppercase">
-                              {lang === 'bn' ? 'পরিবর্তন করুন' : 'Change Image'}
-                            </span>
+                    {/* Full Name */}
+                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
+                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                        {lang === 'bn' ? 'পূর্ণ নাম (NID অনুযায়ী)' : 'Full Name (As on ID)'}
+                      </label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. MD BAREK"
+                        value={kycForm.fullName}
+                        onChange={(e) => setKycForm(p => ({ ...p, fullName: e.target.value }))}
+                        className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
+                      />
+                    </div>
+
+                    {/* Document Number */}
+                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
+                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                        {lang === 'bn' ? 'ডকুমেন্ট নম্বর / আইডি নম্বর' : 'Document Number / ID Number'}
+                      </label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. 5542389100"
+                        value={kycForm.documentNumber}
+                        onChange={(e) => setKycForm(p => ({ ...p, documentNumber: e.target.value }))}
+                        className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5"
+                      />
+                    </div>
+
+                    {/* Date of Birth */}
+                    <div className="relative border border-slate-800 rounded-xl bg-[#111625] px-3 py-1.5">
+                      <label className="text-[9px] text-slate-500 uppercase font-bold tracking-wider block">
+                        {lang === 'bn' ? 'জন্ম তারিখ' : 'Date of Birth'}
+                      </label>
+                      <input 
+                        type="date"
+                        required
+                        value={kycForm.dob}
+                        onChange={(e) => setKycForm(p => ({ ...p, dob: e.target.value }))}
+                        style={{ colorScheme: 'dark' }}
+                        className="w-full bg-transparent border-none outline-none text-white font-bold text-xs mt-0.5 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* ID Front & Back Photo Upload */}
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      {/* Front Side */}
+                      <div 
+                        className={`border border-dashed rounded-xl p-3 text-center cursor-pointer flex flex-col justify-center items-center gap-1.5 min-h-[100px] transition-all select-none ${
+                          isFrontDragging 
+                            ? 'border-blue-500 bg-blue-500/10' 
+                            : kycForm.frontImage 
+                              ? 'border-emerald-800 bg-[#0c121e]/40' 
+                              : 'border-slate-800 hover:border-slate-700 bg-[#0c0e18]'
+                        }`}
+                        onClick={() => document.getElementById('kyc-front-upload')?.click()}
+                        onDragOver={handleDragOver}
+                        onDragEnter={() => setIsFrontDragging(true)}
+                        onDragLeave={() => setIsFrontDragging(false)}
+                        onDrop={handleFrontDrop}
+                      >
+                        <span className="text-[9px] text-slate-500 font-bold uppercase block">
+                          {lang === 'bn' ? 'সামনের অংশ আপলোড' : 'Front Side Image'}
+                        </span>
+                        {kycForm.frontImage ? (
+                          <div className="relative w-full h-[65px] rounded-lg overflow-hidden flex items-center justify-center bg-slate-900 group">
+                            <img 
+                              src={kycForm.frontImage} 
+                              alt="ID Front" 
+                              className="object-cover w-full h-full" 
+                              referrerPolicy="no-referrer" 
+                            />
+                            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                              <CheckCircle2 className="text-emerald-500" size={14} />
+                              <span className="text-[7px] text-white font-bold uppercase">
+                                {lang === 'bn' ? 'পরিবর্তন করুন' : 'Change Image'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="text-slate-400 text-[10px] font-bold">+ {lang === 'bn' ? 'ফাইল নির্বাচন' : 'Choose File'}</div>
-                          <span className="text-[7px] text-slate-600 uppercase font-mono">JPG, PNG (MAX 5MB)</span>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="text-slate-400 text-[10px] font-bold">+ {lang === 'bn' ? 'ফাইল নির্বাচন' : 'Choose File'}</div>
+                            <span className="text-[7px] text-slate-600 uppercase font-mono">JPG, PNG (MAX 5MB)</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Back Side */}
+                      <div 
+                        className={`border border-dashed rounded-xl p-3 text-center cursor-pointer flex flex-col justify-center items-center gap-1.5 min-h-[100px] transition-all select-none ${
+                          isBackDragging 
+                            ? 'border-blue-500 bg-blue-500/10' 
+                            : kycForm.backImage 
+                              ? 'border-emerald-800 bg-[#0c121e]/40' 
+                              : 'border-slate-800 hover:border-slate-700 bg-[#0c0e18]'
+                        }`}
+                        onClick={() => document.getElementById('kyc-back-upload')?.click()}
+                        onDragOver={handleDragOver}
+                        onDragEnter={() => setIsBackDragging(true)}
+                        onDragLeave={() => setIsBackDragging(false)}
+                        onDrop={handleBackDrop}
+                      >
+                        <span className="text-[9px] text-slate-500 font-bold uppercase block">
+                          {lang === 'bn' ? 'পেছনের অংশ আপলোড' : 'Back Side Image'}
+                        </span>
+                        {kycForm.backImage ? (
+                          <div className="relative w-full h-[65px] rounded-lg overflow-hidden flex items-center justify-center bg-slate-900 group">
+                            <img 
+                              src={kycForm.backImage} 
+                              alt="ID Back" 
+                              className="object-cover w-full h-full" 
+                              referrerPolicy="no-referrer" 
+                            />
+                            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                              <CheckCircle2 className="text-emerald-500" size={14} />
+                              <span className="text-[7px] text-white font-bold uppercase">
+                                {lang === 'bn' ? 'পরিবর্তন করুন' : 'Change Image'}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="text-slate-400 text-[10px] font-bold">+ {lang === 'bn' ? 'ফাইল নির্বাচন' : 'Choose File'}</div>
+                            <span className="text-[7px] text-slate-600 uppercase font-mono">JPG, PNG (MAX 5MB)</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isKycSubmitting}
-                  className="w-full mt-2.5 py-2 px-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:brightness-110 disabled:bg-blue-800 text-white font-black uppercase tracking-wider text-[11px] rounded-xl transition-all text-center cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-blue-500/20"
-                >
-                  {isKycSubmitting ? (
-                    <>
-                      <RefreshCw size={13} className="animate-spin" />
-                      <span>{lang === 'bn' ? 'সাবমিট করা হচ্ছে...' : 'Submitting...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{lang === 'bn' ? 'পর্যালোচনার জন্য সাবমিট করুন' : 'Submit for Verification'}</span>
-                      <ArrowRight size={13} />
-                    </>
-                  )}
-                </button>
+                {/* Sticky bottom footer */}
+                <div className="p-4 bg-[#0a0d15] border-t border-slate-800/80 shrink-0 flex gap-3 justify-end">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsKycModalOpen(false)}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isKycSubmitting}
+                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:brightness-110 disabled:bg-blue-800 text-white font-black uppercase tracking-wider text-xs rounded-xl transition-all text-center cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-blue-500/20"
+                  >
+                    {isKycSubmitting ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>{lang === 'bn' ? 'সাবমিট করা হচ্ছে...' : 'Submitting...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{lang === 'bn' ? 'ভেরিফিকেশনের জন্য সাবমিট করুন' : 'Submit for Verification'}</span>
+                        <ArrowRight size={13} />
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
@@ -2257,7 +2286,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
       </AnimatePresence>
 
       {/* Live Interactive ROI Calculator Box */}
-      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#090c13] relative overflow-hidden shadow-2xl">
+      <div id="roi-calculator-box" className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#090c13] relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
@@ -2383,78 +2412,238 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
       </div>
 
       {/* Display Cards of Official Investment Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {INVESTMENT_PLANS.map((plan) => {
-          const IconComponent = plan.icon;
-          const min = Math.round(plan.minAmount * curr.rate);
-          const max = Math.round(plan.maxAmount * curr.rate);
+      <div className="space-y-4 text-left">
+        <div className="flex items-center gap-2 px-1">
+          <Sparkles className="text-amber-400 animate-pulse" size={16} />
+          <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
+            {lang === 'bn' ? 'সুপারচার্জড ভিআইপি ইনভেস্টমেন্ট নোডস' : 'SUPERCHARGED VIP INVESTMENT NODES'}
+          </h2>
+        </div>
 
-          return (
-            <div
-              key={plan.id}
-              className={`relative overflow-hidden rounded-2xl sm:rounded-3xl border p-5 sm:p-6 bg-gradient-to-b ${plan.gradient} ${plan.glowColor} transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between gap-5 group text-left`}
-            >
-              <div className="space-y-4">
-                {/* Top Header Row */}
-                <div className="flex items-start justify-between">
-                  <div className={`p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform`}>
-                    <IconComponent size={20} />
-                  </div>
-                  <span className={`px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider rounded-full border ${plan.badgeColor}`}>
-                    {getPlanTag(plan, lang)}
-                  </span>
-                </div>
+        {/* Global Embedded Styles for Futuristic Theme Animations */}
+        <style>{`
+          @keyframes cyber-scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+          }
+          @keyframes cyber-grid {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 20px; }
+          }
+          @keyframes float-slow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+          }
+          .cyber-card {
+            background-image: 
+              radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.03) 0, transparent 50%),
+              radial-gradient(at 50% 0%, rgba(255, 255, 255, 0.02) 0, transparent 50%),
+              linear-gradient(to bottom, #0d101e 0%, #060812 100%);
+            background-size: 100% 100%;
+            position: relative;
+          }
+          .cyber-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 0.15;
+            z-index: 1;
+          }
+          .cyber-card:hover::before {
+            animation: cyber-grid 4s linear infinite;
+            opacity: 0.25;
+          }
+          .cyber-glow-amber {
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.03), inset 0 0 12px rgba(245, 158, 11, 0.05);
+          }
+          .cyber-glow-amber:hover {
+            box-shadow: 0 0 40px rgba(245, 158, 11, 0.18), inset 0 0 16px rgba(245, 158, 11, 0.08);
+          }
+          .cyber-glow-blue {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.03), inset 0 0 12px rgba(59, 130, 246, 0.05);
+          }
+          .cyber-glow-blue:hover {
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.18), inset 0 0 16px rgba(59, 130, 246, 0.08);
+          }
+          .cyber-glow-purple {
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.03), inset 0 0 12px rgba(168, 85, 247, 0.05);
+          }
+          .cyber-glow-purple:hover {
+            box-shadow: 0 0 40px rgba(168, 85, 247, 0.18), inset 0 0 16px rgba(168, 85, 247, 0.08);
+          }
+          .cyber-glow-slate {
+            box-shadow: 0 0 30px rgba(148, 163, 184, 0.03), inset 0 0 12px rgba(148, 163, 184, 0.05);
+          }
+          .cyber-glow-slate:hover {
+            box-shadow: 0 0 40px rgba(148, 163, 184, 0.18), inset 0 0 16px rgba(148, 163, 184, 0.08);
+          }
+        `}</style>
 
-                {/* Yield details */}
-                <div className="space-y-1">
-                  <h3 className="font-black text-lg sm:text-xl text-white tracking-tight leading-none">
-                    {getPlanName(plan, lang)}
-                  </h3>
-                  <p className="text-slate-400 text-[11px] leading-relaxed font-bold">
-                    {t.durationLabel}: {plan.periodDays} {t.daysLabel}
-                  </p>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {INVESTMENT_PLANS.map((plan) => {
+            const IconComponent = plan.icon;
+            const min = Math.round(plan.minAmount * curr.rate);
+            const max = Math.round(plan.maxAmount * curr.rate);
 
-                {/* Large Daily profit ROI display */}
-                <div className="py-2.5 border-y border-slate-800/80 space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black block">GUARANTEED ROI</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">{plan.dailyRoi}%</span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">/ {lang === 'ar' ? 'يومي' : lang === 'bn' ? 'প্রতিদিন' : 'Daily'}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-bold font-mono">
-                    {curr.symbol}{min.toLocaleString()} - {curr.symbol}{max.toLocaleString()}
-                  </div>
-                </div>
+            // Determine custom neon color themes for premium cyber layout
+            let neonColor = "border-slate-800 text-slate-400 group-hover:border-slate-600";
+            let lineGlow = "bg-slate-500/20";
+            let customGlowClass = "cyber-glow-slate";
+            let iconBoxBg = "bg-slate-950 border-slate-800 text-slate-300 group-hover:text-white";
+            let graphColor = "#64748b";
 
-                {/* Feature Bullet checkmarks */}
-                <ul className="space-y-2">
-                  {getPlanFeatures(plan, lang).map((feat, i) => (
-                    <li key={i} className="flex gap-2 items-start text-[11px] text-slate-300 leading-relaxed font-medium select-none">
-                      <CheckCircle2 size={13} className="text-amber-500 shrink-0 mt-0.5" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            if (plan.id === 'standard') {
+              neonColor = "border-amber-500/20 text-amber-500 group-hover:border-amber-500/50";
+              lineGlow = "bg-amber-500/20";
+              customGlowClass = "cyber-glow-amber";
+              iconBoxBg = "bg-slate-950 border-amber-950 text-amber-400 group-hover:text-amber-300";
+              graphColor = "#f59e0b";
+            } else if (plan.id === 'premium') {
+              neonColor = "border-blue-500/20 text-blue-500 group-hover:border-blue-500/50";
+              lineGlow = "bg-blue-500/20";
+              customGlowClass = "cyber-glow-blue";
+              iconBoxBg = "bg-slate-950 border-blue-950 text-blue-400 group-hover:text-blue-300";
+              graphColor = "#3b82f6";
+            } else if (plan.id === 'ultimate') {
+              neonColor = "border-purple-500/20 text-purple-500 group-hover:border-purple-500/50";
+              lineGlow = "bg-purple-500/20";
+              customGlowClass = "cyber-glow-purple";
+              iconBoxBg = "bg-slate-950 border-purple-950 text-purple-400 group-hover:text-purple-300";
+              graphColor = "#a855f7";
+            }
 
-              <button
-                onClick={() => {
-                  setCalcPlan(plan.id);
-                  setCalcAmount(min);
-                  // scroll beautifully to ROI calc
-                  window.scrollTo({ top: 300, behavior: 'smooth' });
-                }}
-                className="w-full py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer text-center group active:scale-95"
+            return (
+              <div
+                key={plan.id}
+                className={`cyber-card relative overflow-hidden rounded-3xl border ${neonColor} p-5 sm:p-6 transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between gap-4.5 group text-left ${customGlowClass}`}
               >
-                <span className="group-hover:text-amber-400 transition-colors flex items-center justify-center gap-1">
-                  {t.selectPlan}
-                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                </span>
-              </button>
-            </div>
-          );
-        })}
+                {/* Neon Top Bar Accent */}
+                <div className={`absolute top-0 left-0 right-0 h-1 ${lineGlow} opacity-60 group-hover:opacity-100 transition-opacity`} />
+
+                {/* Cyber Scanner Animated Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent -translate-y-full group-hover:animate-[cyber-scan_2s_linear_infinite] pointer-events-none z-10" />
+
+                <div className="space-y-4 z-10">
+                  {/* Top Header Row */}
+                  <div className="flex items-start justify-between">
+                    <div className={`p-2.5 rounded-2xl border ${iconBoxBg} flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-lg`}>
+                      <IconComponent size={18} className="animate-pulse" />
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider rounded-lg border ${plan.badgeColor} shadow-inner`}>
+                      {getPlanTag(plan, lang)}
+                    </span>
+                  </div>
+
+                  {/* Name and Duration */}
+                  <div className="space-y-1">
+                    <h3 className="font-black text-base sm:text-lg text-white tracking-wide uppercase group-hover:text-white transition-colors flex items-center gap-1">
+                      <span>{getPlanName(plan, lang)}</span>
+                    </h3>
+                    <p className="text-slate-500 text-[10px] uppercase font-black tracking-wider flex items-center gap-1.5">
+                      <Clock size={11} className="text-slate-600" />
+                      <span>{t.durationLabel}: {plan.periodDays} {t.daysLabel}</span>
+                    </p>
+                  </div>
+
+                  {/* High Tech Price and ROI Box */}
+                  <div className="py-3 px-3.5 bg-slate-950/70 border border-slate-900/80 rounded-2xl space-y-1.5 relative overflow-hidden">
+                    <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-500/80 animate-ping" />
+                    
+                    <span className="text-[8px] text-slate-500 uppercase tracking-widest font-black block">AUTOMATED ALGORITHMIC YIELD</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-black text-white tracking-tight font-mono">
+                        {plan.dailyRoi}%
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase">/ {lang === 'ar' ? 'يومي' : lang === 'bn' ? 'প্রতিদিন' : 'Daily'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono pt-1.5 border-t border-slate-900/60 font-bold">
+                      <span>MIN: {curr.symbol}{min.toLocaleString()}</span>
+                      <span>MAX: {curr.symbol}{max.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Animated Simulated Graph Line SVG to make it extremely alive and distinctive! */}
+                  <div className="h-10 w-full flex items-end justify-center pt-2 select-none relative opacity-70 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id={`gradient-${plan.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={graphColor} stopOpacity="0.25" />
+                          <stop offset="100%" stopColor={graphColor} stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d={
+                          plan.id === 'starter' 
+                            ? "M 0 25 Q 25 22 50 18 T 100 10" 
+                            : plan.id === 'standard' 
+                            ? "M 0 26 Q 25 20 50 12 T 100 5" 
+                            : plan.id === 'premium'
+                            ? "M 0 28 T 25 18 T 50 10 T 75 8 T 100 3"
+                            : "M 0 29 T 20 22 T 40 12 T 60 8 T 80 4 T 100 2"
+                        }
+                        fill="none"
+                        stroke={graphColor}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        className="transition-all duration-500"
+                      />
+                      <path
+                        d={
+                          plan.id === 'starter' 
+                            ? "M 0 25 Q 25 22 50 18 T 100 10 L 100 30 L 0 30 Z" 
+                            : plan.id === 'standard' 
+                            ? "M 0 26 Q 25 20 50 12 T 100 5 L 100 30 L 0 30 Z" 
+                            : plan.id === 'premium'
+                            ? "M 0 28 T 25 18 T 50 10 T 75 8 T 100 3 L 100 30 L 0 30 Z"
+                            : "M 0 29 T 20 22 T 40 12 T 60 8 T 80 4 T 100 2 L 100 30 L 0 30 Z"
+                        }
+                        fill={`url(#gradient-${plan.id})`}
+                        className="transition-all duration-500"
+                      />
+                      {/* Pulse point at end */}
+                      <circle cx="100" cy={plan.id === 'starter' ? "10" : plan.id === 'standard' ? "5" : plan.id === 'premium' ? "3" : "2"} r="3" fill={graphColor} />
+                    </svg>
+                  </div>
+
+                  {/* Bullet checkmarks list with custom styling */}
+                  <ul className="space-y-1.5 pt-1">
+                    {getPlanFeatures(plan, lang).map((feat, i) => (
+                      <li key={i} className="flex gap-2 items-start text-[10.5px] text-slate-300 leading-relaxed font-semibold select-none">
+                        <CheckCircle2 size={12} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setCalcPlan(plan.id);
+                    setCalcAmount(min);
+                    // scroll beautifully to ROI calc
+                    const element = document.getElementById('roi-calculator-box');
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                      window.scrollTo({ top: 300, behavior: 'smooth' });
+                    }
+                  }}
+                  className="w-full mt-2.5 py-2.5 bg-slate-950/90 hover:bg-slate-900 border border-slate-800 hover:border-slate-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer text-center group z-10 active:scale-95 shadow-lg flex items-center justify-center gap-1.5"
+                >
+                  <span className="group-hover:text-emerald-400 transition-colors flex items-center justify-center gap-1">
+                    {t.selectPlan}
+                    <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Active simulated portfolios table list */}
