@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, getDocFromServer, getDocs, collection, deleteDoc } from 'firebase/firestore';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -91,14 +91,24 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
     if (isSingleDoc) {
       // Single Document Sync (like settings.json)
       const docRef = doc(firestoreDb, collectionName, 'app_config');
-      const docSnap = await getDoc(docRef);
+      let docSnap: any = null;
+      try {
+        docSnap = await getDocFromServer(docRef);
+      } catch (e) {
+        docSnap = await getDoc(docRef);
+      }
 
       // Also read the user's specific 'site/settings' document for external toggle updates compatibility
       const siteDocRef = doc(firestoreDb, 'site', 'settings');
       let siteData: any = null;
       try {
-        const siteSnap = await getDoc(siteDocRef);
-        if (siteSnap.exists()) {
+        let siteSnap: any = null;
+        try {
+          siteSnap = await getDocFromServer(siteDocRef);
+        } catch (e) {
+          siteSnap = await getDoc(siteDocRef);
+        }
+        if (siteSnap && siteSnap.exists()) {
           siteData = siteSnap.data();
           console.log('📥 [CloudSync] Read site/settings document from Firestore for configuration sync:', siteData);
         }
@@ -122,6 +132,20 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
           if (siteData.visibleTools !== undefined) {
             cloudData.visibleTools = siteData.visibleTools;
           }
+        }
+
+        if (collectionName === 'dih_v3_settings') {
+          const toolsToTurnOff = ['bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'];
+          const toolsToKeepOn = ['hosted-admin', 'dih-smm', 'dih-art'];
+          if (Array.isArray(cloudData.visibleTools)) {
+            cloudData.visibleTools = cloudData.visibleTools.filter((t: string) => !toolsToTurnOff.includes(t));
+            toolsToKeepOn.forEach(t => {
+              if (!cloudData.visibleTools.includes(t)) cloudData.visibleTools.push(t);
+            });
+          }
+          cloudData.disabledTools = (Array.isArray(cloudData.disabledTools) ? cloudData.disabledTools : [])
+            .filter((t: string) => !['hosted-admin', 'dih-art'].includes(t));
+          cloudData.disabledTools = Array.from(new Set([...cloudData.disabledTools, 'dih-smm', ...toolsToTurnOff]));
         }
 
         // ALWAYS PREFER CLOUD ON STARTUP TO AVOID OVERWRITING FROM CONTAINER EPHEMERAL FILESYSTEM!

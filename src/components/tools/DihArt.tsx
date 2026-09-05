@@ -625,19 +625,9 @@ export default function DihArt({ currentUser }: DihArtProps) {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 via-pink-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-600/20">
               <Palette size={20} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase font-serif">
-                  DIH<span className="text-rose-500">ART</span>
-                </h1>
-                <span className="text-[9px] px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 font-bold border border-rose-500/20 uppercase tracking-wider">
-                  Exhibition 2024–2025
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-medium">
-                Mayank Parmar — Modern & Contemporary Fine Art Gallery
-              </p>
-            </div>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase font-serif">
+              DIH<span className="text-rose-500">ART</span>
+            </h1>
           </div>
 
           {/* Gallery Navigation & Share */}
@@ -660,77 +650,41 @@ export default function DihArt({ currentUser }: DihArtProps) {
           </div>
         </div>
 
-        {/* Hero Section — Inspired by KexArt's Modern Artist Showcase */}
-        <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-[#0c101d] p-6 sm:p-10 lg:p-14 shadow-2xl">
+        {/* Showcase Banner */}
+        <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-[#0c101d] p-6 sm:p-8 shadow-2xl">
           {/* Subtle Ambient Backlights */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-7 space-y-5 text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold uppercase tracking-widest">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                <span>Exhibition 2024–2025 • London & Global Tour</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] font-serif">
-                EXPLORATION OF <br />
-                <span className="bg-gradient-to-r from-rose-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
-                  CONSCIOUSNESS
-                </span> & FORM
-              </h2>
-
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl font-light">
-                Step inside the multidimensional visual archives of Mayank Parmar. Featuring high-definition original canvases, textured oil abstractions, and immersive sensory acoustics designed to captivate your deepest attention.
-              </p>
-
-              {/* Main "Explore Gallery" Action Button */}
-              <div className="pt-2 flex flex-wrap items-center gap-4">
-                <button
-                  onClick={triggerPrank}
-                  className="px-8 py-4 bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:brightness-115 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-rose-600/30 transition-all flex items-center gap-3 cursor-pointer group active:scale-95 animate-pulse"
-                >
-                  <Eye size={18} className="group-hover:scale-110 transition-transform" />
-                  <span>EXPLORE GALLERY</span>
-                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                </button>
-
-                <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/60 px-4 py-3 rounded-2xl border border-slate-800">
-                  <Volume2 size={15} className="text-rose-400" />
-                  <span>Interactive Audio Enabled for Deep Immersion</span>
-                </div>
-              </div>
-
-              {/* Prank Disclaimer Notice */}
-              <div className="pt-2 flex items-center gap-2 text-[11px] text-slate-500 font-mono">
-                <Info size={13} className="text-slate-400 shrink-0" />
-                <span>Tip: Turn your device volume UP before clicking Explore Gallery for the full kexart sensory effect.</span>
-              </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex flex-wrap items-center gap-4 text-left">
+              <button
+                onClick={triggerPrank}
+                className="px-8 py-4 bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:brightness-115 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-rose-600/30 transition-all flex items-center gap-3 cursor-pointer group active:scale-95 animate-pulse"
+              >
+                <Eye size={18} className="group-hover:scale-110 transition-transform" />
+                <span>EXPLORE GALLERY</span>
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+              </button>
             </div>
 
             {/* Featured Artwork Preview Frame */}
-            <div className="lg:col-span-5 relative group">
-              <div 
-                onClick={triggerPrank}
-                className="relative rounded-2xl overflow-hidden border-2 border-slate-700/80 bg-slate-900 shadow-2xl cursor-pointer transition-all duration-500 group-hover:scale-[1.02] group-hover:border-rose-500"
-              >
-                <img 
-                  src="https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=1000&auto=format&fit=crop&q=80" 
-                  alt="Featured Artwork" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=1000&auto=format&fit=crop&q=80";
-                  }}
-                  className="w-full h-80 sm:h-96 object-cover object-center group-hover:brightness-105 transition-all duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
-                <div className="absolute bottom-4 left-4 right-4 text-left">
-                  <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Featured Masterpiece</span>
-                  <h3 className="text-lg font-bold text-white font-serif">Ethereal Dreams</h3>
-                  <p className="text-xs text-slate-300">Click to inspect high-resolution canvas details</p>
-                </div>
-                <div className="absolute top-4 right-4 p-2 rounded-xl bg-black/60 backdrop-blur-md text-white border border-white/10 group-hover:bg-rose-600 transition-colors">
-                  <ZoomIn size={16} />
-                </div>
+            <div 
+              onClick={triggerPrank}
+              className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-900 shadow-xl cursor-pointer transition-all duration-300 hover:border-rose-500 flex items-center gap-4 p-3 pr-6 group w-full md:w-auto"
+            >
+              <img 
+                src="https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=500&auto=format&fit=crop&q=80" 
+                alt="Featured Masterpiece" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=500&auto=format&fit=crop&q=80";
+                }}
+                className="w-20 h-20 rounded-xl object-cover object-center group-hover:scale-105 transition-transform"
+              />
+              <div className="text-left">
+                <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Featured Masterpiece</span>
+                <h3 className="text-base font-bold text-white font-serif">Ethereal Dreams</h3>
+                <p className="text-xs text-slate-400">Click to view in high definition</p>
               </div>
             </div>
           </div>
@@ -792,7 +746,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
                 </div>
 
                 {/* Card Details */}
-                <div className="p-5 flex-1 flex flex-col justify-between text-left space-y-3">
+                <div className="p-5 flex-1 flex flex-col justify-between text-left space-y-2">
                   <div>
                     <h4 className="text-base font-bold text-white font-serif group-hover:text-rose-400 transition-colors">
                       {art.title}
@@ -803,56 +757,9 @@ export default function DihArt({ currentUser }: DihArtProps) {
                   <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                     {art.description}
                   </p>
-
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                    <span>{art.medium}</span>
-                    <span className="text-rose-400 font-bold flex items-center gap-1">
-                      <Eye size={12} /> Inspect
-                    </span>
-                  </div>
                 </div>
               </motion.div>
             ))}
-          </div>
-        </div>
-
-        {/* Artist Biography & Studio Statement */}
-        <div className="rounded-3xl border border-slate-800 bg-[#0a0d17] p-6 sm:p-10 text-left space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-rose-400 font-black">Artist Profile</span>
-              <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">Mayank Parmar</h3>
-              <p className="text-xs text-slate-400">Contemporary Painter & Multidisciplinary Visual Artist</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 rounded-xl bg-slate-900 text-xs text-slate-300 border border-slate-800">
-                120+ International Exhibitions
-              </span>
-              <span className="px-3 py-1 rounded-xl bg-slate-900 text-xs text-slate-300 border border-slate-800">
-                Studio: London • NYC • Zurich
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-slate-300 leading-relaxed font-light">
-            <div className="space-y-2">
-              <h4 className="text-white font-bold font-serif text-base">Creative Philosophy</h4>
-              <p className="text-xs text-slate-400">
-                My work addresses the fragility of human perception. By combining stark chromatic tension with subtle atmospheric layering, each canvas challenges the observer to examine what lies beneath the immediate sensory surface.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-bold font-serif text-base">Material & Technique</h4>
-              <p className="text-xs text-slate-400">
-                Utilizing hand-ground pigments, natural gums, and heavy textured impasto, the paintings preserve kinetic physical energy that manifests when viewed in real-time illuminated environments.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-bold font-serif text-base">Commission Inquiries</h4>
-              <p className="text-xs text-slate-400">
-                Private commissions and gallery acquisitions are welcomed for selected collectors. Reach out via the official curation portal to schedule private viewings.
-              </p>
-            </div>
           </div>
         </div>
       </div>

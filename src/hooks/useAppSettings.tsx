@@ -167,8 +167,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-casino', 'dih-invest', 'dih-art'],
-  newTools: ['qr', 'encryption', 'to-base64', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-casino', 'dih-invest', 'dih-art'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-art'],
+  newTools: ['qr', 'encryption', 'to-base64', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-art'],
   newBadgeText: 'NEW',
   faviconUrl: '/favicon-dih.png',
   appLogoUrl: '',
@@ -314,7 +314,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   bachelorShowStarring: true,
   smmUsdToBdtRate: 120,
   smmShortcutMappings: {},
-  disabledTools: ['mobile-bypass'],
+  disabledTools: ['mobile-bypass', 'dih-smm', 'bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'],
   toolNotices: {},
   upcomingTools: [],
   comingSoonTools: [],
@@ -351,15 +351,30 @@ const AppSettingsContext = createContext<AppSettingsContextType | undefined>(und
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
+      const isCleaned = localStorage.getItem('dih_options_cleaned_v5');
       const saved = localStorage.getItem('dh_v3_settings');
       if (!saved) return DEFAULT_SETTINGS;
       
       const parsed = JSON.parse(saved);
       if (!parsed) return DEFAULT_SETTINGS;
+
+      const toolsToTurnOff = ['bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'];
+      const toolsToKeepOn = ['hosted-admin', 'dih-smm', 'dih-art'];
+      if (!isCleaned) {
+        localStorage.setItem('dih_options_cleaned_v5', 'true');
+        if (Array.isArray(parsed.visibleTools)) {
+          parsed.visibleTools = parsed.visibleTools.filter((t: string) => !toolsToTurnOff.includes(t));
+          toolsToKeepOn.forEach(t => {
+            if (!parsed.visibleTools.includes(t)) parsed.visibleTools.push(t);
+          });
+        }
+        parsed.disabledTools = (Array.isArray(parsed.disabledTools) ? parsed.disabledTools : [])
+          .filter((t: string) => !['hosted-admin', 'dih-art'].includes(t));
+        parsed.disabledTools = Array.from(new Set([...parsed.disabledTools, 'dih-smm', ...toolsToTurnOff]));
+      }
       
       const parsedVisibleTools = (Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools)
         .filter((t: string) => !DELETED_TOOLS.includes(t));
-      const healedVisibleTools = Array.from(new Set([...parsedVisibleTools, ...DEFAULT_SETTINGS.visibleTools]));
       
       // Ensure all default templates are present
       const existingIds = new Set(parsed.templates?.map((t: any) => t.id) || []);
@@ -378,7 +393,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         footerText: parsed.footerText || DEFAULT_SETTINGS.footerText,
         dashboardStats: parsed.dashboardStats || DEFAULT_SETTINGS.dashboardStats,
         templates: mergedTemplates,
-        visibleTools: healedVisibleTools,
+        visibleTools: parsedVisibleTools,
         upcomingTools: (parsed.upcomingTools ?? DEFAULT_SETTINGS.upcomingTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
         comingSoonTools: (parsed.comingSoonTools ?? DEFAULT_SETTINGS.comingSoonTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
         disabledTools: parsed.disabledTools ?? DEFAULT_SETTINGS.disabledTools,
@@ -402,15 +417,12 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           if (globalSettings) {
              const serverVisibleTools = (Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools)
                .filter((t: string) => !DELETED_TOOLS.includes(t));
-             const healedVisibleTools = Array.from(new Set([...serverVisibleTools, ...DEFAULT_SETTINGS.visibleTools]));
 
              setSettings(prev => ({
                ...prev,
                ...globalSettings,
-               visibleTools: healedVisibleTools,
+               visibleTools: serverVisibleTools,
                newTools: (Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
-               // Merge templates to avoid losing local ones if needed, 
-               // but typically admin wants total control
                templates: globalSettings.templates || prev.templates
              }));
           }
