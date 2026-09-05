@@ -1766,9 +1766,7 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
         {isWithdrawOpen && (
           <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-2 overflow-hidden">
             <motion.div 
@@ -1857,8 +1855,8 @@ export default function DihInvest({ currentUser, onAuthClick, onUserUpdate }: Di
                     </div>
                   </div>
 
-                    {/* Row 2: First Name & Last Name */}
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* Row 2: First Name & Last Name */}
+                  <div className="grid grid-cols-2 gap-2">
                       {/* First Name */}
                       <div className="relative border border-white/5 rounded-xl bg-[#0d101a] px-2.5 py-1.5 focus-within:border-blue-500 transition-all">
                         <label className="text-[8px] text-slate-500 uppercase font-black tracking-wider block">

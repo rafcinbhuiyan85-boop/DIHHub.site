@@ -3005,6 +3005,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   { id: 'dih-smm', label: 'DIH SMM (Social Media)', icon: Flame },
                   { id: 'dih-casino', label: 'DIH CASINO', icon: Dices },
                   { id: 'dih-invest', label: 'DIH INVEST', icon: Coins },
+                  { id: 'dih-art', label: 'DIH ART (KexArt Gallery)', icon: Palette },
                 ].map(tool => (
                   <div key={tool.id} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">

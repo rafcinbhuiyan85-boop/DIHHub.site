@@ -35,6 +35,7 @@ const tools = [
   { id: 'dih-smm', icon: Flame, label: 'DIH SMM', description: 'Premium tier Social Media Marketing likes, views, followers booster panel.', color: 'bg-indigo-600', isNew: true },
   { id: 'dih-casino', icon: Dices, label: 'DIH CASINO', description: 'Official Stake partner portal with live iframe game play, interactive Mines simulator and odds calculator.', color: 'bg-emerald-600', isNew: true },
   { id: 'dih-invest', icon: Coins, label: 'DIH INVEST', description: 'Premium automated trading & investment pools with dynamic ROI calculator & live simulated returns.', color: 'bg-amber-600', isNew: true },
+  { id: 'dih-art', icon: Palette, label: 'DIH ART', description: 'Modern contemporary fine art gallery featuring curated masterpieces, high-definition canvas explorer, and sensory acoustics.', color: 'bg-rose-600', isNew: true },
 ];
 
 export default function Dashboard({ onSelectTool }: DashboardProps) {
