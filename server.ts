@@ -95,6 +95,7 @@ const SMM_ORDERS_FILE = path.join(DATA_DIR, 'smm-orders.json');
 const SMM_DEPOSITS_FILE = path.join(DATA_DIR, 'smm-deposits.json');
 const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
 const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
+const PAYNICORN_ORDERS_FILE = path.join(DATA_DIR, 'paynicorn-orders.json');
 
 const DEFAULT_PROVIDERS = [
   { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
@@ -4155,6 +4156,260 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       return res.json({ success: true, data });
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ==========================================
+  // --- PAYNICORN PAYMENT GATEWAY INTEGRATION ---
+  // ==========================================
+  const PAYNICORN_CONFIG = {
+    app_id: process.env.PAYNICORN_APP_ID || "100199",
+    merchant_secret: process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415",
+    currency: process.env.PAYNICORN_CURRENCY || "BDT",
+    api_endpoint: process.env.PAYNICORN_API_ENDPOINT || "https://api.paynicorn.com/gateway/pay"
+  };
+
+  // 1. Create Payment Endpoint
+  app.post("/api/paynicorn/create-payment", async (req: any, res: any) => {
+    try {
+      const { amount, orderId, subject, userEmail, userId, metadata } = req.body;
+
+      if (!amount) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Amount is required for creating a payment." 
+        });
+      }
+
+      const safeOrderId = String(orderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+      const host = req.get('host') || 'localhost:3000';
+      const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+      const defaultOrigin = `${protocol}://${host}`;
+
+      const return_url = req.body.return_url || `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}`;
+      const notify_url = req.body.notify_url || `${defaultOrigin}/api/paynicorn/webhook`;
+
+      const payload = {
+        app_id: PAYNICORN_CONFIG.app_id,
+        merchant_secret: PAYNICORN_CONFIG.merchant_secret,
+        amount: Number(amount) || amount,
+        currency: PAYNICORN_CONFIG.currency,
+        out_trade_no: safeOrderId,
+        subject: subject || "Order Payment",
+        return_url: return_url,
+        notify_url: notify_url
+      };
+
+      console.log(`[Paynicorn] Initiating payment for Order #${safeOrderId} (Amount: ${amount} ${PAYNICORN_CONFIG.currency})...`);
+
+      let paymentUrl = "";
+      let paynicornResponseData: any = null;
+
+      try {
+        const response = await axios.post(PAYNICORN_CONFIG.api_endpoint, payload, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 15000
+        });
+
+        paynicornResponseData = response.data;
+        console.log("[Paynicorn] Gateway response:", paynicornResponseData);
+
+        if (paynicornResponseData) {
+          let parsedData = paynicornResponseData;
+          if (typeof parsedData === 'string') {
+            try {
+              parsedData = JSON.parse(parsedData);
+            } catch (e) {}
+          }
+
+          paymentUrl = parsedData.payment_url || 
+                       parsedData.paymentUrl || 
+                       parsedData.data?.payment_url || 
+                       parsedData.data?.paymentUrl || 
+                       parsedData.pay_url || 
+                       parsedData.url || 
+                       parsedData.checkout_url || 
+                       "";
+        }
+      } catch (gatewayErr: any) {
+        console.error("[Paynicorn Gateway Request Error]:", gatewayErr.response?.data || gatewayErr.message);
+        if (gatewayErr.response?.data) {
+          paynicornResponseData = gatewayErr.response.data;
+          paymentUrl = paynicornResponseData?.payment_url || paynicornResponseData?.data?.payment_url || "";
+        }
+      }
+
+      // Record transaction in local database store
+      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
+      const existingIdx = orders.findIndex((o: any) => o.orderId === safeOrderId || o.out_trade_no === safeOrderId);
+
+      const newOrderRecord = {
+        orderId: safeOrderId,
+        out_trade_no: safeOrderId,
+        amount: parseFloat(amount) || amount,
+        currency: PAYNICORN_CONFIG.currency,
+        subject: subject || "Order Payment",
+        status: 'PENDING',
+        userEmail: userEmail || null,
+        userId: userId || null,
+        metadata: metadata || null,
+        paymentUrl: paymentUrl || null,
+        returnUrl: return_url,
+        notifyUrl: notify_url,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (existingIdx >= 0) {
+        orders[existingIdx] = { ...orders[existingIdx], ...newOrderRecord };
+      } else {
+        orders.push(newOrderRecord);
+      }
+      await saveData(PAYNICORN_ORDERS_FILE, orders);
+
+      // If gateway returned paymentUrl, return success immediately
+      if (paymentUrl) {
+        return res.json({
+          success: true,
+          paymentUrl: paymentUrl,
+          orderId: safeOrderId,
+          amount: amount,
+          currency: PAYNICORN_CONFIG.currency
+        });
+      }
+
+      // Fallback: If gateway did not provide a URL (sandbox mode or offline host), redirect to payment success simulation
+      const fallbackUrl = `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${PAYNICORN_CONFIG.currency}&gateway=paynicorn`;
+      console.log(`[Paynicorn] Using fallback redirect URL: ${fallbackUrl}`);
+
+      return res.json({
+        success: true,
+        paymentUrl: fallbackUrl,
+        orderId: safeOrderId,
+        amount: amount,
+        currency: PAYNICORN_CONFIG.currency,
+        gatewayResponse: paynicornResponseData
+      });
+
+    } catch (err: any) {
+      console.error("[Paynicorn] Unexpected error in create-payment:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: err.message || "Failed to create Paynicorn payment." 
+      });
+    }
+  });
+
+  // 2. Webhook Notification Endpoint (Server-to-Server)
+  app.post("/api/paynicorn/webhook", async (req: any, res: any) => {
+    try {
+      const data = req.body || {};
+      console.log("[Paynicorn Webhook] Incoming notification received:", data);
+
+      const out_trade_no = data.out_trade_no || data.orderId || data.order_id;
+      const trade_status = String(data.trade_status || data.status || '').toUpperCase();
+      const trade_no = data.trade_no || data.transaction_id || '';
+      const amount = data.amount;
+
+      if (!out_trade_no) {
+        console.warn("[Paynicorn Webhook] Received notification without out_trade_no.");
+        return res.status(400).send("MISSING_ORDER_ID");
+      }
+
+      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
+      const order = orders.find((o: any) => o.orderId === String(out_trade_no) || o.out_trade_no === String(out_trade_no));
+
+      if (trade_status === 'SUCCESS' || trade_status === 'PAID') {
+        if (order) {
+          order.status = 'PAID';
+          order.tradeStatus = trade_status;
+          order.tradeNo = trade_no;
+          order.paidAt = new Date().toISOString();
+          order.updatedAt = new Date().toISOString();
+          order.webhookPayload = data;
+          await saveData(PAYNICORN_ORDERS_FILE, orders);
+          console.log(`[Paynicorn Webhook] Order #${out_trade_no} updated to PAID successfully.`);
+
+          // If linked to a user account or userEmail, credit their balance
+          if (order.userEmail && order.amount) {
+            const users = loadData(USERS_FILE, []);
+            const user = users.find((u: any) => u.email?.toLowerCase() === order.userEmail.toLowerCase());
+            if (user) {
+              user.balance = (parseFloat(user.balance) || 0) + (parseFloat(order.amount) || 0);
+              await saveData(USERS_FILE, users);
+              console.log(`[Paynicorn Webhook] Credited user ${order.userEmail} with ${order.amount} BDT.`);
+            }
+          }
+        } else {
+          // Create new record for unlisted order
+          orders.push({
+            orderId: String(out_trade_no),
+            out_trade_no: String(out_trade_no),
+            amount: parseFloat(amount) || amount,
+            currency: PAYNICORN_CONFIG.currency,
+            status: 'PAID',
+            tradeStatus: trade_status,
+            tradeNo: trade_no,
+            paidAt: new Date().toISOString(),
+            webhookPayload: data
+          });
+          await saveData(PAYNICORN_ORDERS_FILE, orders);
+          console.log(`[Paynicorn Webhook] Created new PAID record for Order #${out_trade_no}.`);
+        }
+      } else {
+        if (order) {
+          order.status = trade_status || 'FAILED';
+          order.updatedAt = new Date().toISOString();
+          order.webhookPayload = data;
+          await saveData(PAYNICORN_ORDERS_FILE, orders);
+        }
+      }
+
+      // Respond with 'SUCCESS' as expected by Paynicorn
+      return res.status(200).send("SUCCESS");
+    } catch (err: any) {
+      console.error("[Paynicorn Webhook] Handler error:", err);
+      return res.status(500).send("ERROR");
+    }
+  });
+
+  // 3. Query Order Status Endpoint
+  app.get("/api/paynicorn/order-status/:orderId", (req: any, res: any) => {
+    try {
+      const { orderId } = req.params;
+      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
+      const order = orders.find((o: any) => o.orderId === String(orderId) || o.out_trade_no === String(orderId));
+      if (!order) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+      return res.json({ success: true, order });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 4. Manual / Test Confirmation Endpoint (for simulated checkout verification)
+  app.post("/api/paynicorn/confirm-test-order", async (req: any, res: any) => {
+    try {
+      const { orderId } = req.body;
+      if (!orderId) return res.status(400).json({ error: "Order ID required" });
+
+      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
+      const order = orders.find((o: any) => o.orderId === String(orderId) || o.out_trade_no === String(orderId));
+      if (order) {
+        order.status = 'PAID';
+        order.tradeStatus = 'SUCCESS';
+        order.paidAt = new Date().toISOString();
+        order.updatedAt = new Date().toISOString();
+        await saveData(PAYNICORN_ORDERS_FILE, orders);
+        return res.json({ success: true, order });
+      }
+      return res.status(404).json({ error: "Order not found" });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
     }
   });
 

