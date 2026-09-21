@@ -295,3 +295,39 @@ export async function getFirestoreOrder(orderId: string): Promise<PaynicornOrder
 
   throw new Error('Firestore is not available to retrieve order.');
 }
+
+/**
+ * Read any document from Firestore (e.g., site/settings)
+ */
+export async function getFirestoreDocument(collectionName: string, docId: string): Promise<any> {
+  if (!collectionName || !docId) return null;
+
+  // Try Admin SDK first
+  if (adminAvailable && adminDb) {
+    try {
+      const snap = await adminDb.collection(collectionName).doc(docId).get();
+      if (snap.exists) {
+        return snap.data();
+      }
+      return null;
+    } catch (adminErr: any) {
+      adminAvailable = false;
+    }
+  }
+
+  // Fallback to Modular Client SDK
+  if (clientDb) {
+    try {
+      const docRef = doc(clientDb, collectionName, docId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return snap.data();
+      }
+      return null;
+    } catch (clientErr: any) {
+      console.warn(`[Paynicorn Firestore] Error fetching document ${collectionName}/${docId}:`, clientErr.message);
+    }
+  }
+
+  return null;
+}

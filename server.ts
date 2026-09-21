@@ -14,7 +14,8 @@ import {
   createFirestoreOrder, 
   getFirestoreOrder, 
   updateFirestoreOrder, 
-  serializeOrder 
+  serializeOrder,
+  getFirestoreDocument
 } from "./src/services/paynicornFirestore.ts";
 
 let _filename = '';
