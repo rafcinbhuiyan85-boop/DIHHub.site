@@ -282,21 +282,21 @@ export default function Dashboard({ onSelectTool }: DashboardProps) {
                           : cn(tool.color, "text-white shadow-current/30 group-hover:scale-110 group-hover:shadow-primary/40")
                   )}>
                     <tool.icon size={18} className="md:w-5 md:h-5 group-hover:animate-pulse transition-transform" />
-                    {settings.disabledTools?.includes(tool.id) ? (
+                    {settings.disabledTools?.includes(tool.id) && tool.id !== 'dih-smm' ? (
                       <div className="absolute -top-2 -right-2 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] px-1.5 py-0.5 rounded-full z-20">
                         <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
                           <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
                           OFFLINE
                         </span>
                       </div>
-                    ) : settings.upcomingTools?.includes(tool.id) ? (
+                    ) : settings.upcomingTools?.includes(tool.id) && tool.id !== 'dih-smm' ? (
                       <div className="absolute -top-2 -right-2 bg-violet-600 shadow-[0_0_8px_rgba(139,92,246,0.6)] px-1.5 py-0.5 rounded-full z-20">
                         <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
                           <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
                           ROADMAP
                         </span>
                       </div>
-                    ) : settings.comingSoonTools?.includes(tool.id) ? (
+                    ) : settings.comingSoonTools?.includes(tool.id) && tool.id !== 'dih-smm' ? (
                       <div className="absolute -top-2 -right-2 bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.6)] px-1.5 py-0.5 rounded-full z-20">
                         <span className="text-[7px] font-black text-white uppercase leading-none tracking-tighter flex items-center gap-0.5">
                           <span className="w-1 h-1 bg-white rounded-full animate-pulse" />

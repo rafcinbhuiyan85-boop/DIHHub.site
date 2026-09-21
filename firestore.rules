@@ -35,6 +35,14 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
+    // Paynicorn orders collection
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+    match /orders/{document=**} {
+      allow read, write: if true;
+    }
+    
     // Simple admin check collection
     match /admins/{adminId} {
       allow read: if isSignedIn() && request.auth.uid == adminId;

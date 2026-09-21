@@ -168,64 +168,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [massOrderText, setMassOrderText] = useState<string>('');
   const [smmEmailOrderSuccessModal, setSmmEmailOrderSuccessModal] = useState<string | null>(null);
 
-  // Deposit Form States
-  const [depositType, setDepositType] = useState<'automatic' | 'manual'>('manual');
-  const [selectedMethod, setSelectedMethod] = useState<'bkash' | 'nagad' | 'rocket' | 'card' | 'crypto' | 'upay' | 'binance' | 'usdt'>('bkash');
-  const [depositAmount, setDepositAmount] = useState<string>('');
-  const [senderDetails, setSenderDetails] = useState<string>('');
-  const [transactionId, setTransactionId] = useState<string>('');
+  // Deposit Form States (Automated Paynicorn Payment Gateway)
+  const [selectedMethod, setSelectedMethod] = useState<string>('bkash');
+  const [depositAmount, setDepositAmount] = useState<string>('5');
   const [depError, setDepError] = useState<string | null>(null);
   const [depSuccess, setDepSuccess] = useState<string | null>(null);
 
-  // Dynamic Gateway configuration sync from admin settings
+  // Automated Paynicorn Payment Gateway Processing States
+  const [isPayingWithPaynicorn, setIsPayingWithPaynicorn] = useState<boolean>(false);
+  const [payingMethod, setPayingMethod] = useState<string | null>(null);
+
+  // Gateway configuration sync from settings
   const [manualGateways, setManualGateways] = useState<any[]>([]);
   const [localDeposits, setLocalDeposits] = useState<any[]>([]);
-  const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
-
-  // Step-by-Step Payment Screenshot OCR Verification States
-  const [depositStep, setDepositStep] = useState<'form' | 'txid' | 'verify'>('form');
-  const [depositScreenshot, setDepositScreenshot] = useState<string | null>(null);
-  const [isVerifyingScreenshot, setIsVerifyingScreenshot] = useState<boolean>(false);
-  const [verifyResponseMsg, setVerifyResponseMsg] = useState<string | null>(null);
-  const [depositTimer, setDepositTimer] = useState<number>(300); // 5 minutes countdown (300 seconds)
-  const [depositInitiatedAt, setDepositInitiatedAt] = useState<string | null>(null);
-
-  // Countdown timer for manual payments
-  useEffect(() => {
-    let interval: any = null;
-    if (depositStep !== 'form') {
-      interval = setInterval(() => {
-        setDepositTimer((prev) => {
-          if (prev <= 1) {
-            handleCancelDeposit('timeout');
-            if (interval) clearInterval(interval);
-            return 300;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      setDepositTimer(300);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [depositStep]);
-
-  const handleCancelDeposit = (reason: 'user' | 'timeout') => {
-    setDepositStep('form');
-    setTransactionId('');
-    setDepositScreenshot(null);
-    setVerifyResponseMsg(null);
-    setDepositInitiatedAt(null);
-    if (reason === 'timeout') {
-      setDepError('Payment session expired (5-minute limit reached). Please try again.');
-      setDepSuccess(null);
-    } else {
-      setDepError('Payment cancelled.');
-      setDepSuccess(null);
-    }
-  };
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -480,13 +435,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       }
     } else {
       const defaultGateways = [
-        { id: 'bkash', title: 'bKash Merchant', numberOrAddress: '+8801835313433', type: 'Merchant', instructions: 'Send payment using bKash Merchant Pay, then submit your Transaction ID (TxID).', enabled: true, minDeposit: 5 },
-        { id: 'nagad', title: 'Nagad Wallet', numberOrAddress: '+8801602469609', type: 'Personal', instructions: 'Send money to our Personal Nagad wallet, and put TxID above.', enabled: true, minDeposit: 5 },
-        { id: 'upay', title: 'Upay Wallet', numberOrAddress: '+8801800005544', type: 'Personal', instructions: 'Transfer via Upay, submit the Reference or TxID.', enabled: false, minDeposit: 2.5 },
-        { id: 'rocket', title: 'Rocket Mobile', numberOrAddress: '+8801500000000-1', type: 'Personal', instructions: 'Send money to Rocket wallet, enter target transaction details.', enabled: false, minDeposit: 2.5 },
-        { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'contact@dihhub.site', type: 'Merchant Checkout Link', instructions: 'Submit request with the desired funding amount. Support will deliver a credit card payment checkout link.', enabled: true, minDeposit: 20 },
-        { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '495331860', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
-        { id: 'usdt', title: 'USDT (BSC - BEP20)', numberOrAddress: '0x09cb303036f305407df1e74614fbd894b988cdd4', type: 'BSC Address', instructions: 'Send the exact USDT amount via BSC (BNB Smart Chain / BEP20) Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
+        { id: 'bkash', title: 'bKash (Instant)', numberOrAddress: 'Paynicorn Auto-Pay', type: 'Automated Gateway', instructions: 'Instant automated checkout via bKash through Paynicorn.', enabled: true, minDeposit: 1 },
+        { id: 'nagad', title: 'Nagad (Instant)', numberOrAddress: 'Paynicorn Auto-Pay', type: 'Automated Gateway', instructions: 'Instant automated checkout via Nagad through Paynicorn.', enabled: true, minDeposit: 1 },
+        { id: 'card', title: 'Cards (Visa/Master)', numberOrAddress: 'Paynicorn Auto-Pay', type: 'Automated Gateway', instructions: 'Instant credit / debit card payment via Paynicorn.', enabled: true, minDeposit: 1 }
       ];
       setManualGateways(defaultGateways);
     }
@@ -1646,157 +1597,71 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }, 6000);
   };
 
-  const handleInitiateDeposit = async () => {
+  const handlePayWithPaynicorn = async (methodIdToUse?: string, methodTitleToUse?: string) => {
     setDepError(null);
     setDepSuccess(null);
 
-    if (!selectedMethod) {
-      setDepError('Please select a payment method first.');
+    const methodId = (methodIdToUse || selectedMethod || 'bkash').trim().toLowerCase();
+    setSelectedMethod(methodId);
+
+    // If amount is empty or <= 0, default to 5 ($5.00 USD)
+    let amt = parseFloat(depositAmount);
+    if (isNaN(amt) || amt <= 0) {
+      amt = 5.0;
+      setDepositAmount('5');
+    }
+
+    if (amt < 1) {
+      setDepError('Minimum deposit amount is $1.00 USD.');
       return;
     }
 
-    const amt = parseFloat(depositAmount);
-    if (!amt || amt <= 0) {
-      setDepError('Please enter a valid amount.');
-      return;
-    }
+    setIsPayingWithPaynicorn(true);
+    setPayingMethod(methodId);
 
-    // Enforce dynamic active gateway's minimum deposit limit
-    const activeGate = manualGateways.find(g => g.id === selectedMethod);
-    const minLimit = activeGate && activeGate.minDeposit !== undefined ? activeGate.minDeposit : 2.5;
-    if (amt < minLimit) {
-      setDepError(`Deposit amount must be at least $${minLimit.toFixed(2)} for ${activeGate?.title || 'this gateway'}.`);
-      return;
-    }
-
-    // Advance to payment details & receipt proof step (Step 2)
-    setDepositTimer(300);
-    setDepositInitiatedAt(new Date().toISOString());
-    setDepositStep('txid');
-    setDepositScreenshot(null);
-    setVerifyResponseMsg(null);
-  };
-
-  const handleProceedToVerifyStep = () => {
-    setDepError(null);
-    setDepSuccess(null);
-    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
-    if (!cleanTxId) {
-      setDepError('Please enter the manual Transaction ID (TxID) or Referer Hash first.');
-      return;
-    }
-    setTransactionId(cleanTxId);
-    setDepositStep('verify');
-  };
-
-  const handleCompleteDeposit = async () => {
-    const cleanTxId = transactionId.replace(/\s+/g, '').trim();
-    if (!cleanTxId) {
-      setDepError('Please enter the manual Transaction ID (TxID) or Referer Hash.');
-      return;
-    }
-
-    if (!depositScreenshot) {
-      setDepError('Please upload/provide a payment confirmation screenshot (SS).');
-      return;
-    }
-
-    setIsVerifyingScreenshot(true);
-    setDepError(null);
-    setVerifyResponseMsg('System scanning screenshot for Transaction ID...');
-
-    const amt = parseFloat(depositAmount);
-    const methodStr = selectedMethod || 'bkash';
-
-    const activeGate = manualGateways.find(g => g.id === selectedMethod);
-    const expectedBdt = amt * (settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120);
+    // Exchange rate: default 128 BDT/USD ($5 USD = 640 BDT) or custom admin rate
+    const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
+      ? settings.smmUsdToBdtRate
+      : 128;
+    const bdtAmount = Math.round(amt * rate);
+    const orderId = `SMM-DEP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const brand = getGatewayBrandInfo(methodId, methodTitleToUse || methodId);
+    const methodLabel = brand.label || methodTitleToUse || methodId.toUpperCase();
 
     try {
-      // Call backend API to verify the screenshot using Gemini
-      const res = await fetch('/api/smm/verify-screenshot', {
+      const res = await fetch('/api/paynicorn/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: depositScreenshot,
-          txid: cleanTxId,
-          amount: amt,
-          gatewayId: activeGate?.id || methodStr,
-          gatewayTitle: activeGate?.title || methodStr,
-          gatewayType: activeGate?.type || 'Personal',
-          gatewayNumber: activeGate?.numberOrAddress || '',
-          expectedBdt: expectedBdt,
-          sessionStartedAt: depositInitiatedAt || new Date().toISOString(),
-          clientTime: new Date().toISOString()
+          amount: bdtAmount,
+          orderId: orderId,
+          subject: `DIH SMM Add Funds - ${methodLabel} ($${amt.toFixed(2)} USD / ৳${bdtAmount} BDT)`,
+          userEmail: userEmail,
+          userId: userToUse?.id || userToUse?.uid || 999,
+          metadata: {
+            type: 'smm_deposit',
+            method: methodId,
+            usdAmount: amt,
+            bdtAmount: bdtAmount,
+            exchangeRate: rate
+          }
         })
       });
 
-      let verification = { isMatch: false, reason: "Verification API connection error.", detectedTxId: null };
-      if (res.ok) {
-        verification = await res.json();
-      }
-
-      // Parse current deposits tracking logs
-      const cached = localStorage.getItem('dih_smm_deposits_v2');
-      let currentDeps = [];
-      if (cached) {
-        try {
-          currentDeps = JSON.parse(cached);
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      // Fixed ID calculations to prevent Math.max in empty arrays or NaN
-      const nextDepId = currentDeps.length 
-        ? Math.max(...currentDeps.map((d: any) => d.id || 0)) + 1 
-        : 1;
-
-      // Determine status based on verification result
-      const isAutoApprove = verification.isMatch === true;
-      const status = isAutoApprove ? 'approved' : 'pending';
-
-      const newDeposit = {
-        id: nextDepId,
-        userId: userToUse?.id || 999,
-        userEmail: userEmail,
-        userName: userName,
-        amount: amt,
-        method: methodStr,
-        sender: 'N/A',
-        txid: cleanTxId,
-        status: status,
-        screenshot: depositScreenshot, // Store compressed base64 screenshot
-        aiReason: verification.reason,
-        detectedTxId: verification.detectedTxId,
-        date: new Date().toISOString().split('T')[0]
-      };
-
-      const updatedDeps = [...currentDeps, newDeposit];
-      saveDeposits(updatedDeps);
-
-      // If auto-approved, credit the user's balance immediately!
-      if (isAutoApprove) {
-        const newBal = balance + amt;
-        updateBalance(newBal);
-        
-        setDepSuccess(`✨ AUTO-CREDITED: Screenshot verified successfully! $${fmtAmt(amt)} has been automatically added to your balance.`);
+      const data = await res.json();
+      if (res.ok && data.success && data.paymentUrl) {
+        // Direct automated redirect to Paynicorn checkout
+        window.location.href = data.paymentUrl;
       } else {
-        setDepSuccess(`Deposit of $${fmtAmt(amt)} submitted as PENDING! ${verification.reason || 'System could not match TxID.'} An admin will review your screenshot manually.`);
+        setDepError(data.error || 'Failed to initialize Paynicorn payment gateway. Please try again.');
+        setIsPayingWithPaynicorn(false);
+        setPayingMethod(null);
       }
-
-      // Clean up states and go back to form
-      setDepositAmount('');
-      setSenderDetails('');
-      setTransactionId('');
-      setDepositScreenshot(null);
-      setDepositInitiatedAt(null);
-      setDepositStep('form');
     } catch (err: any) {
-      console.error(err);
-      setDepError('Failed to verify screenshot. Please try again or submit anyway.');
-    } finally {
-      setIsVerifyingScreenshot(false);
-      setVerifyResponseMsg(null);
+      console.error("Paynicorn initiation error:", err);
+      setDepError('Network connection error while contacting Paynicorn. Please try again.');
+      setIsPayingWithPaynicorn(false);
+      setPayingMethod(null);
     }
   };
 
@@ -3124,479 +2989,211 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                 {/* FORM PANEL */}
                 <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
                   <div className="px-5 py-4 border-b border-[#1e2336] flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                      <FileText size={15} className="text-blue-400" />
-                      <span>Instant Wallet Receipt Verification</span>
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <ShieldCheck size={16} className="text-emerald-400" />
+                      <span>Automated Payment Gateway</span>
                     </h3>
-                    {depositStep !== 'form' && (
-                      <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/15 px-3 py-1 rounded-lg text-xs font-mono font-bold text-amber-400 select-none">
-                        <Clock size={13} className="animate-pulse" />
-                        <span>{formatTime(depositTimer)}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                      <span>Paynicorn Instant Checkout</span>
+                    </div>
                   </div>
+
                   <div className="p-5.5 space-y-5.5">
-                    {depositStep === 'form' && (
-                      <>
-                        {/* METHODS */}
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">1. Select Payment Method</label>
-                          {(!manualGateways || manualGateways.length === 0) ? (
-                            <div className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-center text-xs text-red-400 font-medium font-sans">
-                              Deposits are currently disabled by the administrator. Please try again later.
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-sans">
-                              {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
-                                const brand = getGatewayBrandInfo(gate.id, gate.title, gate.logoUrl);
-                                const isSelected = selectedMethod === gate.id;
-                                return (
-                                  <button
-                                    key={gate.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedMethod(gate.id);
-                                      setDepError(null);
-                                      setDepSuccess(null);
-                                    }}
-                                    className={cn(
-                                      "py-3 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 outline-none select-none flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[84px] hover:scale-[1.03] active:scale-[0.97]",
-                                      isSelected 
-                                        ? "bg-blue-500/15 border-blue-500 text-white shadow-lg shadow-blue-500/10" 
-                                        : "bg-slate-900/40 border-[#1e2336] text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
-                                    )}
-                                  >
-                                    <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200">
-                                      {brand.logo}
-                                    </div>
-                                    <span className="tracking-wider text-[10px] font-bold mt-0.5">{brand.label}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
+                    {/* 1. SELECT AMOUNT (USD) */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between pl-0.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          1. Select Amount (USD)
+                        </label>
+                        <span className="text-[10px] text-blue-400 font-mono font-semibold">
+                          Instant Balance Credit
+                        </span>
+                      </div>
+                      
+                      {/* QUICK AMOUNT BUTTONS */}
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {[5, 10, 20, 50, 100, 200].map(val => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              setDepositAmount(String(val));
+                              setDepError(null);
+                            }}
+                            className={cn(
+                              "py-2.5 rounded-lg border text-xs font-semibold font-mono text-center transition-all duration-150 select-none outline-none cursor-pointer",
+                              parseFloat(depositAmount) === val
+                                ? "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/20"
+                                : "border-[#1e2336] bg-[#0c0e14]/60 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
+                            )}
+                          >
+                            ${val}
+                          </button>
+                        ))}
+                      </div>
 
-                        {/* QUICK SELECT */}
-                        <div className="space-y-2 pt-1">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-0.5">2. Quick Select Amount</label>
-                          <div className="grid grid-cols-6 gap-1.5">
-                            {[5, 10, 20, 50, 100, 200].map(val => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => handleQuickSelect(val)}
-                                className={cn(
-                                  "py-2 rounded-lg border text-xs font-semibold font-mono text-center transition-all duration-150 select-none outline-none",
-                                  parseFloat(depositAmount) === val
-                                    ? "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/10"
-                                    : "border-[#1e2336] bg-[#0c0e14]/50 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
-                                )}
-                              >
-                                ${val}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* AMOUNT */}
-                        <div className="space-y-1.5 pt-1">
-                          <div className="flex justify-between items-center pr-1 pl-0.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">3. Enter Amount (USD)</label>
-                            <span className="text-[10px] text-slate-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10">
-                              Min: ${(manualGateways.find(g => g.id === selectedMethod)?.minDeposit !== undefined ? manualGateways.find(g => g.id === selectedMethod)?.minDeposit : 2.5).toFixed(2)} USD
-                            </span>
-                          </div>
-                          <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-blue-500 font-bold pointer-events-none">$</span>
-                            <input
-                              type="number"
-                              min="1"
-                              step="0.01"
-                              placeholder="0.00"
-                              value={depositAmount}
-                              onChange={(e) => setDepositAmount(e.target.value)}
-                              className="w-full bg-[#0c0e14] border border-[#1e2336] pl-9 pr-4 py-3 text-lg font-mono font-semibold text-white rounded-xl outline-none focus:border-blue-500 transition-colors"
-                            />
-                          </div>
-                        </div>
-
-                        {/* LIVE BDT CONVERSION */}
-                        {(() => {
-                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                          if (!activeGate || !['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id)) return null;
-                          const amt = parseFloat(depositAmount) || 0;
-                          const rate = settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120;
-                          return (
-                            <div className="p-3.5 rounded-xl border border-amber-500/15 bg-amber-500/[0.03] space-y-1.5 font-sans animate-in fade-in duration-200">
-                              <div className="flex justify-between items-center text-xs text-slate-400">
-                                <span>Exchange Rate:</span>
-                                <span className="font-bold text-amber-500">1 USD = ৳{rate} BDT</span>
-                              </div>
-                              {amt > 0 && (
-                                <div className="flex justify-between items-center text-xs text-white border-t border-amber-500/10 pt-1.5 mt-1">
-                                  <span className="font-semibold">Estimated Total Payment:</span>
-                                  <span className="text-sm font-black text-amber-400 font-mono">৳{(amt * rate).toFixed(2)} BDT</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-
-                        {/* DEPOSIT ALERTS */}
-                        {depError && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
-                            <AlertCircle size={15} className="shrink-0" />
-                            {depError}
-                          </div>
-                        )}
-
-                        {depSuccess && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
-                            <CheckCircle2 size={15} className="shrink-0" />
-                            {depSuccess}
-                          </div>
-                        )}
-
-                        <button 
-                          onClick={() => handleInitiateDeposit()}
-                          disabled={!selectedMethod || isVerifyingScreenshot}
-                          className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-sm tracking-wide rounded-xl hover:shadow-lg hover:shadow-blue-500/15 transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <span>Proceed to Pay</span>
-                          <span className="text-xs">➔</span>
-                        </button>
-                      </>
-                    )}
-
-                    {depositStep === 'txid' && (
-                      <div className="space-y-5 text-left animate-in fade-in duration-200">
-                        {/* HEADER BRANDING */}
-                        <div className="flex items-center justify-between border-b border-[#1e2336]/60 pb-3">
-                          <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Payment Gateway</span>
-                          {(() => {
-                            const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                            const brand = activeGate ? getGatewayBrandInfo(activeGate.id, activeGate.title, activeGate.logoUrl) : null;
-                            return brand ? (
-                              <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/15 px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-wider shadow-md shadow-blue-500/5 animate-pulse">
-                                <span className="w-4 h-4 flex items-center justify-center">{brand.logo}</span>
-                                <span>{brand.label}</span>
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-
-                        {/* WALLET & TRANSACTION DETAILS */}
-                        {(() => {
-                          const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                          if (!activeGate) return null;
-                          const amt = parseFloat(depositAmount) || 0;
-                          const rate = settings.smmUsdToBdtRate !== undefined ? settings.smmUsdToBdtRate : 120;
-                          return (
-                            <div className="space-y-4 font-sans bg-[#0c0e14]/40 border border-[#1e2336]/60 rounded-xl p-4">
-                              
-                              {/* WALLET ADDRESS */}
-                              <div className="space-y-1.5">
-                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                  <span>Wallet Number ({activeGate.type || 'Personal'})</span>
-                                  <span className="text-emerald-400">Online</span>
-                                </div>
-                                <div className="bg-[#0c0e14] border border-[#1e2336]/80 rounded-xl p-3 flex items-center justify-between gap-3 font-mono text-xs overflow-hidden">
-                                  <span className="text-white font-extrabold select-all break-all text-left flex-1 tracking-wider leading-none text-sm">
-                                    {activeGate.numberOrAddress}
-                                  </span>
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(activeGate.numberOrAddress);
-                                      setCopiedAddress(true);
-                                      setTimeout(() => setCopiedAddress(false), 2000);
-                                    }}
-                                    className={cn(
-                                      "flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer shrink-0 active:scale-95",
-                                      copiedAddress 
-                                        ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 font-black" 
-                                        : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/15"
-                                    )}
-                                  >
-                                    {copiedAddress ? (
-                                      <>
-                                        <Check size={11} strokeWidth={3} />
-                                        <span>Copied!</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Copy size={11} strokeWidth={2.5} />
-                                        <span>Copy</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* INSTRUCTIONS */}
-                              <div className="text-[11px] text-slate-400 leading-relaxed bg-[#0c0e14] border border-[#1e2336]/40 p-3 rounded-lg space-y-1">
-                                <span className="font-bold text-blue-400 not-italic block text-[10px] uppercase tracking-wider">How to pay:</span>
-                                <div className="text-slate-300 whitespace-pre-line font-medium leading-normal">
-                                  {activeGate.instructions || "Please send the exact amount to the number above."}
-                                </div>
-                              </div>
-
-                              {/* BDT TOTAL OR USD ONLY */}
-                              {['bkash', 'nagad', 'upay', 'rocket'].includes(activeGate.id) ? (
-                                <div className="bg-blue-500/5 border border-blue-500/15 text-blue-400 p-3 rounded-xl flex items-center justify-between text-xs font-sans">
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wide">Expected Payment:</span>
-                                    <span className="text-sm font-black font-mono text-white">৳{(amt * rate).toFixed(2)} BDT <span className="text-xs text-blue-400 font-normal">(${amt.toFixed(2)} USD)</span></span>
-                                  </div>
-                                  <div className="text-right text-[10px] font-black text-blue-400 tracking-wider bg-blue-500/10 px-2 py-1 rounded border border-blue-500/10 uppercase">
-                                    Rate: 1$ = ৳{rate}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="bg-blue-500/5 border border-blue-500/15 text-blue-400 p-3 rounded-xl flex items-center justify-between text-xs font-sans">
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wide">Expected Payment:</span>
-                                    <span className="text-sm font-black font-mono text-white">${amt.toFixed(2)} USD</span>
-                                  </div>
-                                </div>
-                              )}
-
-                            </div>
-                          );
-                        })()}
-
-                        {/* TRANSACTION ID INPUT */}
-                        <div className="space-y-1.5 font-sans">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Paste Transaction ID (TxID) / Ref</label>
+                      {/* CUSTOM AMOUNT INPUT */}
+                      <div className="pt-1.5">
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-blue-500 font-bold pointer-events-none">$</span>
                           <input
-                            type="text"
-                            placeholder="Type or paste your Transaction ID (e.g., 8K8D8F8F)"
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            className="w-full bg-[#0c0e14] border border-[#1e2336] px-3.5 py-2.5 text-xs text-white rounded-lg outline-none focus:border-blue-500 font-mono font-bold uppercase placeholder:lowercase"
+                            type="number"
+                            min="1"
+                            step="0.01"
+                            placeholder="5.00"
+                            value={depositAmount}
+                            onChange={(e) => {
+                              setDepositAmount(e.target.value);
+                              setDepError(null);
+                            }}
+                            className="w-full bg-[#0c0e14] border border-[#1e2336] pl-9 pr-4 py-3 text-lg font-mono font-semibold text-white rounded-xl outline-none focus:border-blue-500 transition-colors"
                           />
                         </div>
+                      </div>
+                    </div>
 
-                        {/* DEPOSIT ALERTS */}
-                        {depError && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
-                            <AlertCircle size={15} className="shrink-0" />
-                            {depError}
+                    {/* LIVE BDT CONVERSION */}
+                    {(() => {
+                      const amt = parseFloat(depositAmount) || 0;
+                      const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
+                        ? settings.smmUsdToBdtRate
+                        : 128;
+                      const bdt = Math.round(amt * rate);
+                      return (
+                        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] space-y-1.5 font-sans animate-in fade-in duration-200">
+                          <div className="flex justify-between items-center text-xs text-slate-400">
+                            <span>Exchange Rate:</span>
+                            <span className="font-bold text-emerald-400 font-mono">1 USD = ৳{rate} BDT</span>
                           </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-3.5 font-sans pt-1">
-                          <button
-                            type="button"
-                            onClick={() => handleCancelDeposit('user')}
-                            className="py-3 bg-slate-900/80 hover:bg-slate-800 border border-[#1e2336] hover:border-slate-700 text-slate-300 hover:text-white font-extrabold text-sm tracking-wide rounded-xl transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-2 cursor-pointer group"
-                          >
-                            <ArrowLeft size={15} className="text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-all duration-150" />
-                            <span>Back to Methods</span>
-                          </button>
-                          <button 
-                            onClick={() => handleProceedToVerifyStep()}
-                            disabled={!transactionId}
-                            className="py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-sm tracking-wide rounded-xl hover:shadow-lg hover:shadow-blue-500/15 transition-all duration-150 active:scale-[0.982] flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <span>Verify Transaction ID</span>
-                            <span className="text-xs">➔</span>
-                          </button>
+                          <div className="flex justify-between items-center text-xs text-white border-t border-emerald-500/10 pt-1.5 mt-1">
+                            <span className="font-semibold text-slate-300">Total Payable via Paynicorn:</span>
+                            <span className="text-sm font-black text-emerald-400 font-mono">
+                              ৳{bdt} BDT <span className="text-xs text-slate-400 font-normal">(${amt.toFixed(2)} USD)</span>
+                            </span>
+                          </div>
                         </div>
+                      );
+                    })()}
+
+                    {/* 2. PAYMENT METHODS (bKash, Nagad, Card) */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between pl-0.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          2. Click Method to Pay Instantly
+                        </label>
+                        <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          Automated Paynicorn
+                        </span>
+                      </div>
+
+                      {(!manualGateways || manualGateways.length === 0) ? (
+                        <div className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-center text-xs text-red-400 font-medium font-sans">
+                          Payment methods are loading or temporarily unavailable.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2.5 font-sans">
+                          {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
+                            const brand = getGatewayBrandInfo(gate.id, gate.title, gate.logoUrl);
+                            const isSelected = selectedMethod === gate.id;
+                            const isThisButtonPaying = isPayingWithPaynicorn && payingMethod === gate.id;
+
+                            return (
+                              <button
+                                key={gate.id}
+                                type="button"
+                                disabled={isPayingWithPaynicorn}
+                                onClick={() => {
+                                  setSelectedMethod(gate.id);
+                                  setDepError(null);
+                                  setDepSuccess(null);
+                                  handlePayWithPaynicorn(gate.id, gate.title);
+                                }}
+                                className={cn(
+                                  "py-3.5 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 outline-none select-none flex flex-col items-center justify-center gap-2 cursor-pointer min-h-[96px] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed group relative overflow-hidden",
+                                  isSelected 
+                                    ? "bg-blue-500/15 border-blue-500 text-white shadow-lg shadow-blue-500/15" 
+                                    : "bg-slate-900/50 border-[#1e2336] text-slate-300 hover:text-white hover:border-[#3b82f6]/40"
+                                )}
+                              >
+                                {isThisButtonPaying ? (
+                                  <div className="flex flex-col items-center justify-center gap-1.5">
+                                    <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                                    <span className="text-[9px] font-mono text-blue-300 font-bold tracking-normal">Connecting...</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200 group-hover:scale-110">
+                                      {brand.logo}
+                                    </div>
+                                    <div className="text-center">
+                                      <span className="tracking-wider text-[11px] font-black block">{brand.label}</span>
+                                      <span className="text-[8px] text-emerald-400 font-mono font-bold tracking-tight block">⚡ Auto Pay</span>
+                                    </div>
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* DEPOSIT ALERTS */}
+                    {depError && (
+                      <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
+                        <AlertCircle size={15} className="shrink-0" />
+                        {depError}
                       </div>
                     )}
 
-                    {depositStep === 'verify' && (
-                      <div className="space-y-5 text-left animate-in fade-in duration-200">
-                        {/* GO BACK & CHANGE METHOD BUTTONS */}
-                        <div className="flex items-center justify-between border-b border-[#1e2336]/40 pb-3">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDepositStep('txid');
-                                setDepError(null);
-                              }}
-                              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white font-bold uppercase tracking-wider cursor-pointer transition active:scale-95"
-                            >
-                              <ArrowLeft size={13} />
-                              <span>Back</span>
-                            </button>
-                            <span className="text-slate-700">|</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCancelDeposit('user')}
-                              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white font-bold uppercase tracking-wider cursor-pointer transition active:scale-95 group"
-                            >
-                              <Layers size={13} className="text-slate-500 group-hover:text-white transition" />
-                              <span>Change Method</span>
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-blue-400 uppercase">
-                            <span>TxID: {transactionId}</span>
-                          </div>
-                        </div>
-
-                        {/* SCREENSHOT UPLOAD */}
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Upload Payment Screenshot (SS)</label>
-                          
-                          {/* DRAG & DROP OR CHOOSE IMAGE */}
-                          <div className="border-2 border-dashed border-[#1e2336] hover:border-blue-500/40 rounded-xl p-5 bg-[#0c0e14]/50 text-center transition-all relative">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              id="deposit-screenshot-file"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = async (event) => {
-                                    const result = event.target?.result as string;
-                                    if (result) {
-                                      setVerifyResponseMsg("Compressing receipt image for scan...");
-                                      const compressed = await resizeAndCompressImage(result);
-                                      setDepositScreenshot(compressed);
-                                      setVerifyResponseMsg(null);
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
-                            {!depositScreenshot ? (
-                              <label htmlFor="deposit-screenshot-file" className="cursor-pointer flex flex-col items-center justify-center gap-3 py-3 select-none">
-                                <div className="w-12 h-12 rounded-full bg-blue-500/5 flex items-center justify-center border border-blue-500/10 text-blue-400 transition hover:bg-blue-500/10">
-                                  <Upload size={20} />
-                                </div>
-                                <div>
-                                  <span className="text-xs font-bold text-slate-200 block">Click or Drag & Drop screenshot</span>
-                                  <span className="text-[10px] text-slate-500 mt-1 block font-medium">Supports official Mobile Banking receipt images</span>
-                                </div>
-                              </label>
-                            ) : (
-                              <div className="space-y-4">
-                                <div className="relative rounded-lg overflow-hidden border border-[#1e2336] max-h-[220px] bg-[#0c0e14] flex items-center justify-center">
-                                  <img
-                                    src={depositScreenshot}
-                                    alt="Payment Screenshot Preview"
-                                    className="max-h-[210px] object-contain"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => setDepositScreenshot(null)}
-                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors cursor-pointer shadow-md"
-                                    title="Remove Image"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </div>
-                                <span className="text-[10px] text-emerald-400 font-mono font-black block bg-emerald-500/5 py-1 rounded border border-emerald-500/10">
-                                 ✓ Screenshot loaded and ready for verification
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {verifyResponseMsg && (
-                          <div className="text-xs text-blue-400 bg-blue-500/5 border border-blue-500/10 rounded-lg p-3 flex items-center gap-2 animate-in fade-in duration-150">
-                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping shrink-0" />
-                            <span className="font-semibold font-mono">{verifyResponseMsg}</span>
-                          </div>
-                        )}
-
-                        {depError && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
-                            <AlertCircle size={15} className="shrink-0" />
-                            {depError}
-                          </div>
-                        )}
-
-                        {/* COMPLETED ACTIONS */}
-                        <div className="space-y-2 pt-2">
-                          <button
-                            onClick={() => handleCompleteDeposit()}
-                            disabled={!depositScreenshot || isVerifyingScreenshot || !transactionId}
-                            className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer shadow-lg shadow-blue-500/10"
-                          >
-                            {isVerifyingScreenshot ? (
-                              <>
-                                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Verifying Screenshot...
-                              </>
-                            ) : (
-                              <>
-                                <ShieldCheck size={14} />
-                                <span>Verify & Auto-Add Balance</span>
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            onClick={async () => {
-                              // Skip OCR and submit directly for manual review
-                              const cleanTxId = transactionId.replace(/\s+/g, '').trim();
-                              if (!cleanTxId) {
-                                setDepError('Please enter the manual Transaction ID before submitting.');
-                                return;
-                              }
-
-                              setIsVerifyingScreenshot(true);
-                              setDepError(null);
-                              setVerifyResponseMsg('Submitting deposit for manual review...');
-                              const amt = parseFloat(depositAmount);
-                              const methodStr = selectedMethod || 'bkash';
-
-                              try {
-                                const cached = localStorage.getItem('dih_smm_deposits_v2');
-                                let currentDeps = [];
-                                if (cached) {
-                                  try { currentDeps = JSON.parse(cached); } catch (e) { console.error(e); }
-                                }
-                                const nextDepId = currentDeps.length ? Math.max(...currentDeps.map((d: any) => d.id || 0)) + 1 : 1;
-
-                                const newDeposit = {
-                                  id: nextDepId,
-                                  userId: userToUse?.id || 999,
-                                  userEmail: userEmail,
-                                  userName: userName,
-                                  amount: amt,
-                                  method: methodStr,
-                                  sender: 'N/A',
-                                  txid: cleanTxId,
-                                  status: 'pending',
-                                  screenshot: depositScreenshot || undefined,
-                                  aiReason: "Requested manual review directly.",
-                                  date: new Date().toISOString().split('T')[0]
-                                };
-
-                                const updatedDeps = [...currentDeps, newDeposit];
-                                saveDeposits(updatedDeps);
-
-                                setDepositAmount('');
-                                setSenderDetails('');
-                                setTransactionId('');
-                                setDepositScreenshot(null);
-                                setDepositStep('form');
-                                setDepSuccess(`Deposit of $${fmtAmt(amt)} via ${methodStr.toUpperCase()} submitted to pending list! SMM admin will verify manually.`);
-                              } catch (err) {
-                                setDepError('Failed to submit. Please try again.');
-                              } finally {
-                                setIsVerifyingScreenshot(false);
-                                setVerifyResponseMsg(null);
-                              }
-                            }}
-                            disabled={isVerifyingScreenshot || !transactionId}
-                            className="w-full py-2.5 bg-slate-900 border border-[#1e2336] hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-slate-400 hover:text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
-                          >
-                            Submit Directly for Manual Review
-                          </button>
-                        </div>
+                    {depSuccess && (
+                      <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
+                        <CheckCircle2 size={15} className="shrink-0" />
+                        {depSuccess}
                       </div>
                     )}
+
+                    {/* PRIMARY PROCEED BUTTON */}
+                    {(() => {
+                      const amt = parseFloat(depositAmount) || 0;
+                      const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
+                        ? settings.smmUsdToBdtRate
+                        : 128;
+                      const bdt = Math.round(amt * rate);
+                      const activeGate = manualGateways.find(g => g.id === selectedMethod);
+                      const brand = activeGate ? getGatewayBrandInfo(activeGate.id, activeGate.title, activeGate.logoUrl) : null;
+                      const methodName = brand?.label || (selectedMethod ? selectedMethod.toUpperCase() : 'bKash');
+
+                      return (
+                        <button 
+                          type="button"
+                          onClick={() => handlePayWithPaynicorn(selectedMethod, activeGate?.title)}
+                          disabled={isPayingWithPaynicorn}
+                          className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-sm tracking-wide rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-150 active:scale-[0.985] flex items-center justify-center gap-2.5 cursor-pointer"
+                        >
+                          {isPayingWithPaynicorn ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                              <span>Redirecting to Paynicorn...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={18} className="text-blue-200" />
+                              <span>
+                                Pay ৳{bdt > 0 ? bdt : '640'} BDT (${amt > 0 ? amt.toFixed(2) : '5.00'} USD) via {methodName}
+                              </span>
+                              <span className="text-xs">➔</span>
+                            </>
+                          )}
+                        </button>
+                      );
+                    })()}
+
+                    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-sans pt-1">
+                      <ShieldCheck size={12} className="text-emerald-500" />
+                      <span>Secured with Paynicorn Automated Payment Gateway • 256-Bit SSL Encrypted</span>
+                    </div>
 
                     {/* USER DEPOSIT TRANSACTIONS LOG */}
                     <div className="mt-8 border-t border-[#1e2336]/60 pt-6">

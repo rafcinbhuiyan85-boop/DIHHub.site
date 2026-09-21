@@ -314,7 +314,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   bachelorShowStarring: true,
   smmUsdToBdtRate: 120,
   smmShortcutMappings: {},
-  disabledTools: ['mobile-bypass', 'dih-smm', 'bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'],
+  disabledTools: ['mobile-bypass', 'bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'],
   toolNotices: {},
   upcomingTools: [],
   comingSoonTools: [],
@@ -351,7 +351,7 @@ const AppSettingsContext = createContext<AppSettingsContextType | undefined>(und
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
-      const isCleaned = localStorage.getItem('dih_options_cleaned_v5');
+      const isCleaned = localStorage.getItem('dih_options_cleaned_v6');
       const saved = localStorage.getItem('dh_v3_settings');
       if (!saved) return DEFAULT_SETTINGS;
       
@@ -361,7 +361,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       const toolsToTurnOff = ['bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'];
       const toolsToKeepOn = ['hosted-admin', 'dih-smm', 'dih-art'];
       if (!isCleaned) {
-        localStorage.setItem('dih_options_cleaned_v5', 'true');
+        localStorage.setItem('dih_options_cleaned_v6', 'true');
         if (Array.isArray(parsed.visibleTools)) {
           parsed.visibleTools = parsed.visibleTools.filter((t: string) => !toolsToTurnOff.includes(t));
           toolsToKeepOn.forEach(t => {
@@ -369,8 +369,16 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           });
         }
         parsed.disabledTools = (Array.isArray(parsed.disabledTools) ? parsed.disabledTools : [])
-          .filter((t: string) => !['hosted-admin', 'dih-art'].includes(t));
-        parsed.disabledTools = Array.from(new Set([...parsed.disabledTools, 'dih-smm', ...toolsToTurnOff]));
+          .filter((t: string) => !['hosted-admin', 'dih-art', 'dih-smm'].includes(t));
+        parsed.disabledTools = Array.from(new Set([...parsed.disabledTools, ...toolsToTurnOff]))
+          .filter((t: string) => t !== 'dih-smm');
+      }
+
+      if (Array.isArray(parsed.disabledTools)) {
+        parsed.disabledTools = parsed.disabledTools.filter((t: string) => t !== 'dih-smm');
+      }
+      if (Array.isArray(parsed.visibleTools) && !parsed.visibleTools.includes('dih-smm')) {
+        parsed.visibleTools.push('dih-smm');
       }
       
       const parsedVisibleTools = (Array.isArray(parsed.visibleTools) ? parsed.visibleTools : DEFAULT_SETTINGS.visibleTools)
@@ -417,10 +425,17 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           if (globalSettings) {
              const serverVisibleTools = (Array.isArray(globalSettings.visibleTools) ? globalSettings.visibleTools : DEFAULT_SETTINGS.visibleTools)
                .filter((t: string) => !DELETED_TOOLS.includes(t));
+             if (!serverVisibleTools.includes('dih-smm')) {
+               serverVisibleTools.push('dih-smm');
+             }
+
+             const serverDisabledTools = (Array.isArray(globalSettings.disabledTools) ? globalSettings.disabledTools : (DEFAULT_SETTINGS.disabledTools || []))
+               .filter((t: string) => t !== 'dih-smm');
 
              setSettings(prev => ({
                ...prev,
                ...globalSettings,
+               disabledTools: serverDisabledTools,
                visibleTools: serverVisibleTools,
                newTools: (Array.isArray(globalSettings.newTools) ? globalSettings.newTools : DEFAULT_SETTINGS.newTools).filter((t: string) => !DELETED_TOOLS.includes(t)),
                templates: globalSettings.templates || prev.templates

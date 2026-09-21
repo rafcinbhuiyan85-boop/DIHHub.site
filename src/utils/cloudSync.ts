@@ -144,8 +144,9 @@ export async function syncFileWithCloud(filePath: string, defaultVal: any = []):
             });
           }
           cloudData.disabledTools = (Array.isArray(cloudData.disabledTools) ? cloudData.disabledTools : [])
-            .filter((t: string) => !['hosted-admin', 'dih-art'].includes(t));
-          cloudData.disabledTools = Array.from(new Set([...cloudData.disabledTools, 'dih-smm', ...toolsToTurnOff]));
+            .filter((t: string) => !['hosted-admin', 'dih-art', 'dih-smm'].includes(t));
+          cloudData.disabledTools = Array.from(new Set([...cloudData.disabledTools, ...toolsToTurnOff]))
+            .filter((t: string) => t !== 'dih-smm');
         }
 
         // ALWAYS PREFER CLOUD ON STARTUP TO AVOID OVERWRITING FROM CONTAINER EPHEMERAL FILESYSTEM!

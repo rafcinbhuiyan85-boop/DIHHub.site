@@ -10,6 +10,12 @@ import axios from "axios";
 import { GoogleGenAI } from "@google/genai";
 import { syncFileWithCloud, saveToCloud, getFirestoreDb } from "./src/utils/cloudSync.ts";
 import { doc, setDoc, writeBatch, increment } from "firebase/firestore";
+import { 
+  createFirestoreOrder, 
+  getFirestoreOrder, 
+  updateFirestoreOrder, 
+  serializeOrder 
+} from "./src/services/paynicornFirestore.ts";
 
 let _filename = '';
 let _dirname = '';
@@ -95,7 +101,6 @@ const SMM_ORDERS_FILE = path.join(DATA_DIR, 'smm-orders.json');
 const SMM_DEPOSITS_FILE = path.join(DATA_DIR, 'smm-deposits.json');
 const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
 const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
-const PAYNICORN_ORDERS_FILE = path.join(DATA_DIR, 'paynicorn-orders.json');
 
 const DEFAULT_PROVIDERS = [
   { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
@@ -1043,6 +1048,15 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
         { id: 'binance', title: 'Binance Pay ID', numberOrAddress: '495331860', type: 'Merchant Pay ID', instructions: 'Pay using your Binance App using Binance Pay ID. Provide Binance account nickname.', enabled: true, minDeposit: 2.5 },
         { id: 'usdt', title: 'USDT (BSC - BEP20)', numberOrAddress: '0x09cb303036f305407df1e74614fbd894b988cdd4', type: 'BSC Address', instructions: 'Send the exact USDT amount via BSC (BNB Smart Chain / BEP20) Network. Paste TxHash / TxID once done.', enabled: true, minDeposit: 2.5 }
       ];
+      changed = true;
+    }
+
+    if (settings.disabledTools && Array.isArray(settings.disabledTools) && settings.disabledTools.includes('dih-smm')) {
+      settings.disabledTools = settings.disabledTools.filter((t: string) => t !== 'dih-smm');
+      changed = true;
+    }
+    if (settings.visibleTools && Array.isArray(settings.visibleTools) && !settings.visibleTools.includes('dih-smm')) {
+      settings.visibleTools.push('dih-smm');
       changed = true;
     }
 
@@ -4160,7 +4174,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   });
 
   // ==========================================
-  // --- PAYNICORN PAYMENT GATEWAY INTEGRATION ---
+  // --- PAYNICORN PAYMENT GATEWAY INTEGRATION (FIRESTORE) ---
   // ==========================================
   const PAYNICORN_CONFIG = {
     app_id: process.env.PAYNICORN_APP_ID || "100199",
@@ -4169,15 +4183,15 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     api_endpoint: process.env.PAYNICORN_API_ENDPOINT || "https://api.paynicorn.com/gateway/pay"
   };
 
-  // 1. Create Payment Endpoint
+  // 1. Create Payment Endpoint: Save in Firestore orders collection with orderId as document ID
   app.post("/api/paynicorn/create-payment", async (req: any, res: any) => {
     try {
       const { amount, orderId, subject, userEmail, userId, metadata } = req.body;
 
-      if (!amount) {
+      if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
         return res.status(400).json({ 
           success: false, 
-          error: "Amount is required for creating a payment." 
+          error: "A valid positive amount is required for creating a payment." 
         });
       }
 
@@ -4192,7 +4206,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       const payload = {
         app_id: PAYNICORN_CONFIG.app_id,
         merchant_secret: PAYNICORN_CONFIG.merchant_secret,
-        amount: Number(amount) || amount,
+        amount: Number(amount),
         currency: PAYNICORN_CONFIG.currency,
         out_trade_no: safeOrderId,
         subject: subject || "Order Payment",
@@ -4235,61 +4249,38 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
                        "";
         }
       } catch (gatewayErr: any) {
-        console.error("[Paynicorn Gateway Request Error]:", gatewayErr.response?.data || gatewayErr.message);
+        console.error("[Paynicorn Gateway Request Notice]:", gatewayErr.response?.data || gatewayErr.message);
         if (gatewayErr.response?.data) {
           paynicornResponseData = gatewayErr.response.data;
           paymentUrl = paynicornResponseData?.payment_url || paynicornResponseData?.data?.payment_url || "";
         }
       }
 
-      // Record transaction in local database store
-      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
-      const existingIdx = orders.findIndex((o: any) => o.orderId === safeOrderId || o.out_trade_no === safeOrderId);
+      // If gateway did not provide a URL (sandbox mode or gateway offline), use verified fallback
+      const finalPaymentUrl = paymentUrl || `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${PAYNICORN_CONFIG.currency}&gateway=paynicorn`;
 
-      const newOrderRecord = {
+      // Save order in Firestore orders collection with orderId as document ID
+      await createFirestoreOrder({
         orderId: safeOrderId,
-        out_trade_no: safeOrderId,
-        amount: parseFloat(amount) || amount,
+        amount: Number(amount),
+        status: 'PENDING',
+        userId: userId ? String(userId) : null,
+        userEmail: userEmail ? String(userEmail) : null,
         currency: PAYNICORN_CONFIG.currency,
         subject: subject || "Order Payment",
-        status: 'PENDING',
-        userEmail: userEmail || null,
-        userId: userId || null,
-        metadata: metadata || null,
-        paymentUrl: paymentUrl || null,
+        paymentUrl: finalPaymentUrl,
         returnUrl: return_url,
         notifyUrl: notify_url,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+        metadata: metadata || null
+      });
 
-      if (existingIdx >= 0) {
-        orders[existingIdx] = { ...orders[existingIdx], ...newOrderRecord };
-      } else {
-        orders.push(newOrderRecord);
-      }
-      await saveData(PAYNICORN_ORDERS_FILE, orders);
-
-      // If gateway returned paymentUrl, return success immediately
-      if (paymentUrl) {
-        return res.json({
-          success: true,
-          paymentUrl: paymentUrl,
-          orderId: safeOrderId,
-          amount: amount,
-          currency: PAYNICORN_CONFIG.currency
-        });
-      }
-
-      // Fallback: If gateway did not provide a URL (sandbox mode or offline host), redirect to payment success simulation
-      const fallbackUrl = `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${PAYNICORN_CONFIG.currency}&gateway=paynicorn`;
-      console.log(`[Paynicorn] Using fallback redirect URL: ${fallbackUrl}`);
+      console.log(`[Paynicorn] Successfully stored Order #${safeOrderId} in Firestore with status PENDING.`);
 
       return res.json({
         success: true,
-        paymentUrl: fallbackUrl,
+        paymentUrl: finalPaymentUrl,
         orderId: safeOrderId,
-        amount: amount,
+        amount: Number(amount),
         currency: PAYNICORN_CONFIG.currency,
         gatewayResponse: paynicornResponseData
       });
@@ -4303,7 +4294,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     }
   });
 
-  // 2. Webhook Notification Endpoint (Server-to-Server)
+  // 2. Webhook Notification Endpoint: verify trade_status === 'SUCCESS' and update Firestore order
   app.post("/api/paynicorn/webhook", async (req: any, res: any) => {
     try {
       const data = req.body || {};
@@ -4319,56 +4310,79 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         return res.status(400).send("MISSING_ORDER_ID");
       }
 
-      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
-      const order = orders.find((o: any) => o.orderId === String(out_trade_no) || o.out_trade_no === String(out_trade_no));
+      const orderIdStr = String(out_trade_no);
 
-      if (trade_status === 'SUCCESS' || trade_status === 'PAID') {
-        if (order) {
-          order.status = 'PAID';
-          order.tradeStatus = trade_status;
-          order.tradeNo = trade_no;
-          order.paidAt = new Date().toISOString();
-          order.updatedAt = new Date().toISOString();
-          order.webhookPayload = data;
-          await saveData(PAYNICORN_ORDERS_FILE, orders);
-          console.log(`[Paynicorn Webhook] Order #${out_trade_no} updated to PAID successfully.`);
+      if (trade_status === 'SUCCESS') {
+        const updatedOrder = await updateFirestoreOrder(orderIdStr, {
+          status: 'PAID',
+          tradeStatus: 'SUCCESS',
+          tradeNo: trade_no,
+          paidAt: new Date().toISOString(),
+          webhookPayload: data
+        });
 
-          // If linked to a user account or userEmail, credit their balance
-          if (order.userEmail && order.amount) {
+        console.log(`[Paynicorn Webhook] Order #${orderIdStr} updated to PAID in Firestore.`);
+
+        // User balance credit logic if linked to a user
+        const targetEmail = updatedOrder?.userEmail || data.userEmail;
+        const targetAmount = updatedOrder?.amount || parseFloat(amount);
+
+        if (targetEmail && targetAmount) {
+          try {
             const users = loadData(USERS_FILE, []);
-            const user = users.find((u: any) => u.email?.toLowerCase() === order.userEmail.toLowerCase());
+            const user = users.find((u: any) => u.email?.toLowerCase() === String(targetEmail).toLowerCase());
             if (user) {
-              user.balance = (parseFloat(user.balance) || 0) + (parseFloat(order.amount) || 0);
+              const isSmmDeposit = updatedOrder?.metadata?.type === 'smm_deposit';
+              const creditAmount = (isSmmDeposit && updatedOrder?.metadata?.usdAmount)
+                ? Number(updatedOrder.metadata.usdAmount)
+                : (Number(targetAmount) || 0);
+
+              user.balance = (Number(user.balance) || 0) + creditAmount;
               await saveData(USERS_FILE, users);
-              console.log(`[Paynicorn Webhook] Credited user ${order.userEmail} with ${order.amount} BDT.`);
+              console.log(`[Paynicorn Webhook] Credited user ${targetEmail} with ${creditAmount} ${isSmmDeposit ? 'USD' : 'BDT'}.`);
+
+              if (isSmmDeposit) {
+                try {
+                  const smmDeps = loadData(SMM_DEPOSITS_FILE, []);
+                  const nextDepId = smmDeps.length ? Math.max(...smmDeps.map((d: any) => d.id || 0)) + 1 : 1;
+                  smmDeps.push({
+                    id: nextDepId,
+                    userId: user.id || 999,
+                    userEmail: user.email || targetEmail,
+                    userName: user.name || 'User',
+                    amount: creditAmount,
+                    method: `Paynicorn (${(updatedOrder?.metadata?.method || 'Automated').toUpperCase()})`,
+                    sender: 'Paynicorn Gateway',
+                    txid: trade_no || orderIdStr,
+                    status: 'approved',
+                    screenshot: '',
+                    aiReason: 'Automatic Paynicorn payment gateway verified and credited.',
+                    detectedTxId: trade_no || orderIdStr,
+                    date: new Date().toISOString().split('T')[0]
+                  });
+                  await saveData(SMM_DEPOSITS_FILE, smmDeps);
+                  console.log(`[Paynicorn Webhook] Created SMM Deposit entry for user ${user.email}, $${creditAmount}`);
+                } catch (smmErr) {
+                  console.error("[Paynicorn Webhook] Failed to save SMM deposit entry:", smmErr);
+                }
+              }
             }
+          } catch (creditErr) {
+            console.error("[Paynicorn Webhook] Error updating user balance:", creditErr);
           }
-        } else {
-          // Create new record for unlisted order
-          orders.push({
-            orderId: String(out_trade_no),
-            out_trade_no: String(out_trade_no),
-            amount: parseFloat(amount) || amount,
-            currency: PAYNICORN_CONFIG.currency,
-            status: 'PAID',
-            tradeStatus: trade_status,
-            tradeNo: trade_no,
-            paidAt: new Date().toISOString(),
-            webhookPayload: data
-          });
-          await saveData(PAYNICORN_ORDERS_FILE, orders);
-          console.log(`[Paynicorn Webhook] Created new PAID record for Order #${out_trade_no}.`);
         }
       } else {
-        if (order) {
-          order.status = trade_status || 'FAILED';
-          order.updatedAt = new Date().toISOString();
-          order.webhookPayload = data;
-          await saveData(PAYNICORN_ORDERS_FILE, orders);
-        }
+        // Record non-success trade status in Firestore
+        await updateFirestoreOrder(orderIdStr, {
+          status: trade_status || 'FAILED',
+          tradeStatus: trade_status,
+          tradeNo: trade_no,
+          webhookPayload: data
+        });
+        console.log(`[Paynicorn Webhook] Order #${orderIdStr} status updated to ${trade_status} in Firestore.`);
       }
 
-      // Respond with 'SUCCESS' as expected by Paynicorn
+      // Must respond with "SUCCESS" as expected by Paynicorn
       return res.status(200).send("SUCCESS");
     } catch (err: any) {
       console.error("[Paynicorn Webhook] Handler error:", err);
@@ -4376,17 +4390,22 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     }
   });
 
-  // 3. Query Order Status Endpoint
-  app.get("/api/paynicorn/order-status/:orderId", (req: any, res: any) => {
+  // 3. Order Status Check: Query the order document directly from Firestore
+  app.get("/api/paynicorn/order-status/:orderId", async (req: any, res: any) => {
     try {
       const { orderId } = req.params;
-      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
-      const order = orders.find((o: any) => o.orderId === String(orderId) || o.out_trade_no === String(orderId));
+      if (!orderId) {
+        return res.status(400).json({ success: false, error: "orderId parameter is required" });
+      }
+
+      const order = await getFirestoreOrder(String(orderId));
       if (!order) {
         return res.status(404).json({ success: false, error: "Order not found" });
       }
+
       return res.json({ success: true, order });
     } catch (e: any) {
+      console.error("[Paynicorn] Error querying order status:", e);
       return res.status(500).json({ success: false, error: e.message });
     }
   });
@@ -4395,21 +4414,67 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   app.post("/api/paynicorn/confirm-test-order", async (req: any, res: any) => {
     try {
       const { orderId } = req.body;
-      if (!orderId) return res.status(400).json({ error: "Order ID required" });
-
-      const orders = loadData(PAYNICORN_ORDERS_FILE, []);
-      const order = orders.find((o: any) => o.orderId === String(orderId) || o.out_trade_no === String(orderId));
-      if (order) {
-        order.status = 'PAID';
-        order.tradeStatus = 'SUCCESS';
-        order.paidAt = new Date().toISOString();
-        order.updatedAt = new Date().toISOString();
-        await saveData(PAYNICORN_ORDERS_FILE, orders);
-        return res.json({ success: true, order });
+      if (!orderId) {
+        return res.status(400).json({ success: false, error: "Order ID required" });
       }
-      return res.status(404).json({ error: "Order not found" });
+
+      const orderIdStr = String(orderId);
+      const existing = await getFirestoreOrder(orderIdStr);
+      if (!existing) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+
+      const updated = await updateFirestoreOrder(orderIdStr, {
+        status: 'PAID',
+        tradeStatus: 'SUCCESS',
+        paidAt: new Date().toISOString()
+      });
+
+      // Credit balance if linked to a user
+      const targetEmail = existing?.userEmail;
+      if (targetEmail) {
+        try {
+          const users = loadData(USERS_FILE, []);
+          const user = users.find((u: any) => u.email?.toLowerCase() === String(targetEmail).toLowerCase());
+          if (user) {
+            const isSmmDeposit = existing?.metadata?.type === 'smm_deposit';
+            const creditAmount = (isSmmDeposit && existing?.metadata?.usdAmount)
+              ? Number(existing.metadata.usdAmount)
+              : (Number(existing.amount) || 0);
+
+            user.balance = (Number(user.balance) || 0) + creditAmount;
+            await saveData(USERS_FILE, users);
+
+            if (isSmmDeposit) {
+              const smmDeps = loadData(SMM_DEPOSITS_FILE, []);
+              const nextDepId = smmDeps.length ? Math.max(...smmDeps.map((d: any) => d.id || 0)) + 1 : 1;
+              smmDeps.push({
+                id: nextDepId,
+                userId: user.id || 999,
+                userEmail: user.email || targetEmail,
+                userName: user.name || 'User',
+                amount: creditAmount,
+                method: `Paynicorn (${(existing?.metadata?.method || 'Automated').toUpperCase()})`,
+                sender: 'Paynicorn Gateway (Test)',
+                txid: 'SIM-' + Date.now(),
+                status: 'approved',
+                screenshot: '',
+                aiReason: 'Paynicorn test simulation verified and credited.',
+                detectedTxId: 'SIM-' + Date.now(),
+                date: new Date().toISOString().split('T')[0]
+              });
+              await saveData(SMM_DEPOSITS_FILE, smmDeps);
+            }
+          }
+        } catch (creditErr) {
+          console.error("[Paynicorn Confirm Test] Error updating balance:", creditErr);
+        }
+      }
+
+      return res.json({ success: true, order: updated });
     } catch (e: any) {
-      return res.status(500).json({ error: e.message });
+      console.error("[Paynicorn] Error confirming test order:", e);
+      return res.status(500).json({ success: false, error: e.message });
     }
   });
 

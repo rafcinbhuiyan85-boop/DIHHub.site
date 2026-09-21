@@ -43,9 +43,66 @@
         "htmlContent",
         "createdAt"
       ]
+    },
+    "PaynicornOrder": {
+      "title": "Paynicorn Order",
+      "description": "An order processed via Paynicorn payment gateway",
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Unique identifier for the order"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount in payment currency"
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency of payment (e.g. BDT)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "PAID", "FAILED", "CANCELLED"],
+          "description": "Order processing status"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Identifier of the ordering user"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Email of user"
+        },
+        "paymentUrl": {
+          "type": "string",
+          "description": "Checkout or payment URL"
+        },
+        "tradeNo": {
+          "type": "string",
+          "description": "Paynicorn trade number"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": [
+        "orderId",
+        "amount",
+        "status"
+      ]
     }
   },
   "firestore": {
+    "/orders/{orderId}": {
+      "schema": "PaynicornOrder",
+      "description": "Paynicorn payment orders collection"
+    },
     "/templates/{templateId}": {
       "schema": "HtmlTemplate",
       "description": "Collection of hosted HTML templates"
