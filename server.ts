@@ -4185,20 +4185,16 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       const siteSettings = await getFirestoreDocument('site', 'settings').catch(() => null);
       const appKey = (siteSettings?.paynicornAppKey || process.env.PAYNICORN_APP_ID || "").trim();
       const merchantSecret = (siteSettings?.paynicornMerchantSecret || process.env.PAYNICORN_MERCHANT_SECRET || "").trim();
-      const currency = (siteSettings?.paynicornCurrency || process.env.PAYNICORN_CURRENCY || "BDT").trim();
-      const env = siteSettings?.paynicornEnv || (process.env.PAYNICORN_API_ENDPOINT?.includes("test") ? "test" : "production");
+      const currency = "BDT";
       
-      const defaultEndpoint = env === "test"
-        ? "https://test.paynicorn.com/trade/v3/transaction/pay"
-        : "https://api.paynicorn.com/trade/v3/transaction/pay";
-        
-      const apiEndpoint = (siteSettings?.paynicornEndpoint || process.env.PAYNICORN_API_ENDPOINT || defaultEndpoint).trim();
+      // 1. Strictly LIVE Production endpoint as requested:
+      const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
 
       return {
         appKey: appKey || "7971309",
         merchantSecret: merchantSecret || "d29fec33b82a4d418d5ebc675cacb415",
         currency,
-        env,
+        env: "production",
         apiEndpoint,
         isConfigured: Boolean(appKey && merchantSecret)
       };
@@ -4206,9 +4202,9 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       return {
         appKey: process.env.PAYNICORN_APP_ID || "7971309",
         merchantSecret: process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415",
-        currency: process.env.PAYNICORN_CURRENCY || "BDT",
+        currency: "BDT",
         env: "production",
-        apiEndpoint: process.env.PAYNICORN_API_ENDPOINT || "https://api.paynicorn.com/trade/v3/transaction/pay",
+        apiEndpoint: "https://api.paynicorn.com/trade/v3/transaction/pay",
         isConfigured: Boolean(process.env.PAYNICORN_APP_ID && process.env.PAYNICORN_MERCHANT_SECRET)
       };
     }
@@ -4320,6 +4316,15 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       if (req.body.payMethod) bizReq.payMethod = String(req.body.payMethod).trim();
       if (metadata) bizReq.memo = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
 
+      // 2. Remove any mock, is_test, or sandbox flags from the request payload
+      delete bizReq.mock;
+      delete bizReq.is_test;
+      delete bizReq.isTest;
+      delete bizReq.sandbox;
+      delete bizReq.test;
+      delete bizReq.test_mode;
+      delete bizReq.is_mock;
+
       // Sign payload with Base64 content + MD5 hash
       const jsonBizReq = JSON.stringify(bizReq);
       const base64Content = Buffer.from(jsonBizReq, "utf8").toString("base64");
@@ -4331,7 +4336,16 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         sign: signature
       };
 
-      console.log(`[Paynicorn] Initiating payment for Order #${safeOrderId} (Amount: ৳${bdtAmount} BDT / $${usdAmount} USD) via ${config.apiEndpoint}...`);
+      console.log(`[Paynicorn] Calling LIVE Production endpoint: ${config.apiEndpoint}`);
+      console.log(`[Paynicorn Request Payload Parameters]:`, {
+        appKey: config.appKey,
+        amount: bizReq.amount,
+        currency: bizReq.currency,
+        goods_name: bizReq.goods_name,
+        orderId: bizReq.orderId,
+        callback_url: bizReq.callback_url,
+        redirect_url: bizReq.redirect_url
+      });
 
       let paymentUrl = "";
       let txnId = "";
@@ -4343,40 +4357,65 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          timeout: 20000
+          timeout: 25000
         });
 
         rawGatewayResponse = response.data;
-        console.log("[Paynicorn Gateway Response]:", rawGatewayResponse);
+        // 4. Log the full JSON response received from Paynicorn when generating the payment URL
+        console.log("[Paynicorn Gateway Full JSON Response]:", JSON.stringify(rawGatewayResponse, null, 2));
 
         if (rawGatewayResponse) {
           // Decode official v3 response package: Base64 content
-          if (rawGatewayResponse.responseCode === "000000" && rawGatewayResponse.content) {
+          if (rawGatewayResponse.content) {
             try {
               const decodedStr = Buffer.from(rawGatewayResponse.content, "base64").toString("utf8");
               const decoded = JSON.parse(decodedStr);
-              console.log("[Paynicorn Decoded Response]:", decoded);
+              console.log("[Paynicorn Gateway Decoded Content JSON]:", JSON.stringify(decoded, null, 2));
               paymentUrl = decoded.checkoutUrl || decoded.checkout_url || decoded.webUrl || decoded.web_url || decoded.paymentUrl || decoded.payment_url || "";
               txnId = decoded.txnId || decoded.txn_id || "";
+              console.log(`[Paynicorn Extracted checkoutUrl]: ${paymentUrl}`);
             } catch (decErr) {
               console.error("[Paynicorn] Failed to decode response content:", decErr);
             }
-          } else if (rawGatewayResponse.checkoutUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.webUrl || rawGatewayResponse.web_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.payment_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.webUrl || rawGatewayResponse.data?.paymentUrl) {
-            paymentUrl = rawGatewayResponse.checkoutUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.webUrl || rawGatewayResponse.web_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.payment_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.webUrl || rawGatewayResponse.data?.paymentUrl || "";
+          }
+          
+          if (!paymentUrl) {
+            paymentUrl = rawGatewayResponse.checkoutUrl || 
+                         rawGatewayResponse.checkout_url || 
+                         rawGatewayResponse.webUrl || 
+                         rawGatewayResponse.web_url || 
+                         rawGatewayResponse.paymentUrl || 
+                         rawGatewayResponse.payment_url || 
+                         rawGatewayResponse.data?.checkoutUrl || 
+                         rawGatewayResponse.data?.webUrl || 
+                         rawGatewayResponse.data?.paymentUrl || 
+                         "";
+            if (paymentUrl) {
+              console.log(`[Paynicorn Extracted checkoutUrl from raw payload]: ${paymentUrl}`);
+            }
           }
         }
       } catch (gatewayErr: any) {
         console.error("[Paynicorn Gateway Request Error]:", gatewayErr.response?.data || gatewayErr.message);
         if (gatewayErr.response?.data) {
           rawGatewayResponse = gatewayErr.response.data;
+          console.log("[Paynicorn Gateway Error JSON]:", JSON.stringify(rawGatewayResponse, null, 2));
         }
       }
 
-      // If upstream gateway returned a live cashier URL, use it directly without redirect loops.
-      // Only fallback to mock harness if no payment URL was returned.
+      // 3. Ensure return URL (redirect_url) is ONLY used AFTER the user finishes payment on Paynicorn cashier,
+      // and NOT triggered automatically during initiation.
       if (!paymentUrl) {
-        console.warn("[Paynicorn] Gateway did not return a cashier URL, falling back to mock page.");
-        paymentUrl = `${liveOrigin}/paynicorn/mock?orderId=${encodeURIComponent(safeOrderId)}&merchant_order_no=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(bdtAmount)}&currency=BDT&subject=${encodeURIComponent(goodsName)}&return_url=${encodeURIComponent(redirect_url)}&notify_url=${encodeURIComponent(callback_url)}`;
+        const errorMsg = rawGatewayResponse?.responseMsg || 
+                         rawGatewayResponse?.msg || 
+                         rawGatewayResponse?.message || 
+                         "Paynicorn API did not return a valid cashier checkoutUrl.";
+        console.error(`[Paynicorn Initiation Error] ${errorMsg}`);
+        return res.status(400).json({
+          success: false,
+          error: errorMsg,
+          gatewayResponse: rawGatewayResponse
+        });
       }
 
       // Save order in Firestore orders collection with orderId as document ID
