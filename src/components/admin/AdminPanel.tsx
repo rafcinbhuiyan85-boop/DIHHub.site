@@ -4749,7 +4749,7 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                         value={settings.paynicornAppKey || ''}
                         onChange={e => updateSettings({ paynicornAppKey: e.target.value.trim() })}
                         className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-1 focus:ring-blue-500 text-xs font-mono outline-none text-white transition-all"
-                        placeholder="e.g. 100199 or your merchant App ID"
+                        placeholder="e.g. 7971309 or your merchant App ID"
                       />
                     </div>
                     <p className="text-[10px] text-slate-500 ml-1">Obtain from your Paynicorn Merchant Console (Merchant Management &gt; App Key)</p>

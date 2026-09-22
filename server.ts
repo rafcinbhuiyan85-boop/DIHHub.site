@@ -4195,7 +4195,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       const apiEndpoint = (siteSettings?.paynicornEndpoint || process.env.PAYNICORN_API_ENDPOINT || defaultEndpoint).trim();
 
       return {
-        appKey: appKey || "100199",
+        appKey: appKey || "7971309",
         merchantSecret: merchantSecret || "d29fec33b82a4d418d5ebc675cacb415",
         currency,
         env,
@@ -4204,7 +4204,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       };
     } catch (e) {
       return {
-        appKey: process.env.PAYNICORN_APP_ID || "100199",
+        appKey: process.env.PAYNICORN_APP_ID || "7971309",
         merchantSecret: process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415",
         currency: process.env.PAYNICORN_CURRENCY || "BDT",
         env: "production",
