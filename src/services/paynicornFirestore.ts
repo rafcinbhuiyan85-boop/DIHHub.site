@@ -27,6 +27,7 @@ export interface PaynicornOrderData {
   orderId: string;
   merchant_order_no?: string;
   amount: number;
+  usdAmount?: number;
   status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | string;
   userId?: string | null;
   userEmail?: string | null;

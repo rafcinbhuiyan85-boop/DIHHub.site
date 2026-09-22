@@ -4258,18 +4258,61 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       const return_url = req.body.return_url || `${liveOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&merchant_order_no=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${encodeURIComponent(config.currency)}&gateway=paynicorn`;
       const notify_url = req.body.notify_url || `${liveOrigin}/api/paynicorn/callback`;
 
-      // Official Paynicorn v3 Request Body
-      const formattedAmount = Number(amount).toFixed(2);
+      // 1. Dynamic Exchange Rate & BDT Conversion
+      const settings = loadData(SETTINGS_FILE, {});
+      const exchangeRate = Number(settings.smmUsdToBdtRate || settings.usdToBdtRate || 128) || 128;
+
+      let usdAmount = 0;
+      let bdtAmount = 0;
+
+      const isUsd = req.body.currency === 'USD' || 
+                    req.body.isUsd === true || 
+                    Boolean(metadata?.usdAmount) || 
+                    Boolean(req.body.usdAmount) ||
+                    (metadata?.type === 'smm_deposit' && Number(amount) < 100);
+
+      if (isUsd) {
+        usdAmount = Number(req.body.usdAmount || metadata?.usdAmount || amount);
+        bdtAmount = Math.round(usdAmount * exchangeRate);
+      } else if (metadata?.bdtAmount) {
+        bdtAmount = Math.round(Number(metadata.bdtAmount));
+        usdAmount = Number(metadata.usdAmount || (bdtAmount / exchangeRate));
+      } else {
+        bdtAmount = Math.round(Number(amount));
+        usdAmount = Number((bdtAmount / exchangeRate).toFixed(2));
+      }
+
+      if (bdtAmount <= 0) {
+        bdtAmount = 100;
+        usdAmount = Number((100 / exchangeRate).toFixed(2));
+      }
+
+      // Generate descriptive goods_name including USD and BDT breakdown
+      const goodsName = usdAmount > 0
+        ? `DIH SMM Add Funds ($${usdAmount.toFixed(2)} USD / ৳${bdtAmount} BDT)`
+        : (subject || `DIH Hub Payment #${safeOrderId} (৳${bdtAmount} BDT)`);
+
+      // 2. Strict API Payload Parameters for Paynicorn v3 API (/trade/v3/transaction/pay)
+      const callback_url = req.body.callback_url || "https://dihhub.site/api/paynicorn/callback";
+      const redirect_url = req.body.redirect_url || "https://dihhub.site/payment-success";
+
       const bizReq: any = {
-        amount: formattedAmount,
-        countryCode: req.body.countryCode || "BD",
+        amount: String(bdtAmount),
+        currency: "BDT",
+        goods_name: goodsName,
+        goodsName: goodsName,
+        orderDescription: goodsName,
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        orderDescription: subject || `DIH Hub Payment #${safeOrderId}`,
-        currency: config.currency,
-        cpFrontPage: return_url,
-        notifyUrl: notify_url,
-        notify_url: notify_url
+        countryCode: req.body.countryCode || "BD",
+        callback_url: callback_url,
+        callbackUrl: callback_url,
+        notify_url: callback_url,
+        notifyUrl: callback_url,
+        redirect_url: redirect_url,
+        redirectUrl: redirect_url,
+        cpFrontPage: redirect_url,
+        return_url: redirect_url
       };
 
       if (userEmail) bizReq.email = String(userEmail).trim();
@@ -4288,7 +4331,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         sign: signature
       };
 
-      console.log(`[Paynicorn] Initiating payment for Order #${safeOrderId} (Amount: ${formattedAmount} ${config.currency}) via ${config.apiEndpoint}...`);
+      console.log(`[Paynicorn] Initiating payment for Order #${safeOrderId} (Amount: ৳${bdtAmount} BDT / $${usdAmount} USD) via ${config.apiEndpoint}...`);
 
       let paymentUrl = "";
       let txnId = "";
@@ -4307,19 +4350,19 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         console.log("[Paynicorn Gateway Response]:", rawGatewayResponse);
 
         if (rawGatewayResponse) {
-          // Check official v3 structure
+          // Decode official v3 response package: Base64 content
           if (rawGatewayResponse.responseCode === "000000" && rawGatewayResponse.content) {
             try {
               const decodedStr = Buffer.from(rawGatewayResponse.content, "base64").toString("utf8");
               const decoded = JSON.parse(decodedStr);
               console.log("[Paynicorn Decoded Response]:", decoded);
-              paymentUrl = decoded.webUrl || decoded.web_url || decoded.paymentUrl || decoded.payment_url || "";
+              paymentUrl = decoded.checkoutUrl || decoded.checkout_url || decoded.webUrl || decoded.web_url || decoded.paymentUrl || decoded.payment_url || "";
               txnId = decoded.txnId || decoded.txn_id || "";
             } catch (decErr) {
               console.error("[Paynicorn] Failed to decode response content:", decErr);
             }
-          } else if (rawGatewayResponse.payment_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.webUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.paymentUrl) {
-            paymentUrl = rawGatewayResponse.payment_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.webUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.paymentUrl || "";
+          } else if (rawGatewayResponse.checkoutUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.webUrl || rawGatewayResponse.web_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.payment_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.webUrl || rawGatewayResponse.data?.paymentUrl) {
+            paymentUrl = rawGatewayResponse.checkoutUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.webUrl || rawGatewayResponse.web_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.payment_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.webUrl || rawGatewayResponse.data?.paymentUrl || "";
           }
         }
       } catch (gatewayErr: any) {
@@ -4329,28 +4372,36 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         }
       }
 
-      // In test mode or when upstream gateway doesn't provide a live URL, use our dedicated Paynicorn mock page
-      if (config.env === "test" || !paymentUrl) {
-        paymentUrl = `${liveOrigin}/paynicorn/mock?orderId=${encodeURIComponent(safeOrderId)}&merchant_order_no=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(formattedAmount)}&currency=${encodeURIComponent(config.currency)}&subject=${encodeURIComponent(subject || 'Order Payment')}&return_url=${encodeURIComponent(return_url)}&notify_url=${encodeURIComponent(notify_url)}`;
+      // If upstream gateway returned a live cashier URL, use it directly without redirect loops.
+      // Only fallback to mock harness if no payment URL was returned.
+      if (!paymentUrl) {
+        console.warn("[Paynicorn] Gateway did not return a cashier URL, falling back to mock page.");
+        paymentUrl = `${liveOrigin}/paynicorn/mock?orderId=${encodeURIComponent(safeOrderId)}&merchant_order_no=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(bdtAmount)}&currency=BDT&subject=${encodeURIComponent(goodsName)}&return_url=${encodeURIComponent(redirect_url)}&notify_url=${encodeURIComponent(callback_url)}`;
       }
 
       // Save order in Firestore orders collection with orderId as document ID
       await createFirestoreOrder({
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        amount: Number(amount),
+        amount: bdtAmount,
+        usdAmount: usdAmount,
         status: 'PENDING',
         userId: userId ? String(userId) : null,
         userEmail: userEmail ? String(userEmail) : null,
-        currency: config.currency,
-        subject: subject || "Order Payment",
+        currency: "BDT",
+        subject: goodsName,
         paymentUrl: paymentUrl,
-        returnUrl: return_url,
-        notifyUrl: notify_url,
-        metadata: metadata || null
+        returnUrl: redirect_url,
+        notifyUrl: callback_url,
+        metadata: {
+          ...(metadata || {}),
+          exchangeRate,
+          usdAmount,
+          bdtAmount
+        }
       });
 
-      console.log(`[Paynicorn] Order #${safeOrderId} stored in Firestore (PENDING). Redirecting browser to official Paynicorn URL: ${paymentUrl}`);
+      console.log(`[Paynicorn] Order #${safeOrderId} stored in Firestore (PENDING). Directing browser to official Paynicorn URL: ${paymentUrl}`);
 
       return res.json({
         success: true,
@@ -4359,8 +4410,9 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         checkoutUrl: paymentUrl,
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        amount: Number(amount),
-        currency: config.currency,
+        amount: bdtAmount,
+        usdAmount: usdAmount,
+        currency: "BDT",
         data: {
           orderId: safeOrderId,
           merchant_order_no: safeOrderId,
