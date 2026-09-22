@@ -25,6 +25,7 @@ try {
 
 export interface PaynicornOrderData {
   orderId: string;
+  merchant_order_no?: string;
   amount: number;
   status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | string;
   userId?: string | null;
