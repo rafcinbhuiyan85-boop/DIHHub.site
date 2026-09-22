@@ -45,6 +45,11 @@ export interface AppSettings {
   paybdExchangeRate: number;
   paybdSiteUrl: string;
   paybdCurrency: 'BDT' | 'USD';
+  paynicornAppKey: string;
+  paynicornMerchantSecret: string;
+  paynicornCurrency: string;
+  paynicornEnv: 'production' | 'test';
+  paynicornEndpoint: string;
   movieApiKey: string;
   tmdbApiKey: string;
   moviePlayerServer: string;
@@ -238,6 +243,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   paybdExchangeRate: 110,
   paybdSiteUrl: 'https://ais-dev-nfwyd43crdrwbpwg3sdssy-663044304859.asia-east1.run.app',
   paybdCurrency: 'USD',
+  paynicornAppKey: '',
+  paynicornMerchantSecret: '',
+  paynicornCurrency: 'BDT',
+  paynicornEnv: 'production',
+  paynicornEndpoint: '',
   movieApiKey: '',
   tmdbApiKey: 'aa53c992e50edfd89401fdf7f394dae4',
   moviePlayerServer: 'vidsrc.to',

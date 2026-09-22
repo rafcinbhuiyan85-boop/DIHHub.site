@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import crypto from "crypto";
 import multer from "multer";
 import "dotenv/config";
 import { exec } from "child_process";
@@ -4177,11 +4178,40 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   // ==========================================
   // --- PAYNICORN PAYMENT GATEWAY INTEGRATION (FIRESTORE) ---
   // ==========================================
-  const PAYNICORN_CONFIG = {
-    app_id: process.env.PAYNICORN_APP_ID || "100199",
-    merchant_secret: process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415",
-    currency: process.env.PAYNICORN_CURRENCY || "BDT",
-    api_endpoint: process.env.PAYNICORN_API_ENDPOINT || "https://api.paynicorn.com/gateway/pay"
+
+  // Helper to load dynamic Paynicorn configuration from Firestore and environment
+  const getPaynicornConfig = async () => {
+    try {
+      const siteSettings = await getFirestoreDocument('site', 'settings').catch(() => null);
+      const appKey = (siteSettings?.paynicornAppKey || process.env.PAYNICORN_APP_ID || "").trim();
+      const merchantSecret = (siteSettings?.paynicornMerchantSecret || process.env.PAYNICORN_MERCHANT_SECRET || "").trim();
+      const currency = (siteSettings?.paynicornCurrency || process.env.PAYNICORN_CURRENCY || "BDT").trim();
+      const env = siteSettings?.paynicornEnv || (process.env.PAYNICORN_API_ENDPOINT?.includes("test") ? "test" : "production");
+      
+      const defaultEndpoint = env === "test"
+        ? "https://test.paynicorn.com/trade/v3/transaction/pay"
+        : "https://api.paynicorn.com/trade/v3/transaction/pay";
+        
+      const apiEndpoint = (siteSettings?.paynicornEndpoint || process.env.PAYNICORN_API_ENDPOINT || defaultEndpoint).trim();
+
+      return {
+        appKey: appKey || "100199",
+        merchantSecret: merchantSecret || "d29fec33b82a4d418d5ebc675cacb415",
+        currency,
+        env,
+        apiEndpoint,
+        isConfigured: Boolean(appKey && merchantSecret)
+      };
+    } catch (e) {
+      return {
+        appKey: process.env.PAYNICORN_APP_ID || "100199",
+        merchantSecret: process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415",
+        currency: process.env.PAYNICORN_CURRENCY || "BDT",
+        env: "production",
+        apiEndpoint: process.env.PAYNICORN_API_ENDPOINT || "https://api.paynicorn.com/trade/v3/transaction/pay",
+        isConfigured: Boolean(process.env.PAYNICORN_APP_ID && process.env.PAYNICORN_MERCHANT_SECRET)
+      };
+    }
   };
 
   // 1. Create Payment Endpoint: Save in Firestore orders collection with orderId as document ID
@@ -4196,69 +4226,92 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         });
       }
 
+      const config = await getPaynicornConfig();
       const safeOrderId = String(orderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
       const host = req.get('host') || 'localhost:3000';
       const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
       const defaultOrigin = `${protocol}://${host}`;
 
-      const return_url = req.body.return_url || `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}`;
+      // Return URL: where Paynicorn will redirect the user ONLY after they finish payment on Paynicorn
+      const return_url = req.body.return_url || `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${encodeURIComponent(config.currency)}&gateway=paynicorn`;
       const notify_url = req.body.notify_url || `${defaultOrigin}/api/paynicorn/webhook`;
 
-      const payload = {
-        app_id: PAYNICORN_CONFIG.app_id,
-        merchant_secret: PAYNICORN_CONFIG.merchant_secret,
-        amount: Number(amount),
-        currency: PAYNICORN_CONFIG.currency,
-        out_trade_no: safeOrderId,
-        subject: subject || "Order Payment",
-        return_url: return_url,
-        notify_url: notify_url
+      // Official Paynicorn v3 Request Body
+      const formattedAmount = Number(amount).toFixed(2);
+      const bizReq: any = {
+        amount: formattedAmount,
+        countryCode: req.body.countryCode || "BD",
+        orderId: safeOrderId,
+        orderDescription: subject || `DIH Hub Payment #${safeOrderId}`,
+        currency: config.currency,
+        cpFrontPage: return_url
       };
 
-      console.log(`[Paynicorn] Initiating payment for Order #${safeOrderId} (Amount: ${amount} ${PAYNICORN_CONFIG.currency})...`);
+      if (userEmail) bizReq.email = String(userEmail).trim();
+      if (req.body.phone) bizReq.phone = String(req.body.phone).trim();
+      if (req.body.payMethod) bizReq.payMethod = String(req.body.payMethod).trim();
+      if (metadata) bizReq.memo = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
+
+      // Sign payload with Base64 content + MD5 hash
+      const jsonBizReq = JSON.stringify(bizReq);
+      const base64Content = Buffer.from(jsonBizReq, "utf8").toString("base64");
+      const signature = crypto.createHash("md5").update(base64Content + config.merchantSecret, "utf8").digest("hex");
+
+      const v3Payload = {
+        appKey: config.appKey,
+        content: base64Content,
+        sign: signature
+      };
+
+      console.log(`[Paynicorn] Initiating payment for Order #${safeOrderId} (Amount: ${formattedAmount} ${config.currency}) via ${config.apiEndpoint}...`);
 
       let paymentUrl = "";
-      let paynicornResponseData: any = null;
+      let txnId = "";
+      let rawGatewayResponse: any = null;
 
       try {
-        const response = await axios.post(PAYNICORN_CONFIG.api_endpoint, payload, {
+        const response = await axios.post(config.apiEndpoint, v3Payload, {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          timeout: 15000
+          timeout: 20000
         });
 
-        paynicornResponseData = response.data;
-        console.log("[Paynicorn] Gateway response:", paynicornResponseData);
+        rawGatewayResponse = response.data;
+        console.log("[Paynicorn Gateway Response]:", rawGatewayResponse);
 
-        if (paynicornResponseData) {
-          let parsedData = paynicornResponseData;
-          if (typeof parsedData === 'string') {
+        if (rawGatewayResponse) {
+          // Check official v3 structure
+          if (rawGatewayResponse.responseCode === "000000" && rawGatewayResponse.content) {
             try {
-              parsedData = JSON.parse(parsedData);
-            } catch (e) {}
+              const decodedStr = Buffer.from(rawGatewayResponse.content, "base64").toString("utf8");
+              const decoded = JSON.parse(decodedStr);
+              console.log("[Paynicorn Decoded Response]:", decoded);
+              paymentUrl = decoded.webUrl || decoded.web_url || decoded.paymentUrl || decoded.payment_url || "";
+              txnId = decoded.txnId || decoded.txn_id || "";
+            } catch (decErr) {
+              console.error("[Paynicorn] Failed to decode response content:", decErr);
+            }
+          } else if (rawGatewayResponse.payment_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.webUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.paymentUrl) {
+            paymentUrl = rawGatewayResponse.payment_url || rawGatewayResponse.paymentUrl || rawGatewayResponse.webUrl || rawGatewayResponse.checkout_url || rawGatewayResponse.data?.checkoutUrl || rawGatewayResponse.data?.paymentUrl || "";
           }
-
-          paymentUrl = parsedData.payment_url || 
-                       parsedData.paymentUrl || 
-                       parsedData.data?.payment_url || 
-                       parsedData.data?.paymentUrl || 
-                       parsedData.pay_url || 
-                       parsedData.url || 
-                       parsedData.checkout_url || 
-                       "";
         }
       } catch (gatewayErr: any) {
-        console.error("[Paynicorn Gateway Request Notice]:", gatewayErr.response?.data || gatewayErr.message);
+        console.error("[Paynicorn Gateway Request Error]:", gatewayErr.response?.data || gatewayErr.message);
         if (gatewayErr.response?.data) {
-          paynicornResponseData = gatewayErr.response.data;
-          paymentUrl = paynicornResponseData?.payment_url || paynicornResponseData?.data?.payment_url || "";
+          rawGatewayResponse = gatewayErr.response.data;
         }
       }
 
-      // If gateway did not provide a URL (sandbox mode or gateway offline), use verified fallback
-      const finalPaymentUrl = paymentUrl || `${defaultOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${PAYNICORN_CONFIG.currency}&gateway=paynicorn`;
+      // Ensure we have the official Paynicorn checkout/cashier URL
+      if (!paymentUrl) {
+        const cashierBase = config.env === "test"
+          ? "https://test.paynicorn.com/trade/v3/cashier"
+          : "https://api.paynicorn.com/trade/v3/cashier";
+        
+        paymentUrl = `${cashierBase}?appKey=${encodeURIComponent(config.appKey)}&orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(formattedAmount)}&currency=${encodeURIComponent(config.currency)}&countryCode=BD`;
+      }
 
       // Save order in Firestore orders collection with orderId as document ID
       await createFirestoreOrder({
@@ -4267,23 +4320,31 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         status: 'PENDING',
         userId: userId ? String(userId) : null,
         userEmail: userEmail ? String(userEmail) : null,
-        currency: PAYNICORN_CONFIG.currency,
+        currency: config.currency,
         subject: subject || "Order Payment",
-        paymentUrl: finalPaymentUrl,
+        paymentUrl: paymentUrl,
         returnUrl: return_url,
         notifyUrl: notify_url,
         metadata: metadata || null
       });
 
-      console.log(`[Paynicorn] Successfully stored Order #${safeOrderId} in Firestore with status PENDING.`);
+      console.log(`[Paynicorn] Order #${safeOrderId} stored in Firestore (PENDING). Redirecting browser to official Paynicorn URL: ${paymentUrl}`);
 
       return res.json({
         success: true,
-        paymentUrl: finalPaymentUrl,
+        paymentUrl: paymentUrl,
+        webUrl: paymentUrl,
+        checkoutUrl: paymentUrl,
         orderId: safeOrderId,
         amount: Number(amount),
-        currency: PAYNICORN_CONFIG.currency,
-        gatewayResponse: paynicornResponseData
+        currency: config.currency,
+        data: {
+          orderId: safeOrderId,
+          paymentUrl: paymentUrl,
+          webUrl: paymentUrl,
+          checkoutUrl: paymentUrl,
+          txnId: txnId
+        }
       });
 
     } catch (err: any) {
@@ -4295,25 +4356,39 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     }
   });
 
-  // 2. Webhook Notification Endpoint: verify trade_status === 'SUCCESS' and update Firestore order
+  // 2. Webhook Notification Endpoint: verify trade_status === 'SUCCESS' or status === '1' and update Firestore order
   app.post("/api/paynicorn/webhook", async (req: any, res: any) => {
     try {
-      const data = req.body || {};
+      let data = req.body || {};
       console.log("[Paynicorn Webhook] Incoming notification received:", data);
 
-      const out_trade_no = data.out_trade_no || data.orderId || data.order_id;
-      const trade_status = String(data.trade_status || data.status || '').toUpperCase();
-      const trade_no = data.trade_no || data.transaction_id || '';
-      const amount = data.amount;
+      // Support official encrypted callback: { content: "<base64>", sign: "<md5>" }
+      if (data.content && typeof data.content === 'string') {
+        try {
+          const decodedStr = Buffer.from(data.content, "base64").toString("utf8");
+          const decoded = JSON.parse(decodedStr);
+          console.log("[Paynicorn Webhook] Decoded content payload:", decoded);
+          data = { ...data, ...decoded };
+        } catch (decErr) {
+          console.error("[Paynicorn Webhook] Error decoding encrypted content:", decErr);
+        }
+      }
+
+      const out_trade_no = data.orderId || data.out_trade_no || data.order_id;
+      const rawStatus = String(data.status || data.trade_status || '').toUpperCase();
+      const trade_no = data.txnId || data.trade_no || data.transaction_id || '';
+      const amount = data.amount || data.pricingAmount;
 
       if (!out_trade_no) {
-        console.warn("[Paynicorn Webhook] Received notification without out_trade_no.");
+        console.warn("[Paynicorn Webhook] Received notification without order identifier.");
         return res.status(400).send("MISSING_ORDER_ID");
       }
 
       const orderIdStr = String(out_trade_no);
+      // Status '1' in Paynicorn means payment success; 'SUCCESS' is standard trade status
+      const isSuccess = rawStatus === '1' || rawStatus === 'SUCCESS';
 
-      if (trade_status === 'SUCCESS') {
+      if (isSuccess) {
         const updatedOrder = await updateFirestoreOrder(orderIdStr, {
           status: 'PAID',
           tradeStatus: 'SUCCESS',
@@ -4375,12 +4450,12 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       } else {
         // Record non-success trade status in Firestore
         await updateFirestoreOrder(orderIdStr, {
-          status: trade_status || 'FAILED',
-          tradeStatus: trade_status,
+          status: rawStatus === '0' ? 'FAILED' : (rawStatus || 'FAILED'),
+          tradeStatus: rawStatus,
           tradeNo: trade_no,
           webhookPayload: data
         });
-        console.log(`[Paynicorn Webhook] Order #${orderIdStr} status updated to ${trade_status} in Firestore.`);
+        console.log(`[Paynicorn Webhook] Order #${orderIdStr} status updated to ${rawStatus} in Firestore.`);
       }
 
       // Must respond with "SUCCESS" as expected by Paynicorn

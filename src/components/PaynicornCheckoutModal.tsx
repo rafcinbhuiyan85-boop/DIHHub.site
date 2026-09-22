@@ -55,11 +55,13 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
       });
 
       const data = await response.json();
+      const paymentUrl = data.paymentUrl || data.webUrl || data.checkoutUrl || data.data?.paymentUrl || data.data?.webUrl || data.data?.checkoutUrl;
 
-      if (data.success && data.paymentUrl) {
+      if (paymentUrl) {
         if (onSuccess) onSuccess(orderId);
-        // Immediate redirection as specified in requirements
-        window.location.href = data.paymentUrl;
+        // Immediate redirection to real Paynicorn checkout page
+        window.location.href = paymentUrl;
+        return;
       } else {
         setError(data.error || 'পেমেন্ট গেটওয়েতে সংযোগ করতে সমস্যা হচ্ছে।');
         setLoading(false);

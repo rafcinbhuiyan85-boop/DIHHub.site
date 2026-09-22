@@ -4654,9 +4654,148 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div>
                 <h2 className="text-2xl font-bold mb-1">Payment Engine</h2>
-                <p className="text-xs text-slate-500">Configure DesiPayBD (TukTakPay) integration.</p>
+                <p className="text-xs text-slate-500">Configure Paynicorn Gateway (bKash, Nagad, Card) and DesiPayBD integrations.</p>
               </div>
 
+              {/* PAYNICORN GATEWAY CONFIGURATION */}
+              <div className="bg-slate-900 border border-blue-500/30 rounded-2xl p-6 space-y-6 shadow-xl shadow-blue-500/5">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
+                      🦄
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        Paynicorn Official Gateway
+                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30 font-mono font-bold">v3 API</span>
+                      </h3>
+                      <p className="text-xs text-slate-400">Direct redirection to official Paynicorn checkout with bKash, Nagad, and Card channels.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-[10px] font-bold px-2.5 py-1 rounded-full border font-mono uppercase tracking-wider",
+                      settings.paynicornAppKey ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    )}>
+                      {settings.paynicornAppKey ? "Configured" : "Needs Credentials"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Environment Switcher */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-[11px] uppercase tracking-widest text-blue-400 ml-1">Gateway Environment</h4>
+                    <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl">
+                      <button 
+                        type="button"
+                        onClick={() => updateSettings({ paynicornEnv: 'production' })}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                          settings.paynicornEnv !== 'test' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-slate-300"
+                        )}
+                      >
+                        Production (api.paynicorn.com)
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => updateSettings({ paynicornEnv: 'test' })}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                          settings.paynicornEnv === 'test' ? "bg-amber-600 text-white shadow-lg shadow-amber-600/30" : "text-slate-500 hover:text-slate-300"
+                        )}
+                      >
+                        Sandbox / Test (test.paynicorn.com)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Currency */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-[11px] uppercase tracking-widest text-blue-400 ml-1">Paynicorn Currency</h4>
+                    <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl">
+                      <button 
+                        type="button"
+                        onClick={() => updateSettings({ paynicornCurrency: 'BDT' })}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                          settings.paynicornCurrency !== 'USD' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-slate-300"
+                        )}
+                      >
+                        BDT (৳ Bangladesh Taka)
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => updateSettings({ paynicornCurrency: 'USD' })}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                          settings.paynicornCurrency === 'USD' ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-slate-300"
+                        )}
+                      >
+                        USD ($ US Dollar)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* App Key */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-[11px] uppercase tracking-widest text-blue-400 ml-1">Paynicorn App Key / ID</h4>
+                    <div className="relative">
+                      <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                      <input 
+                        type="text"
+                        value={settings.paynicornAppKey || ''}
+                        onChange={e => updateSettings({ paynicornAppKey: e.target.value.trim() })}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-1 focus:ring-blue-500 text-xs font-mono outline-none text-white transition-all"
+                        placeholder="e.g. 100199 or your merchant App ID"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500 ml-1">Obtain from your Paynicorn Merchant Console (Merchant Management &gt; App Key)</p>
+                  </div>
+
+                  {/* Merchant Secret */}
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-[11px] uppercase tracking-widest text-blue-400 ml-1">Paynicorn Merchant Secret (Salt)</h4>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                      <input 
+                        type="password"
+                        value={settings.paynicornMerchantSecret || ''}
+                        onChange={e => updateSettings({ paynicornMerchantSecret: e.target.value.trim() })}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-1 focus:ring-blue-500 text-xs font-mono outline-none text-white transition-all"
+                        placeholder="Paynicorn Private Signing Secret"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500 ml-1">Used to compute MD5 request and webhook response signatures</p>
+                  </div>
+                </div>
+
+                {/* Integration URLs for Merchant Portal */}
+                <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                    <ShieldCheck size={14} className="text-emerald-400" />
+                    Paynicorn Merchant Portal Configuration (Callback &amp; Redirect URLs)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+                    <div>
+                      <span className="text-slate-500 font-mono block mb-1">Return / Front URL (cpFrontPage):</span>
+                      <div className="bg-slate-900 border border-slate-800 rounded-lg p-2 font-mono text-emerald-400 select-all break-all">
+                        {typeof window !== 'undefined' ? `${window.location.origin}/payment-success` : '/payment-success'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-mono block mb-1">Webhook / IPN Notify URL:</span>
+                      <div className="bg-slate-900 border border-slate-800 rounded-lg p-2 font-mono text-blue-400 select-all break-all">
+                        {typeof window !== 'undefined' ? `${window.location.origin}/api/paynicorn/webhook` : '/api/paynicorn/webhook'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DESIPAYBD CONFIGURATION */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-8">
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

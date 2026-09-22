@@ -161,9 +161,11 @@ export default function ApkStore() {
         })
       });
       const data = await res.json();
-      if (data.success && data.paymentUrl) {
-        // Immediate redirection as specified in Paynicorn integration guidelines
-        window.location.href = data.paymentUrl;
+      const paymentUrl = data.paymentUrl || data.webUrl || data.checkoutUrl || data.data?.paymentUrl || data.data?.webUrl || data.data?.checkoutUrl;
+      if (paymentUrl) {
+        // Immediately redirect user's browser directly to that official Paynicorn URL
+        window.location.href = paymentUrl;
+        return;
       } else {
         alert(data.error || 'Failed to initiate Paynicorn payment.');
         setPaymentStep('method');

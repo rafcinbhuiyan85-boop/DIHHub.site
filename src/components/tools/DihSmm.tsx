@@ -1597,12 +1597,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }, 6000);
   };
 
-  const handlePayWithPaynicorn = async (methodIdToUse?: string, methodTitleToUse?: string) => {
+  const handlePayWithPaynicorn = async () => {
     setDepError(null);
     setDepSuccess(null);
-
-    const methodId = (methodIdToUse || selectedMethod || 'bkash').trim().toLowerCase();
-    setSelectedMethod(methodId);
 
     // If amount is empty or <= 0, default to 5 ($5.00 USD)
     let amt = parseFloat(depositAmount);
@@ -1617,7 +1614,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
 
     setIsPayingWithPaynicorn(true);
-    setPayingMethod(methodId);
 
     // Exchange rate: default 128 BDT/USD ($5 USD = 640 BDT) or custom admin rate
     const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
@@ -1625,8 +1621,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       : 128;
     const bdtAmount = Math.round(amt * rate);
     const orderId = `SMM-DEP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const brand = getGatewayBrandInfo(methodId, methodTitleToUse || methodId);
-    const methodLabel = brand.label || methodTitleToUse || methodId.toUpperCase();
 
     try {
       const res = await fetch('/api/paynicorn/create-payment', {
@@ -1635,12 +1629,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         body: JSON.stringify({
           amount: bdtAmount,
           orderId: orderId,
-          subject: `DIH SMM Add Funds - ${methodLabel} ($${amt.toFixed(2)} USD / ৳${bdtAmount} BDT)`,
+          subject: `DIH SMM Add Funds ($${amt.toFixed(2)} USD / ৳${bdtAmount} BDT)`,
           userEmail: userEmail,
           userId: userToUse?.id || userToUse?.uid || 999,
+          // No payMethod passed so Paynicorn renders cashier with all active methods
           metadata: {
             type: 'smm_deposit',
-            method: methodId,
             usdAmount: amt,
             bdtAmount: bdtAmount,
             exchangeRate: rate
@@ -1649,19 +1643,20 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       });
 
       const data = await res.json();
-      if (res.ok && data.success && data.paymentUrl) {
-        // Direct automated redirect to Paynicorn checkout
-        window.location.href = data.paymentUrl;
+      const paymentUrl = data.paymentUrl || data.webUrl || data.checkoutUrl || data.data?.paymentUrl || data.data?.webUrl || data.data?.checkoutUrl;
+      
+      if (res.ok && paymentUrl) {
+        // Directly redirect the browser to the returned checkout URL
+        window.location.href = paymentUrl;
+        return;
       } else {
         setDepError(data.error || 'Failed to initialize Paynicorn payment gateway. Please try again.');
         setIsPayingWithPaynicorn(false);
-        setPayingMethod(null);
       }
     } catch (err: any) {
       console.error("Paynicorn initiation error:", err);
       setDepError('Network connection error while contacting Paynicorn. Please try again.');
       setIsPayingWithPaynicorn(false);
-      setPayingMethod(null);
     }
   };
 
@@ -3076,69 +3071,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       );
                     })()}
 
-                    {/* 2. PAYMENT METHODS (bKash, Nagad, Card) */}
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center justify-between pl-0.5">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                          2. Click Method to Pay Instantly
-                        </label>
-                        <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                          Automated Paynicorn
-                        </span>
-                      </div>
-
-                      {(!manualGateways || manualGateways.length === 0) ? (
-                        <div className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-center text-xs text-red-400 font-medium font-sans">
-                          Payment methods are loading or temporarily unavailable.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2.5 font-sans">
-                          {manualGateways.filter(gate => gate.enabled !== false).map(gate => {
-                            const brand = getGatewayBrandInfo(gate.id, gate.title, gate.logoUrl);
-                            const isSelected = selectedMethod === gate.id;
-                            const isThisButtonPaying = isPayingWithPaynicorn && payingMethod === gate.id;
-
-                            return (
-                              <button
-                                key={gate.id}
-                                type="button"
-                                disabled={isPayingWithPaynicorn}
-                                onClick={() => {
-                                  setSelectedMethod(gate.id);
-                                  setDepError(null);
-                                  setDepSuccess(null);
-                                  handlePayWithPaynicorn(gate.id, gate.title);
-                                }}
-                                className={cn(
-                                  "py-3.5 px-2 rounded-xl border text-[11px] font-bold uppercase transition-all duration-200 outline-none select-none flex flex-col items-center justify-center gap-2 cursor-pointer min-h-[96px] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed group relative overflow-hidden",
-                                  isSelected 
-                                    ? "bg-blue-500/15 border-blue-500 text-white shadow-lg shadow-blue-500/15" 
-                                    : "bg-slate-900/50 border-[#1e2336] text-slate-300 hover:text-white hover:border-[#3b82f6]/40"
-                                )}
-                              >
-                                {isThisButtonPaying ? (
-                                  <div className="flex flex-col items-center justify-center gap-1.5">
-                                    <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-[9px] font-mono text-blue-300 font-bold tracking-normal">Connecting...</span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex items-center justify-center w-8 h-8 transition-transform duration-200 group-hover:scale-110">
-                                      {brand.logo}
-                                    </div>
-                                    <div className="text-center">
-                                      <span className="tracking-wider text-[11px] font-black block">{brand.label}</span>
-                                      <span className="text-[8px] text-emerald-400 font-mono font-bold tracking-tight block">⚡ Auto Pay</span>
-                                    </div>
-                                  </>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
                     {/* DEPOSIT ALERTS */}
                     {depError && (
                       <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
@@ -3154,41 +3086,26 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       </div>
                     )}
 
-                    {/* PRIMARY PROCEED BUTTON */}
-                    {(() => {
-                      const amt = parseFloat(depositAmount) || 0;
-                      const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
-                        ? settings.smmUsdToBdtRate
-                        : 128;
-                      const bdt = Math.round(amt * rate);
-                      const activeGate = manualGateways.find(g => g.id === selectedMethod);
-                      const brand = activeGate ? getGatewayBrandInfo(activeGate.id, activeGate.title, activeGate.logoUrl) : null;
-                      const methodName = brand?.label || (selectedMethod ? selectedMethod.toUpperCase() : 'bKash');
-
-                      return (
-                        <button 
-                          type="button"
-                          onClick={() => handlePayWithPaynicorn(selectedMethod, activeGate?.title)}
-                          disabled={isPayingWithPaynicorn}
-                          className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-sm tracking-wide rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-150 active:scale-[0.985] flex items-center justify-center gap-2.5 cursor-pointer"
-                        >
-                          {isPayingWithPaynicorn ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                              <span>Redirecting to Paynicorn...</span>
-                            </>
-                          ) : (
-                            <>
-                              <ShieldCheck size={18} className="text-blue-200" />
-                              <span>
-                                Pay ৳{bdt > 0 ? bdt : '640'} BDT (${amt > 0 ? amt.toFixed(2) : '5.00'} USD) via {methodName}
-                              </span>
-                              <span className="text-xs">➔</span>
-                            </>
-                          )}
-                        </button>
-                      );
-                    })()}
+                    {/* UNIFIED PAYNICORN PAYMENT BUTTON */}
+                    <button 
+                      type="button"
+                      onClick={handlePayWithPaynicorn}
+                      disabled={isPayingWithPaynicorn}
+                      className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-sm tracking-wide rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-150 active:scale-[0.985] flex items-center justify-center gap-2.5 cursor-pointer"
+                    >
+                      {isPayingWithPaynicorn ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          <span>Connecting to Paynicorn...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={18} className="text-blue-200" />
+                          <span>Proceed to Pay via Paynicorn</span>
+                          <span className="text-xs">➔</span>
+                        </>
+                      )}
+                    </button>
 
                     <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-sans pt-1">
                       <ShieldCheck size={12} className="text-emerald-500" />
