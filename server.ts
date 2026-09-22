@@ -4501,12 +4501,31 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         }
       }
 
-      // When Paynicorn sends a POST or GET request to this endpoint, instantly respond with HTTP status 200 and plain text string "SUCCESS" ONLY
-      return res.status(200).send("SUCCESS");
+      // Extract transaction ID (txnId, paynicorn_order_no, or merchant_order_no) from incoming request
+      const txnId = data.txnId || 
+                    data.paynicorn_order_no || 
+                    data.merchant_order_no || 
+                    data.orderId || 
+                    data.payTxnId || 
+                    data.transaction_id || 
+                    data.trade_no || 
+                    req.body?.txnId || 
+                    req.body?.paynicorn_order_no || 
+                    req.body?.merchant_order_no || 
+                    req.query?.txnId || 
+                    req.query?.paynicorn_order_no || 
+                    req.query?.merchant_order_no || 
+                    '';
+
+      // Paynicorn official specification: Respond immediately with HTTP 200 and plain text format: success_${txnId}
+      // Exact text: "success_" concatenated with the transaction ID
+      res.setHeader("Content-Type", "text/plain");
+      return res.status(200).send(`success_${txnId}`);
     } catch (err: any) {
       console.error("[Paynicorn Callback] Handler error:", err);
-      // Strictly return HTTP 200 "SUCCESS" plain text
-      return res.status(200).send("SUCCESS");
+      const fallbackTxnId = req.body?.txnId || req.body?.paynicorn_order_no || req.body?.merchant_order_no || req.query?.txnId || req.query?.paynicorn_order_no || req.query?.merchant_order_no || '';
+      res.setHeader("Content-Type", "text/plain");
+      return res.status(200).send(`success_${fallbackTxnId}`);
     }
   };
 
