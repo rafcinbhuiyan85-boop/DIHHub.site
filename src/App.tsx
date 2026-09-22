@@ -24,6 +24,7 @@ import MobileBypass from './components/tools/MobileBypass';
 import UserAuthModal from './components/UserAuthModal';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+import PaynicornMockPayment from './pages/PaynicornMockPayment';
 import AdsController from './components/AdsController';
 import Migration from './pages/Migration';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -348,6 +349,8 @@ function MainApp() {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/payment-cancel" element={<PaymentCancel />} />
+        <Route path="/paynicorn/mock" element={<PaynicornMockPayment />} />
+        <Route path="/payment/mock" element={<PaynicornMockPayment />} />
         <Route path="/admin/templates" element={<Navigate to="/" replace />} />
         <Route path="*" element={
           <>

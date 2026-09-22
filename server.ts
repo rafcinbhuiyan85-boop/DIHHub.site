@@ -4318,13 +4318,9 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         }
       }
 
-      // Ensure we have the official Paynicorn checkout/cashier URL
-      if (!paymentUrl) {
-        const cashierBase = config.env === "test"
-          ? "https://test.paynicorn.com/trade/v3/cashier"
-          : "https://api.paynicorn.com/trade/v3/cashier";
-        
-        paymentUrl = `${cashierBase}?appKey=${encodeURIComponent(config.appKey)}&orderId=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(formattedAmount)}&currency=${encodeURIComponent(config.currency)}&countryCode=BD`;
+      // In test mode or when upstream gateway doesn't provide a live URL, use our dedicated Paynicorn mock page
+      if (config.env === "test" || !paymentUrl) {
+        paymentUrl = `${defaultOrigin}/paynicorn/mock?orderId=${encodeURIComponent(safeOrderId)}&merchant_order_no=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(formattedAmount)}&currency=${encodeURIComponent(config.currency)}&subject=${encodeURIComponent(subject || 'Order Payment')}&return_url=${encodeURIComponent(return_url)}&notify_url=${encodeURIComponent(notify_url)}`;
       }
 
       // Save order in Firestore orders collection with orderId as document ID
@@ -4373,14 +4369,40 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     }
   });
 
-  // 2. Webhook Notification Endpoint: processes payment status & strictly returns HTTP 200 "SUCCESS" plain text
+  // 2. Webhook Notification Endpoint: processes payment status & strictly returns HTTP 200 "SUCCESS" plain text only when notification payload is provided
   const handlePaynicornWebhook = async (req: any, res: any) => {
     // Strictly set plain text response header for Paynicorn
     res.setHeader("Content-Type", "text/plain");
 
     try {
-      let data: any = { ...(req.body || {}), ...(req.query || {}) };
-      console.log("[Paynicorn Webhook] Incoming notification received:", data);
+      let data: any = {};
+      if (req.body && typeof req.body === 'object') {
+        data = { ...data, ...req.body };
+      } else if (typeof req.body === 'string' && req.body.trim()) {
+        try {
+          data = JSON.parse(req.body);
+        } catch {
+          const params = new URLSearchParams(req.body);
+          const parsedParams: Record<string, string> = {};
+          params.forEach((v, k) => { parsedParams[k] = v; });
+          if (Object.keys(parsedParams).length > 0) {
+            data = parsedParams;
+          }
+        }
+      }
+
+      if (req.query && typeof req.query === 'object') {
+        data = { ...data, ...req.query };
+      }
+
+      // 1. Verify notification payload is present
+      const hasPayload = data && Object.keys(data).length > 0;
+      if (!hasPayload) {
+        console.warn("[Paynicorn Webhook] Rejected: No notification payload received.");
+        return res.status(400).send("MISSING_PAYLOAD");
+      }
+
+      console.log("[Paynicorn Webhook] Incoming notification payload received:", data);
 
       // Support official encrypted callback: { content: "<base64>", sign: "<md5>" }
       if (data.content && typeof data.content === 'string') {
@@ -4395,15 +4417,16 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       }
 
       const out_trade_no = data.orderId || data.merchant_order_no || data.out_trade_no || data.order_id || data.orderNo;
+      
+      // 2. Ensure payload contains an order identifier
+      if (!out_trade_no) {
+        console.warn("[Paynicorn Webhook] Rejected: Payload missing order identifier.", data);
+        return res.status(400).send("MISSING_ORDER_ID");
+      }
+
       const rawStatus = String(data.status || data.trade_status || data.code || '').toUpperCase();
       const trade_no = data.txnId || data.trade_no || data.transaction_id || data.payTxnId || '';
       const amount = data.amount || data.pricingAmount;
-
-      // Handle ping tests / empty order ID callback checks from Paynicorn dashboard gracefully
-      if (!out_trade_no) {
-        console.warn("[Paynicorn Webhook] Received notification ping without order identifier. Responding SUCCESS.");
-        return res.status(200).send("SUCCESS");
-      }
 
       const orderIdStr = String(out_trade_no);
       // Status '1' in Paynicorn means payment success; 'SUCCESS' or code '0000' is standard success
@@ -4479,12 +4502,11 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         console.log(`[Paynicorn Webhook] Order #${orderIdStr} status updated to ${rawStatus} in Firestore.`);
       }
 
-      // Strictly return HTTP 200 response with the plain text string "SUCCESS"
+      // Strictly return HTTP 200 response with the plain text string "SUCCESS" only upon receiving notification payload
       return res.status(200).send("SUCCESS");
     } catch (err: any) {
       console.error("[Paynicorn Webhook] Handler error:", err);
-      // Even upon catching an error, strictly return HTTP 200 "SUCCESS" so Paynicorn console marks the callback test as successful
-      return res.status(200).send("SUCCESS");
+      return res.status(500).send("ERROR");
     }
   };
 
