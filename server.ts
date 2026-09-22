@@ -4239,14 +4239,20 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       // Format: <PREFIX>-<TIMESTAMP>-<HEX>, capped to max 64 chars as mandated by Paynicorn
       const safeOrderId = `${basePrefix}-${timestamp}-${uniqueSuffix}`.slice(0, 64);
 
-      const reqHost = req.get('host') || '';
-      let liveOrigin = 'https://ais-dev-nfwyd43crdrwbpwg3sdssy-663044304859.asia-east1.run.app';
-      if (reqHost && !reqHost.includes('localhost') && !reqHost.includes('127.0.0.1')) {
+      // Priority for custom domain (e.g. dihhub.site on Vercel, VPS, or custom host):
+      // When hosted on dihhub.site, incoming request host is dihhub.site, so notify_url automatically becomes https://dihhub.site/api/paynicorn/callback
+      const forwardedHost = (req.headers['x-forwarded-host'] as string) || req.get('host') || '';
+      let liveOrigin = '';
+
+      if (forwardedHost && !forwardedHost.includes('localhost') && !forwardedHost.includes('127.0.0.1')) {
         const proto = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-        liveOrigin = `${proto}://${reqHost}`;
+        liveOrigin = `${proto}://${forwardedHost}`;
       } else if (process.env.APP_URL) {
         liveOrigin = process.env.APP_URL;
+      } else {
+        liveOrigin = 'https://ais-dev-nfwyd43crdrwbpwg3sdssy-663044304859.asia-east1.run.app';
       }
+      liveOrigin = liveOrigin.replace(/\/+$/, '');
 
       // Return URL: where Paynicorn will redirect the user ONLY after they finish payment on Paynicorn
       const return_url = req.body.return_url || `${liveOrigin}/payment-success?orderId=${encodeURIComponent(safeOrderId)}&merchant_order_no=${encodeURIComponent(safeOrderId)}&amount=${encodeURIComponent(amount)}&currency=${encodeURIComponent(config.currency)}&gateway=paynicorn`;
