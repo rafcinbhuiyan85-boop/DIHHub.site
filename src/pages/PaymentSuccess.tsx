@@ -6,9 +6,11 @@ import { motion } from 'framer-motion';
 const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId') || 
+                  searchParams.get('merchant_order_no') || 
                   searchParams.get('out_trade_no') || 
-                  searchParams.get('order') || 
-                  searchParams.get('trade_no');
+                  searchParams.get('txnId') || 
+                  searchParams.get('trade_no') ||
+                  searchParams.get('order');
   const amountParam = searchParams.get('amount');
   const currencyParam = searchParams.get('currency') || 'BDT';
   const gatewayParam = searchParams.get('gateway') || 'Paynicorn';

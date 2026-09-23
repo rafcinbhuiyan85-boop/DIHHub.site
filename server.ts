@@ -4298,14 +4298,16 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       }
 
       // Paynicorn official specification: Respond immediately with HTTP 200 and plain text format: success_${txnId}
-      // Exact text: "success_" concatenated with the transaction ID
+      // Exact text: "success_" concatenated with the transaction ID, or "success" if verifying endpoint via Check Address
+      const responseText = txnId ? `success_${txnId}` : "success";
       res.setHeader("Content-Type", "text/plain");
-      return res.status(200).send(`success_${txnId}`);
+      return res.status(200).send(responseText);
     } catch (err: any) {
       console.error("[Paynicorn Callback] Handler error:", err);
       const fallbackTxnId = req.body?.txnId || req.body?.paynicorn_order_no || req.body?.merchant_order_no || req.query?.txnId || req.query?.paynicorn_order_no || req.query?.merchant_order_no || '';
+      const fallbackResponse = fallbackTxnId ? `success_${fallbackTxnId}` : "success";
       res.setHeader("Content-Type", "text/plain");
-      return res.status(200).send(`success_${fallbackTxnId}`);
+      return res.status(200).send(fallbackResponse);
     }
   };
 
