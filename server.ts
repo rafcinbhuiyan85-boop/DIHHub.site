@@ -3973,19 +3973,10 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         : (subject || `DIH Hub Payment #${safeOrderId} (৳${bdtAmount} BDT)`);
 
       // 2. Strict API Payload Parameters for Paynicorn v3 API (/trade/v3/transaction/pay)
-      // NOTE: dihhub.site redirects to www.dihhub.site on Vercel with a 308 redirect.
-      // Paynicorn callback robot does not follow 308 POST redirects, so we MUST use https://www.dihhub.site
-      let defaultHost = 'https://www.dihhub.site';
-      if (liveOrigin && !liveOrigin.includes('localhost') && !liveOrigin.includes('127.0.0.1')) {
-        if (liveOrigin.includes('dihhub.site') && !liveOrigin.includes('www.dihhub.site')) {
-          defaultHost = 'https://www.dihhub.site';
-        } else {
-          defaultHost = liveOrigin;
-        }
-      }
-
-      const callback_url = req.body.callback_url || req.body.notify_url || `${defaultHost}/api/paynicorn/callback`;
-      const redirect_url = req.body.redirect_url || req.body.return_url || `${defaultHost}/payment-success`;
+      // Paynicorn webhook robot requires a publicly reachable domain without Google 302 Cookie Check or Vercel 308 redirect.
+      // Therefore, the callback MUST always be sent to https://www.dihhub.site/api/paynicorn/callback.
+      const callback_url = req.body.callback_url || req.body.notify_url || "https://www.dihhub.site/api/paynicorn/callback";
+      const redirect_url = req.body.redirect_url || req.body.return_url || (liveOrigin ? `${liveOrigin}/payment-success` : "https://www.dihhub.site/payment-success");
 
       const bizReq: any = {
         amount: String(bdtAmount),
