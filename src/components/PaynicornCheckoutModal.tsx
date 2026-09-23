@@ -30,9 +30,14 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
 
   const countries = [
     { code: 'BD', name: 'Bangladesh', flag: '🇧🇩', currency: 'BDT', symbol: '৳', methods: 'bKash, Nagad' },
+    { code: 'US', name: 'USA / Cards', flag: '🇺🇸', currency: 'USD', symbol: '$', methods: 'Visa, Mastercard' },
+    { code: 'AE', name: 'UAE', flag: '🇦🇪', currency: 'AED', symbol: 'AED', methods: 'Cards / Local Pay' },
     { code: 'PK', name: 'Pakistan', flag: '🇵🇰', currency: 'PKR', symbol: '₨', methods: 'JazzCash, Easypaisa' },
     { code: 'IN', name: 'India', flag: '🇮🇳', currency: 'INR', symbol: '₹', methods: 'UPI, Paytm, Cards' },
-    { code: 'US', name: 'Cards / Global', flag: '🌍', currency: 'USD', symbol: '$', methods: 'Visa, Mastercard' },
+    { code: 'KR', name: 'South Korea', flag: '🇰🇷', currency: 'KRW', symbol: '₩', methods: 'KakaoPay, Cards' },
+    { code: 'CN', name: 'China', flag: '🇨🇳', currency: 'CNY', symbol: '¥', methods: 'AliPay, WeChat' },
+    { code: 'ES', name: 'Spain', flag: '🇪🇸', currency: 'EUR', symbol: '€', methods: 'Bizum, SEPA' },
+    { code: 'MM', name: 'Myanmar', flag: '🇲🇲', currency: 'MMK', symbol: 'Ks', methods: 'KBZPay, WavePay' },
     { code: 'ID', name: 'Indonesia', flag: '🇮🇩', currency: 'IDR', symbol: 'Rp', methods: 'QRIS, DANA' },
     { code: 'MY', name: 'Malaysia', flag: '🇲🇾', currency: 'MYR', symbol: 'RM', methods: 'FPX, Touch n Go' },
   ];
@@ -53,13 +58,16 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
     setError(null);
 
     try {
+      const isUsd = currentCountryObj.currency === 'USD';
       const response = await fetch('/api/paynicorn/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: numericAmount,
           currency: currentCountryObj.currency,
+          country: currentCountryObj.code,
           countryCode: currentCountryObj.code,
+          paymentMethod: isUsd ? 'card' : (currentCountryObj.code === 'BD' ? 'local' : 'auto'),
           orderId: orderId,
           subject: orderTitle,
           userEmail: userEmail || undefined,
@@ -73,7 +81,7 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
 
       if (paymentUrl) {
         if (onSuccess) onSuccess(orderId);
-        // Immediate redirection to real Paynicorn checkout page
+        // Immediate redirection to real payment gateway checkout page
         window.location.href = paymentUrl;
         return;
       } else {
@@ -81,7 +89,7 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
         setLoading(false);
       }
     } catch (err: any) {
-      console.error('Paynicorn Checkout Error:', err);
+      console.error('Payment Checkout Error:', err);
       setError('সার্ভারে যোগাযোগ করা যায়নি। দয়া করে পুনরায় চেষ্টা করুন।');
       setLoading(false);
     }
@@ -113,8 +121,8 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
               <CreditCard size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight text-white">Paynicorn Pay</h3>
-              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Instant BDT Gateway</p>
+              <h3 className="text-xl font-black uppercase tracking-tight text-white">Secure Checkout</h3>
+              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Instant Automated Gateway</p>
             </div>
           </div>
 
@@ -203,11 +211,11 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
             {loading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                <span>Redirecting to Paynicorn...</span>
+                <span>Redirecting to Payment Gateway...</span>
               </>
             ) : (
               <>
-                <span>Pay with Paynicorn</span>
+                <span>Proceed to Payment</span>
                 <ArrowRight size={18} />
               </>
             )}

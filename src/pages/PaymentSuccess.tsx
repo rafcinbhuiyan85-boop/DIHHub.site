@@ -117,7 +117,7 @@ const PaymentSuccess: React.FC = () => {
 
           <div className="flex justify-between items-center text-xs border-t border-slate-700/50 pt-2">
             <span className="text-slate-400 uppercase tracking-wider font-semibold">Gateway</span>
-            <span className="text-slate-300 font-medium">Paynicorn (BDT)</span>
+            <span className="text-slate-300 font-medium">Instant Automated Gateway</span>
           </div>
         </div>
 

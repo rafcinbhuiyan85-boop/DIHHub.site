@@ -3978,62 +3978,88 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       const callback_url = req.body.callback_url || req.body.notify_url || "https://www.dihhub.site/api/paynicorn/callback";
       const redirect_url = req.body.redirect_url || req.body.return_url || (liveOrigin ? `${liveOrigin}/payment-success` : "https://www.dihhub.site/payment-success");
 
-      // Smart Visitor Country Auto-Detection:
-      // Reads from request body, Vercel IP header, Cloudflare IP header, or defaults to BD
-      const detectedCountry = String(
-        req.body.countryCode || 
-        req.headers['x-vercel-ip-country'] || 
-        req.headers['cf-ipcountry'] || 
-        req.headers['x-country-code'] || 
-        'BD'
-      ).trim().toUpperCase().slice(0, 2);
+      // 1. Accept 'currency', 'country', and 'paymentMethod' from the frontend request body
+      const reqMethod = String(req.body.paymentMethod || req.body.method || '').trim().toLowerCase();
+      const reqCountry = String(req.body.country || req.body.countryCode || '').trim().toUpperCase();
+      const reqCurrency = String(req.body.currency || '').trim().toUpperCase();
 
-      const countryToCurrency: Record<string, string> = {
-        BD: 'BDT',
-        IN: 'INR',
-        PK: 'PKR',
-        NG: 'NGN',
-        PH: 'PHP',
-        EG: 'EGP',
-        BR: 'BRL',
-        ID: 'IDR',
-        MY: 'MYR',
-        US: 'USD',
-        GB: 'USD',
-        CA: 'USD',
-        AU: 'USD'
-      };
+      let targetCountry = 'BD';
+      let targetCurrency = 'BDT';
 
-      const finalCountryCode = (req.body.countryCode || detectedCountry || 'BD').toUpperCase();
-      const finalCurrency = req.body.currency || countryToCurrency[finalCountryCode] || (finalCountryCode === 'BD' ? 'BDT' : 'USD');
+      // 2. If user selects Local Payment (bKash/Nagad), set: currency: "BDT", country: "BD"
+      if (reqMethod === 'local' || reqMethod === 'bkash' || reqMethod === 'nagad' || reqMethod === 'rocket' || reqCountry === 'BD' || reqCurrency === 'BDT') {
+        targetCountry = 'BD';
+        targetCurrency = 'BDT';
+      }
+      // 3. If user selects International Card / USD, set: currency: "USD", country: "US"
+      else if (reqMethod === 'card' || reqMethod === 'cards' || reqMethod === 'usd' || reqMethod === 'international' || reqCountry === 'US' || reqCurrency === 'USD') {
+        targetCountry = 'US';
+        targetCurrency = 'USD';
+      }
+      // Dynamic country & currency from merchant's configured countries:
+      else if (reqCountry) {
+        targetCountry = reqCountry;
+        const countryMap: Record<string, string> = {
+          BD: 'BDT',
+          US: 'USD',
+          PK: 'PKR',
+          IN: 'INR',
+          ID: 'IDR',
+          MY: 'MYR',
+          AE: 'AED',
+          KR: 'KRW',
+          CN: 'CNY',
+          ES: 'EUR',
+          MM: 'MMK'
+        };
+        targetCurrency = reqCurrency || countryMap[reqCountry] || 'USD';
+      } else if (reqCurrency) {
+        targetCurrency = reqCurrency;
+        targetCountry = reqCurrency === 'BDT' ? 'BD' : (reqCurrency === 'PKR' ? 'PK' : (reqCurrency === 'INR' ? 'IN' : 'US'));
+      }
 
-      // Determine appropriate charge amount based on currency
+      // Determine charge amount based on target currency
       let finalAmount = '';
-      if (req.body.amount && req.body.currency) {
+      if (req.body.amount && (reqCurrency === targetCurrency)) {
         finalAmount = String(req.body.amount);
-      } else if (finalCurrency === 'USD') {
+      } else if (targetCurrency === 'USD') {
         finalAmount = String(usdAmount.toFixed(2));
-      } else if (finalCurrency === 'INR') {
-        finalAmount = String(Math.round(usdAmount * 86));
-      } else if (finalCurrency === 'PKR') {
-        finalAmount = String(Math.round(usdAmount * 280));
-      } else if (finalCurrency === 'BDT') {
+      } else if (targetCurrency === 'BDT') {
         finalAmount = String(bdtAmount);
+      } else if (targetCurrency === 'INR') {
+        finalAmount = String(Math.round(usdAmount * 86));
+      } else if (targetCurrency === 'PKR') {
+        finalAmount = String(Math.round(usdAmount * 280));
+      } else if (targetCurrency === 'IDR') {
+        finalAmount = String(Math.round(usdAmount * 16200));
+      } else if (targetCurrency === 'MYR') {
+        finalAmount = String((usdAmount * 4.45).toFixed(2));
+      } else if (targetCurrency === 'AED') {
+        finalAmount = String((usdAmount * 3.67).toFixed(2));
+      } else if (targetCurrency === 'KRW') {
+        finalAmount = String(Math.round(usdAmount * 1350));
+      } else if (targetCurrency === 'CNY') {
+        finalAmount = String((usdAmount * 7.25).toFixed(2));
+      } else if (targetCurrency === 'EUR') {
+        finalAmount = String((usdAmount * 0.92).toFixed(2));
+      } else if (targetCurrency === 'MMK') {
+        finalAmount = String(Math.round(usdAmount * 2100));
       } else if (req.body.amount) {
         finalAmount = String(req.body.amount);
       } else {
         finalAmount = String(bdtAmount);
       }
 
+      // 4. Pass dynamic 'currency' and 'country' into create-order API payload
       const bizReq: any = {
         amount: finalAmount,
-        currency: finalCurrency,
+        currency: targetCurrency,
         goods_name: goodsName,
         goodsName: goodsName,
         orderDescription: goodsName,
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        countryCode: finalCountryCode,
+        countryCode: targetCountry,
         callback_url: callback_url,
         callbackUrl: callback_url,
         notify_url: callback_url,
@@ -4151,16 +4177,16 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         });
       }
 
-      // Save order in Firestore orders collection with orderId as document ID
-      await createFirestoreOrder({
+      // Save order in Firestore orders collection asynchronously without blocking customer redirect
+      createFirestoreOrder({
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        amount: bdtAmount,
+        amount: finalAmount,
         usdAmount: usdAmount,
         status: 'PENDING',
         userId: userId ? String(userId) : null,
         userEmail: userEmail ? String(userEmail) : null,
-        currency: "BDT",
+        currency: targetCurrency,
         subject: goodsName,
         paymentUrl: paymentUrl,
         returnUrl: redirect_url,
@@ -4169,9 +4195,10 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
           ...(metadata || {}),
           exchangeRate,
           usdAmount,
-          bdtAmount
+          currency: targetCurrency,
+          countryCode: targetCountry
         }
-      });
+      }).catch(err => console.warn(`[Firestore Order Save Async Notice]: ${err?.message}`));
 
       console.log(`[Paynicorn] Order #${safeOrderId} stored in Firestore (PENDING). Directing browser to official Paynicorn URL: ${paymentUrl}`);
 
@@ -4182,16 +4209,19 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         checkoutUrl: paymentUrl,
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        amount: bdtAmount,
+        amount: finalAmount,
         usdAmount: usdAmount,
-        currency: "BDT",
+        currency: targetCurrency,
+        countryCode: targetCountry,
         data: {
           orderId: safeOrderId,
           merchant_order_no: safeOrderId,
           paymentUrl: paymentUrl,
           webUrl: paymentUrl,
           checkoutUrl: paymentUrl,
-          txnId: txnId
+          txnId: txnId,
+          currency: targetCurrency,
+          countryCode: targetCountry
         }
       });
 

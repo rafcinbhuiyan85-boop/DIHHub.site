@@ -205,12 +205,57 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     },
     {
       code: 'US',
-      name: 'Cards / Global',
-      flag: '🌍',
+      name: 'Cards / Global (USA)',
+      flag: '🇺🇸',
       currency: 'USD',
       symbol: '$',
       methods: 'Visa / MasterCard / Cards',
       ratePerUsd: 1
+    },
+    {
+      code: 'AE',
+      name: 'UAE',
+      flag: '🇦🇪',
+      currency: 'AED',
+      symbol: 'AED',
+      methods: 'Cards / Local Pay',
+      ratePerUsd: 3.67
+    },
+    {
+      code: 'KR',
+      name: 'South Korea',
+      flag: '🇰🇷',
+      currency: 'KRW',
+      symbol: '₩',
+      methods: 'KakaoPay / Cards',
+      ratePerUsd: 1350
+    },
+    {
+      code: 'CN',
+      name: 'China',
+      flag: '🇨🇳',
+      currency: 'CNY',
+      symbol: '¥',
+      methods: 'AliPay / WeChat / Cards',
+      ratePerUsd: 7.25
+    },
+    {
+      code: 'ES',
+      name: 'Spain / Europe',
+      flag: '🇪🇸',
+      currency: 'EUR',
+      symbol: '€',
+      methods: 'Bizum / SEPA / Cards',
+      ratePerUsd: 0.92
+    },
+    {
+      code: 'MM',
+      name: 'Myanmar',
+      flag: '🇲🇲',
+      currency: 'MMK',
+      symbol: 'Ks',
+      methods: 'KBZPay / WavePay',
+      ratePerUsd: 2100
     },
     {
       code: 'ID',
@@ -1687,12 +1732,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         body: JSON.stringify({
           amount: chargedAmount,
           currency: countryObj.currency,
+          country: countryObj.code,
           countryCode: countryObj.code,
+          paymentMethod: isUsd ? 'card' : (countryObj.code === 'BD' ? 'local' : 'auto'),
           orderId: orderId,
           subject: `DIH SMM Add Funds ($${amt.toFixed(2)} USD / ${countryObj.symbol}${chargedAmount} ${countryObj.currency})`,
           userEmail: userEmail,
           userId: userToUse?.id || userToUse?.uid || 999,
-          // No payMethod passed so Paynicorn renders cashier with all active methods for this country
           metadata: {
             type: 'smm_deposit',
             usdAmount: amt,
@@ -1700,6 +1746,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
             currency: countryObj.currency,
             countryCode: countryObj.code,
             countryName: countryObj.name,
+            paymentMethod: isUsd ? 'card' : (countryObj.code === 'BD' ? 'local' : 'auto'),
             ratePerUsd: countryObj.ratePerUsd
           }
         })
@@ -1713,12 +1760,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         window.location.href = paymentUrl;
         return;
       } else {
-        setDepError(data.error || 'Failed to initialize Paynicorn payment gateway. Please try again.');
+        setDepError(data.error || 'Failed to initialize secure payment gateway. Please try again.');
         setIsPayingWithPaynicorn(false);
       }
     } catch (err: any) {
-      console.error("Paynicorn initiation error:", err);
-      setDepError('Network connection error while contacting Paynicorn. Please try again.');
+      console.error("Gateway initiation error:", err);
+      setDepError('Network connection error while connecting to payment gateway. Please try again.');
       setIsPayingWithPaynicorn(false);
     }
   };
@@ -3179,7 +3226,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             </div>
                           )}
                           <div className="flex justify-between items-center text-xs text-white border-t border-emerald-500/10 pt-1.5 mt-1">
-                            <span className="font-semibold text-slate-300">Total Payable at Paynicorn:</span>
+                            <span className="font-semibold text-slate-300">Total Payable:</span>
                             <span className="text-sm font-black text-emerald-400 font-mono">
                               {activeCountry.symbol}{payable} {activeCountry.currency}{' '}
                               <span className="text-xs text-slate-400 font-normal">(${amt.toFixed(2)} USD)</span>
@@ -3204,7 +3251,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       </div>
                     )}
 
-                    {/* UNIFIED PAYNICORN PAYMENT BUTTON */}
+                    {/* UNIFIED INSTANT PAYMENT BUTTON */}
                     <button 
                       type="button"
                       onClick={handlePayWithPaynicorn}
@@ -3214,12 +3261,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       {isPayingWithPaynicorn ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                          <span>Connecting to Paynicorn...</span>
+                          <span>Connecting to Secure Gateway...</span>
                         </>
                       ) : (
                         <>
                           <ShieldCheck size={18} className="text-blue-200" />
-                          <span>Proceed to Pay via Paynicorn</span>
+                          <span>Proceed to Payment</span>
                           <span className="text-xs">➔</span>
                         </>
                       )}
@@ -3227,7 +3274,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                     <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-sans pt-1">
                       <ShieldCheck size={12} className="text-emerald-500" />
-                      <span>Secured with Paynicorn Automated Payment Gateway • 256-Bit SSL Encrypted</span>
+                      <span>256-Bit SSL Secured Automated Payment Gateway • Instant Credit</span>
                     </div>
 
                     {/* USER DEPOSIT TRANSACTIONS LOG */}
