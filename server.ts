@@ -3140,327 +3140,6 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     });
   });
 
-  // --- BanglaEpay Payment Gateway Integration ---
-
-  // POST /api/payment/initiate -> called by frontend with user ID & amount
-  app.post('/api/payment/initiate', async (req, res) => {
-    const { userId, amount } = req.body;
-    if (!userId || !amount) {
-      return res.status(400).json({ success: false, message: 'userId and amount required' });
-    }
-
-    try {
-      const users = loadData(USERS_FILE, []);
-      const user = users.find((u: any) => u.id === userId);
-      if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found' });
-      }
-
-      const settings = loadData(SETTINGS_FILE, {});
-      const brandKey = process.env.BANGLAEPAY_BRAND_KEY;
-      if (!brandKey) {
-        console.error('[BanglaEpay] BANGLAEPAY_BRAND_KEY is missing from environment variables.');
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Payment gateway brand key is not configured. Please enter it in Settings as BANGLAEPAY_BRAND_KEY.' 
-        });
-      }
-      const siteUrl = settings.paybdSiteUrl || process.env.SITE_URL || 'https://ais-dev-nfwyd43crdrwbpwg3sdssy-663044304859.asia-east1.run.app';
-      const orderId = `ORDER_${userId}_${Date.now()}`;
-
-      console.log(`[BanglaEpay] Creating transaction for client: ${user.name} (${user.email}), amount: ${amount}`);
-
-      // Resilient sequence of candidate checkout initiation endpoints
-      const endpoints = [
-        'https://banglaepay.com/api/checkout/initiate',
-        'https://api.banglaepay.com/api/checkout/initiate',
-        'https://banglaepay.com/v1/payment/create',
-        'https://banglaepay.com/api/payment/create'
-      ];
-
-      let lastError: any = null;
-      let checkoutUrl: string | null = null;
-
-      for (const endpoint of endpoints) {
-        try {
-          const payload = {
-            brand_key: brandKey,
-            amount: parseFloat(amount),
-            order_id: orderId,
-            customer_name: user.name || 'User',
-            customer_email: user.email || 'user@example.com',
-            customer_phone: user.phone || '01700000000',
-            success_url: `${siteUrl}/payment/success?order=${orderId}`,
-            cancel_url: `${siteUrl}/payment/cancel`,
-            webhook_url: `${siteUrl}/api/payment/callback`,
-            callback_url: `${siteUrl}/api/payment/callback`
-          };
-
-          const r = await axios.post(endpoint, payload, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${brandKey}`,
-              'X-Brand-Key': brandKey,
-              'API-KEY': brandKey
-            },
-            timeout: 8000
-          });
-
-          const d = r.data;
-          checkoutUrl = d.payment_url || d.checkout_url || d.url || d.data?.payment_url || d.data?.checkout_url || d.data?.url;
-          if (checkoutUrl) {
-            console.log(`[BanglaEpay] Successfully initialized checkout at: ${endpoint}`);
-            break;
-          }
-        } catch (err: any) {
-          lastError = err;
-          console.warn(`[BanglaEpay] Endpoint ${endpoint} failed:`, err.message);
-        }
-      }
-
-      if (checkoutUrl) {
-        return res.json({ success: true, payment_url: checkoutUrl, order_id: orderId });
-      }
-
-      console.error(`[BanglaEpay] All checkout endpoints failed. Last error:`, lastError?.message);
-      // Resilient fallback URL in case of downtime or mock testing
-      const fallbackUrl = `https://banglaepay.com/checkout?brand_key=${brandKey}&amount=${amount}&order_id=${orderId}&success_url=${encodeURIComponent(`${siteUrl}/payment/success?order=${orderId}`)}&cancel_url=${encodeURIComponent(`${siteUrl}/payment/cancel`)}`;
-      console.log(`[BanglaEpay] Redirecting to safety fallback URL: ${fallbackUrl}`);
-      return res.json({ success: true, payment_url: fallbackUrl, order_id: orderId, isFallback: true });
-
-    } catch (error: any) {
-      console.error('[BanglaEpay] Payment Initiation Exception:', error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  });
-
-  // POST /api/payment/callback -> Process automated IPN from BanglaEpay
-  app.post('/api/payment/callback', async (req, res) => {
-    console.log('[BanglaEpay Webhook] Received IPN callback payload:', req.body);
-    
-    const body = req.body || {};
-    const orderId = body.order_id || body.orderId || body.merchant_order_id;
-    const txId = body.transaction_id || body.transactionId || body.txId || body.pg_tx_id;
-    const amount = parseFloat(body.amount || body.payment_amount || 0);
-    const status = body.status || body.payment_status || body.transaction_status || body.pay_status;
-
-    // Check for success condition
-    const isSuccess = 
-      status === 'SUCCESS' || 
-      status === 'success' || 
-      status === 'COMPLETED' || 
-      status === 'completed' || 
-      status === '1' || 
-      status === 'Successful' || 
-      body.pay_status === 'Successful' ||
-      body.status === 'COMPLETED' ||
-      body.status === 'success' ||
-      req.query.status === 'success'; // permissive matching
-
-    if (!orderId) {
-      return res.status(400).json({ error: 'Missing order_id' });
-    }
-
-    // Extraction of User ID from orderId sequence (ORDER_[userId]_[timestamp])
-    const parts = orderId.split('_');
-    const userId = parts[1] || body.user_id || body.userId;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'Failed to extract user ID from order ID metadata' });
-    }
-
-    try {
-      console.log(`[BanglaEpay Webhook] Processing callback. Order: ${orderId}, User: ${userId}, Success: ${isSuccess}, Amt: ${amount}`);
-
-      if (isSuccess) {
-        // ── 1. Update Local File Database ──
-        const users = loadData(USERS_FILE, []);
-        const userIndex = users.findIndex((u: any) => u.id === userId);
-        let newBalance = amount;
-
-        if (userIndex !== -1) {
-          users[userIndex].isPaid = true;
-          // Set or add to their balance
-          users[userIndex].balance = (users[userIndex].balance || 0) + amount;
-          newBalance = users[userIndex].balance;
-
-          // Add transaction logs
-          const logs = loadData(LOGS_FILE, []);
-          logs.unshift({
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            userId: userId,
-            event: 'payment_success',
-            amount: amount,
-            orderId: orderId,
-            txId: txId || 'AUTO_EPAY_GATE',
-            gateway: 'BanglaEpay'
-          });
-          
-          saveData(USERS_FILE, users);
-          saveData(LOGS_FILE, logs.slice(0, 1000));
-        }
-
-        // ── 2. Update Firestore Databases In Real-Time (using transaction-safe writeBatch) ──
-        try {
-          const dbFs = getFirestoreDb();
-          if (dbFs) {
-            console.log(`[BanglaEpay Webhook] Mirroring payment update to Firestore for user ${userId} using writeBatch increment of ${amount}`);
-            const batch = writeBatch(dbFs);
-            
-            // Sync user details to 'dih_v3_users'
-            const userDocRef1 = doc(dbFs, 'dih_v3_users', userId);
-            batch.set(userDocRef1, { isPaid: true, balance: increment(amount) }, { merge: true });
-
-            // Sync user details to generic 'users'
-            const userDocRef2 = doc(dbFs, 'users', userId);
-            batch.set(userDocRef2, { isPaid: true, balance: increment(amount) }, { merge: true });
-
-            await batch.commit();
-            console.log(`[BanglaEpay Webhook] Real-time Firestore writeBatch sync completed successfully.`);
-          } else {
-            console.warn('[BanglaEpay Webhook] Firestore is offline or unconfigured, skipped remote write.');
-          }
-        } catch (fsErr: any) {
-          console.error('[BanglaEpay Webhook] Error during Firestore dual-sync batch operation:', fsErr.message);
-        }
-
-        return res.json({ success: true, status: 'PROCESSED' });
-      }
-
-      return res.status(400).json({ error: 'Payment status is not successful', status });
-    } catch (e: any) {
-      console.error('[BanglaEpay Webhook] Callback exception processing payment:', e.message);
-      return res.status(500).json({ error: e.message });
-    }
-  });
-
-  // --- DesiPayBD Payment Integration ---
-  
-  // POST /api/payment/create  → called by frontend SDK
-  app.post('/api/payment/create', async (req, res) => {
-    const { amount, userEmail, userName = 'User', userId = '' } = req.body;
-    if (!amount || !userEmail) return res.status(400).json({ success: false, message: 'amount and userEmail required' });
-    
-    // Load dynamic settings
-    const settings = loadData(SETTINGS_FILE, {});
-    const apiKey   = settings.paybdApiKey || process.env.DESIPAYBD_API_KEY || 'YOUR_API_KEY_HERE';
-    const currency = settings.paybdCurrency || 'USD';
-    const rate     = currency === 'USD' ? 1 : parseFloat(settings.paybdExchangeRate || process.env.EXCHANGE_RATE || '110');
-    const siteUrl  = settings.paybdSiteUrl || process.env.SITE_URL || 'https://ais-dev-nfwyd43crdrwbpwg3sdssy-663044304859.asia-east1.run.app';
-
-    const orderId  = `ORDER_${userId}_${Date.now()}`;
-    const localAmt = Math.round(parseFloat(amount) * rate * 100) / 100;
-    try {
-      const r = await fetch('https://pay.tuktakpay.com/api/payment/create', {
-        method: 'POST',
-        headers: { 'API-KEY': apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cus_name: userName, cus_email: userEmail, amount: localAmt,
-          metadata: { order_id: orderId, user_id: userId, user_email: userEmail, usd_amount: parseFloat(amount), currency: currency },
-          success_url: `${siteUrl}/payment/success?order=${orderId}`,
-          cancel_url:  `${siteUrl}/payment/cancel`,
-          webhook_url: `${siteUrl}/api/payment/webhook`,
-        }),
-      });
-      const d: any = await r.json();
-      if (d.status && d.payment_url) return res.json({ success: true, payment_url: d.payment_url, order_id: orderId });
-      return res.status(400).json({ success: false, message: d.message || 'Gateway error' });
-    } catch (e: any) { 
-        console.error('Payment Create Error:', e.message);
-        return res.status(500).json({ success: false, message: e.message }); 
-    }
-  });
-
-  // POST /api/payment/webhook  → DesiPayBD calls this after payment
-  app.post('/api/payment/webhook', async (req, res) => {
-    const txId = req.body.transaction_id || req.body.transactionId;
-    if (!txId) return res.status(400).json({ error: 'Missing transaction_id' });
-
-    // Load dynamic settings for verification
-    const settings = loadData(SETTINGS_FILE, {});
-    const apiKey   = settings.paybdApiKey || process.env.DESIPAYBD_API_KEY || 'YOUR_API_KEY_HERE';
-
-    try {
-      const r = await fetch('https://pay.desipaybd.com/api/payment/verify', {
-        method: 'POST',
-        headers: { 'API-KEY': apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transaction_id: txId }),
-      });
-      const d: any = await r.json();
-      if (d.status === 'COMPLETED') {
-        const meta      = typeof d.metadata === 'string' ? JSON.parse(d.metadata) : d.metadata;
-        const userId    = meta?.user_id;
-        const userEmail = meta?.user_email || '';
-        const usdAmount = parseFloat(meta?.usd_amount || 0);
-        const orderId   = meta?.order_id;
-        
-        console.log(`✅ Payment confirmed! Order:${orderId} User:${userId} Email:${userEmail} Amount:$${usdAmount}`);
-        
-        // ── CREDIT USER BALANCE HERE ──────────────────────────────────────────
-        const users = loadData(USERS_FILE, []);
-        const userIndex = users.findIndex((u: any) => 
-          (u.id && String(u.id) === String(userId)) || 
-          (u.email && String(u.email).toLowerCase() === String(userId).toLowerCase()) ||
-          (u.email && String(u.email).toLowerCase() === String(userEmail).toLowerCase())
-        );
-
-        if (userIndex !== -1) {
-            const actualUser = users[userIndex];
-            actualUser.balance = (parseFloat(actualUser.balance) || 0) + usdAmount;
-            
-            // Also log the transaction
-            const logs = loadData(LOGS_FILE, []);
-            logs.unshift({
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                userId: actualUser.id || '999',
-                event: 'payment_success',
-                amount: usdAmount,
-                orderId: orderId,
-                txId: txId,
-                gateway: 'DesiPayBD (Automatic)'
-            });
-            await saveData(USERS_FILE, users);
-            await saveData(LOGS_FILE, logs.slice(0, 1000));
-
-            // Create SMM Deposit record if applicable
-            try {
-              const smmDeps = loadData(SMM_DEPOSITS_FILE, []);
-              const nextDepId = smmDeps.length ? Math.max(...smmDeps.map((d: any) => d.id || 0)) + 1 : 1;
-              smmDeps.push({
-                id: nextDepId,
-                userId: actualUser.id || 999,
-                userEmail: actualUser.email || userEmail,
-                userName: actualUser.name || 'User',
-                amount: usdAmount,
-                method: 'DesiPayBD (Automatic)',
-                sender: 'N/A',
-                txid: txId,
-                status: 'approved',
-                screenshot: '',
-                aiReason: 'Automatic instant checkout success.',
-                detectedTxId: txId,
-                date: new Date().toISOString().split('T')[0]
-              });
-              await saveData(SMM_DEPOSITS_FILE, smmDeps);
-              console.log(`[DesiPayBD] Created SMM Deposit entry for SMM Tool. User: ${actualUser.email}, Amt: $${usdAmount}`);
-            } catch (smmErr) {
-              console.error("[DesiPayBD] Failed to create SMM deposit record:", smmErr);
-            }
-        } else {
-            console.error(`[DesiPayBD Webhook] User not found matching userId: ${userId} or userEmail: ${userEmail}`);
-        }
-        // ─────────────────────────────────────────────────────────────────────
-        return res.json({ success: true });
-      }
-      return res.status(400).json({ error: 'Not completed' });
-    } catch (e: any) { 
-        console.error('Webhook Error:', e.message);
-        return res.status(500).json({ error: e.message }); 
-    }
-  });
-
   // --- HOSTINGER CONTROL PANEL MANAGER API ENDPOINTS ---
   const HOSTINGER_FILE = path.join(DATA_DIR, 'hostinger_data.json');
 
@@ -4183,29 +3862,34 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   const getPaynicornConfig = async () => {
     try {
       const siteSettings = await getFirestoreDocument('site', 'settings').catch(() => null);
-      const appKey = (siteSettings?.paynicornAppKey || process.env.PAYNICORN_APP_ID || "").trim();
-      const merchantSecret = (siteSettings?.paynicornMerchantSecret || process.env.PAYNICORN_MERCHANT_SECRET || "").trim();
+      const appKey = (siteSettings?.paynicornAppKey || process.env.PAYNICORN_APP_ID || "7971309").trim();
+      const merchantSecret = (siteSettings?.paynicornMerchantSecret || process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415").trim();
       const currency = "BDT";
-      
-      // 1. Strictly LIVE Production endpoint as requested:
+      const env = "production";
       const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
 
       return {
-        appKey: appKey || "7971309",
-        merchantSecret: merchantSecret || "d29fec33b82a4d418d5ebc675cacb415",
+        appKey,
+        merchantSecret,
         currency,
-        env: "production",
+        env,
         apiEndpoint,
         isConfigured: Boolean(appKey && merchantSecret)
       };
     } catch (e) {
+      const appKey = (process.env.PAYNICORN_APP_ID || "7971309").trim();
+      const merchantSecret = (process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415").trim();
+      const currency = "BDT";
+      const env = "production";
+      const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
+
       return {
-        appKey: process.env.PAYNICORN_APP_ID || "7971309",
-        merchantSecret: process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415",
-        currency: "BDT",
-        env: "production",
-        apiEndpoint: "https://api.paynicorn.com/trade/v3/transaction/pay",
-        isConfigured: Boolean(process.env.PAYNICORN_APP_ID && process.env.PAYNICORN_MERCHANT_SECRET)
+        appKey,
+        merchantSecret,
+        currency,
+        env,
+        apiEndpoint,
+        isConfigured: Boolean(appKey && merchantSecret)
       };
     }
   };
