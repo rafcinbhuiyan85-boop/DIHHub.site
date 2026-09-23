@@ -282,6 +282,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   // Automated Paynicorn Payment Gateway Processing States
   const [isPayingWithPaynicorn, setIsPayingWithPaynicorn] = useState<boolean>(false);
   const [payingMethod, setPayingMethod] = useState<string | null>(null);
+  const [directPaymentUrl, setDirectPaymentUrl] = useState<string | null>(null);
 
   // Gateway configuration sync from settings
   const [manualGateways, setManualGateways] = useState<any[]>([]);
@@ -1756,8 +1757,17 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       const paymentUrl = data.paymentUrl || data.webUrl || data.checkoutUrl || data.data?.paymentUrl || data.data?.webUrl || data.data?.checkoutUrl;
       
       if (res.ok && paymentUrl) {
-        // Directly redirect the browser to the returned checkout URL
-        window.location.href = paymentUrl;
+        setDirectPaymentUrl(paymentUrl);
+        // Directly redirect the browser to the returned checkout URL with top-window priority
+        try {
+          if (window.top && window.top !== window) {
+            window.top.location.href = paymentUrl;
+          } else {
+            window.location.href = paymentUrl;
+          }
+        } catch {
+          window.location.href = paymentUrl;
+        }
         return;
       } else {
         setDepError(data.error || 'Failed to initialize secure payment gateway. Please try again.');
@@ -3267,6 +3277,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         </>
                       )}
                     </button>
+
+                    {directPaymentUrl && (
+                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center space-y-2">
+                        <div className="flex items-center justify-center gap-2 text-xs text-emerald-400 font-bold">
+                          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          <span>Gateway Ready! Redirecting to Cashier...</span>
+                        </div>
+                        <a
+                          href={directPaymentUrl}
+                          target="_top"
+                          className="inline-flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/30"
+                        >
+                          Click to Open Cashier Now ➔
+                        </a>
+                      </div>
+                    )}
 
                     {/* USER DEPOSIT TRANSACTIONS LOG */}
                     <div className="mt-8 border-t border-[#1e2336]/60 pt-6">

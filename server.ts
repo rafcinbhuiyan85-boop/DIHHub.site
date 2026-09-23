@@ -8,6 +8,7 @@ import "dotenv/config";
 import { exec } from "child_process";
 import cors from "cors";
 import axios from "axios";
+import https from "https";
 import { GoogleGenAI } from "@google/genai";
 import { syncFileWithCloud, saveToCloud, getFirestoreDb } from "./src/utils/cloudSync.ts";
 import { doc, setDoc, writeBatch, increment } from "firebase/firestore";
@@ -105,8 +106,7 @@ const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
 const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
 
 const DEFAULT_PROVIDERS = [
-  { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
-  { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
+  { id: 1, name: 'SMMGEN', apiUrl: 'https://my.smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.011, serviceCount: 7910 }
 ];
 
 const loadData = (file: string, defaultVal: any) => {
@@ -3858,8 +3858,18 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   // --- PAYNICORN PAYMENT GATEWAY INTEGRATION (FIRESTORE) ---
   // ==========================================
 
-  // Helper to load dynamic Paynicorn configuration from Firestore and environment
+  // Fast keep-alive HTTPS agent for low-latency Paynicorn requests
+  const paynicornAgent = new https.Agent({ keepAlive: true, maxSockets: 30, timeout: 15000 });
+
+  let cachedPaynicornConfig: any = null;
+  let lastPaynicornConfigTime = 0;
+
+  // Helper to load dynamic Paynicorn configuration with in-memory caching
   const getPaynicornConfig = async () => {
+    const now = Date.now();
+    if (cachedPaynicornConfig && (now - lastPaynicornConfigTime < 60000)) {
+      return cachedPaynicornConfig;
+    }
     try {
       const siteSettings = await getFirestoreDocument('site', 'settings').catch(() => null);
       const appKey = (siteSettings?.paynicornAppKey || process.env.PAYNICORN_APP_ID || "7971309").trim();
@@ -3868,7 +3878,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       const env = "production";
       const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
 
-      return {
+      cachedPaynicornConfig = {
         appKey,
         merchantSecret,
         currency,
@@ -3876,6 +3886,8 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         apiEndpoint,
         isConfigured: Boolean(appKey && merchantSecret)
       };
+      lastPaynicornConfigTime = now;
+      return cachedPaynicornConfig;
     } catch (e) {
       const appKey = (process.env.PAYNICORN_APP_ID || "7971309").trim();
       const merchantSecret = (process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415").trim();
@@ -4116,7 +4128,8 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          timeout: 25000
+          httpsAgent: paynicornAgent,
+          timeout: 15000
         });
 
         rawGatewayResponse = response.data;
