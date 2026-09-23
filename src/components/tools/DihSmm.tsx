@@ -1757,17 +1757,21 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       const paymentUrl = data.paymentUrl || data.webUrl || data.checkoutUrl || data.data?.paymentUrl || data.data?.webUrl || data.data?.checkoutUrl;
       
       if (res.ok && paymentUrl) {
-        setDirectPaymentUrl(paymentUrl);
-        // Directly redirect the browser to the returned checkout URL with top-window priority
+        // Immediate priority navigation using location.replace for instant redirect without history stall
         try {
           if (window.top && window.top !== window) {
-            window.top.location.href = paymentUrl;
+            window.top.location.replace(paymentUrl);
           } else {
-            window.location.href = paymentUrl;
+            window.location.replace(paymentUrl);
           }
         } catch {
-          window.location.href = paymentUrl;
+          window.location.replace(paymentUrl);
         }
+
+        // Only show manual fallback button if browser delays navigation by more than 2 seconds
+        setTimeout(() => {
+          setDirectPaymentUrl(paymentUrl);
+        }, 2000);
         return;
       } else {
         setDepError(data.error || 'Failed to initialize secure payment gateway. Please try again.');

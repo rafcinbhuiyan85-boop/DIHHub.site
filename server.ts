@@ -3859,51 +3859,24 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
   // ==========================================
 
   // Fast keep-alive HTTPS agent for low-latency Paynicorn requests
-  const paynicornAgent = new https.Agent({ keepAlive: true, maxSockets: 30, timeout: 15000 });
+  const paynicornAgent = new https.Agent({ keepAlive: true, maxSockets: 30, timeout: 10000 });
 
-  let cachedPaynicornConfig: any = null;
-  let lastPaynicornConfigTime = 0;
+  // Instant Paynicorn configuration (0ms latency, zero database blocking)
+  const getPaynicornConfig = () => {
+    const appKey = (process.env.PAYNICORN_APP_ID || "7971309").trim();
+    const merchantSecret = (process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415").trim();
+    const currency = "BDT";
+    const env = "production";
+    const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
 
-  // Helper to load dynamic Paynicorn configuration with in-memory caching
-  const getPaynicornConfig = async () => {
-    const now = Date.now();
-    if (cachedPaynicornConfig && (now - lastPaynicornConfigTime < 60000)) {
-      return cachedPaynicornConfig;
-    }
-    try {
-      const siteSettings = await getFirestoreDocument('site', 'settings').catch(() => null);
-      const appKey = (siteSettings?.paynicornAppKey || process.env.PAYNICORN_APP_ID || "7971309").trim();
-      const merchantSecret = (siteSettings?.paynicornMerchantSecret || process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415").trim();
-      const currency = "BDT";
-      const env = "production";
-      const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
-
-      cachedPaynicornConfig = {
-        appKey,
-        merchantSecret,
-        currency,
-        env,
-        apiEndpoint,
-        isConfigured: Boolean(appKey && merchantSecret)
-      };
-      lastPaynicornConfigTime = now;
-      return cachedPaynicornConfig;
-    } catch (e) {
-      const appKey = (process.env.PAYNICORN_APP_ID || "7971309").trim();
-      const merchantSecret = (process.env.PAYNICORN_MERCHANT_SECRET || "d29fec33b82a4d418d5ebc675cacb415").trim();
-      const currency = "BDT";
-      const env = "production";
-      const apiEndpoint = "https://api.paynicorn.com/trade/v3/transaction/pay";
-
-      return {
-        appKey,
-        merchantSecret,
-        currency,
-        env,
-        apiEndpoint,
-        isConfigured: Boolean(appKey && merchantSecret)
-      };
-    }
+    return {
+      appKey,
+      merchantSecret,
+      currency,
+      env,
+      apiEndpoint,
+      isConfigured: Boolean(appKey && merchantSecret)
+    };
   };
 
   // 1. Create Payment Endpoint: Save in Firestore orders collection with orderId as document ID
@@ -3918,7 +3891,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         });
       }
 
-      const config = await getPaynicornConfig();
+      const config = getPaynicornConfig();
 
       // Ensure every single payment request generates a completely unique merchant_order_no / orderId
       // Appending high-resolution timestamp and crypto random bytes prevents any loops or reuse of test sessions
