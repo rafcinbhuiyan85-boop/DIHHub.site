@@ -220,12 +220,6 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
               </>
             )}
           </button>
-
-          {/* Trust badges */}
-          <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-            <ShieldCheck size={14} className="text-emerald-400" />
-            <span>256-Bit SSL Encrypted Official Gateway</span>
-          </div>
         </motion.div>
       </div>
     </AnimatePresence>

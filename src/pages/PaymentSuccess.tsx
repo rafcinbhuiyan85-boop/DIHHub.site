@@ -82,7 +82,7 @@ const PaymentSuccess: React.FC = () => {
         
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
           <ShieldCheck size={14} />
-          {gatewayParam} Secured
+          RB SECURED
         </div>
 
         <h1 className="text-3xl font-black mb-2 uppercase tracking-tight text-white">Payment Received!</h1>
@@ -117,23 +117,12 @@ const PaymentSuccess: React.FC = () => {
 
           <div className="flex justify-between items-center text-xs border-t border-slate-700/50 pt-2">
             <span className="text-slate-400 uppercase tracking-wider font-semibold">Gateway</span>
-            <span className="text-slate-300 font-medium">Instant Automated Gateway</span>
+            <span className="text-slate-300 font-medium">Payment Gateway</span>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          {!isPaid && (
-            <button
-              onClick={handleSimulatedConfirm}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 p-3.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              {loading ? 'Verifying...' : 'Verify Status Now'}
-            </button>
-          )}
-
           <Link 
             to="/"
             className="w-full flex items-center justify-center gap-3 p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm uppercase tracking-[0.15em] transition-all shadow-xl shadow-emerald-600/20 active:scale-95"

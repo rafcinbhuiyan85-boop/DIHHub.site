@@ -3096,12 +3096,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                   <div className="px-5 py-4 border-b border-[#1e2336] flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                       <ShieldCheck size={16} className="text-emerald-400" />
-                      <span>Automated Payment Gateway</span>
+                      <span>Payment Gateway</span>
                     </h3>
-                    <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                      <span>Paynicorn Instant Checkout</span>
-                    </div>
                   </div>
 
                   <div className="p-5.5 space-y-5.5">
@@ -3271,11 +3267,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         </>
                       )}
                     </button>
-
-                    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-sans pt-1">
-                      <ShieldCheck size={12} className="text-emerald-500" />
-                      <span>256-Bit SSL Secured Automated Payment Gateway • Instant Credit</span>
-                    </div>
 
                     {/* USER DEPOSIT TRANSACTIONS LOG */}
                     <div className="mt-8 border-t border-[#1e2336]/60 pt-6">
