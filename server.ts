@@ -3973,8 +3973,19 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         : (subject || `DIH Hub Payment #${safeOrderId} (৳${bdtAmount} BDT)`);
 
       // 2. Strict API Payload Parameters for Paynicorn v3 API (/trade/v3/transaction/pay)
-      const callback_url = req.body.callback_url || "https://dihhub.site/api/paynicorn/callback";
-      const redirect_url = req.body.redirect_url || "https://dihhub.site/payment-success";
+      // NOTE: dihhub.site redirects to www.dihhub.site on Vercel with a 308 redirect.
+      // Paynicorn callback robot does not follow 308 POST redirects, so we MUST use https://www.dihhub.site
+      let defaultHost = 'https://www.dihhub.site';
+      if (liveOrigin && !liveOrigin.includes('localhost') && !liveOrigin.includes('127.0.0.1')) {
+        if (liveOrigin.includes('dihhub.site') && !liveOrigin.includes('www.dihhub.site')) {
+          defaultHost = 'https://www.dihhub.site';
+        } else {
+          defaultHost = liveOrigin;
+        }
+      }
+
+      const callback_url = req.body.callback_url || req.body.notify_url || `${defaultHost}/api/paynicorn/callback`;
+      const redirect_url = req.body.redirect_url || req.body.return_url || `${defaultHost}/payment-success`;
 
       const bizReq: any = {
         amount: String(bdtAmount),
@@ -4197,6 +4208,22 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         }
       }
 
+      // Extract transaction ID (txnId, paynicorn_order_no, or merchant_order_no) from incoming request early
+      const txnId = data.txnId || 
+                    data.paynicorn_order_no || 
+                    data.merchant_order_no || 
+                    data.orderId || 
+                    data.payTxnId || 
+                    data.transaction_id || 
+                    data.trade_no || 
+                    req.body?.txnId || 
+                    req.body?.paynicorn_order_no || 
+                    req.body?.merchant_order_no || 
+                    req.query?.txnId || 
+                    req.query?.paynicorn_order_no || 
+                    req.query?.merchant_order_no || 
+                    '';
+
       const out_trade_no = data.orderId || data.merchant_order_no || data.out_trade_no || data.order_id || data.orderNo;
       const rawStatus = String(data.status || data.trade_status || data.code || '').toUpperCase();
       const trade_no = data.txnId || data.trade_no || data.transaction_id || data.payTxnId || '';
@@ -4207,22 +4234,25 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         const isSuccess = rawStatus === '1' || rawStatus === 'SUCCESS' || rawStatus === '0000';
 
         if (isSuccess) {
-          const updatedOrder = await updateFirestoreOrder(orderIdStr, {
-            status: 'PAID',
-            tradeStatus: 'SUCCESS',
-            tradeNo: trade_no,
-            paidAt: new Date().toISOString(),
-            webhookPayload: data
-          });
+          try {
+            const updatedOrder = await Promise.race([
+              updateFirestoreOrder(orderIdStr, {
+                status: 'PAID',
+                tradeStatus: 'SUCCESS',
+                tradeNo: trade_no,
+                paidAt: new Date().toISOString(),
+                webhookPayload: data
+              }),
+              new Promise<null>(resolve => setTimeout(() => resolve(null), 2500))
+            ]);
 
-          console.log(`[Paynicorn Callback] Order #${orderIdStr} updated to PAID in Firestore.`);
+            console.log(`[Paynicorn Callback] Order #${orderIdStr} updated to PAID in Firestore.`);
 
-          // User balance credit logic if linked to a user
-          const targetEmail = updatedOrder?.userEmail || data.userEmail;
-          const targetAmount = updatedOrder?.amount || parseFloat(amount);
+            // User balance credit logic if linked to a user
+            const targetEmail = updatedOrder?.userEmail || data.userEmail;
+            const targetAmount = updatedOrder?.amount || parseFloat(amount);
 
-          if (targetEmail && targetAmount) {
-            try {
+            if (targetEmail && targetAmount) {
               const users = loadData(USERS_FILE, []);
               const user = users.find((u: any) => u.email?.toLowerCase() === String(targetEmail).toLowerCase());
               if (user) {
@@ -4261,36 +4291,20 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
                   }
                 }
               }
-            } catch (creditErr) {
-              console.error("[Paynicorn Callback] Error updating user balance:", creditErr);
             }
+          } catch (orderUpdateErr) {
+            console.error("[Paynicorn Callback] Error during background order status update:", orderUpdateErr);
           }
         } else if (rawStatus === '2' || rawStatus === 'FAILED' || rawStatus === 'FAIL') {
-          await updateFirestoreOrder(orderIdStr, {
+          updateFirestoreOrder(orderIdStr, {
             status: 'FAILED',
             tradeStatus: rawStatus,
             tradeNo: trade_no,
             webhookPayload: data
-          });
+          }).catch(e => console.error("[Paynicorn Callback] Error marking order failed:", e));
           console.log(`[Paynicorn Callback] Order #${orderIdStr} status updated to ${rawStatus} in Firestore.`);
         }
       }
-
-      // Extract transaction ID (txnId, paynicorn_order_no, or merchant_order_no) from incoming request
-      const txnId = data.txnId || 
-                    data.paynicorn_order_no || 
-                    data.merchant_order_no || 
-                    data.orderId || 
-                    data.payTxnId || 
-                    data.transaction_id || 
-                    data.trade_no || 
-                    req.body?.txnId || 
-                    req.body?.paynicorn_order_no || 
-                    req.body?.merchant_order_no || 
-                    req.query?.txnId || 
-                    req.query?.paynicorn_order_no || 
-                    req.query?.merchant_order_no || 
-                    '';
 
       // Paynicorn official specification: Respond immediately with HTTP 200 and plain text format: success_${txnId}
       // Exact text: "success_" concatenated with the transaction ID
