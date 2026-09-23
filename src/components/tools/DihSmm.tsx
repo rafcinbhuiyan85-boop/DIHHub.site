@@ -174,6 +174,66 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [depError, setDepError] = useState<string | null>(null);
   const [depSuccess, setDepSuccess] = useState<string | null>(null);
 
+  // Supported Paynicorn Countries configured on your merchant account
+  const paynicornSupportedCountries = useMemo(() => [
+    {
+      code: 'BD',
+      name: 'Bangladesh',
+      flag: '🇧🇩',
+      currency: 'BDT',
+      symbol: '৳',
+      methods: 'bKash / Nagad / Rocket',
+      ratePerUsd: Number(settings.smmUsdToBdtRate) || 128
+    },
+    {
+      code: 'PK',
+      name: 'Pakistan',
+      flag: '🇵🇰',
+      currency: 'PKR',
+      symbol: '₨',
+      methods: 'JazzCash / Easypaisa',
+      ratePerUsd: 280
+    },
+    {
+      code: 'IN',
+      name: 'India',
+      flag: '🇮🇳',
+      currency: 'INR',
+      symbol: '₹',
+      methods: 'UPI / Paytm / Cards',
+      ratePerUsd: 86
+    },
+    {
+      code: 'US',
+      name: 'Cards / Global',
+      flag: '🌍',
+      currency: 'USD',
+      symbol: '$',
+      methods: 'Visa / MasterCard / Cards',
+      ratePerUsd: 1
+    },
+    {
+      code: 'ID',
+      name: 'Indonesia',
+      flag: '🇮🇩',
+      currency: 'IDR',
+      symbol: 'Rp',
+      methods: 'QRIS / DANA / OVO',
+      ratePerUsd: 16200
+    },
+    {
+      code: 'MY',
+      name: 'Malaysia',
+      flag: '🇲🇾',
+      currency: 'MYR',
+      symbol: 'RM',
+      methods: 'FPX / Touch \'n Go',
+      ratePerUsd: 4.45
+    }
+  ], [settings.smmUsdToBdtRate]);
+
+  const [selectedPayCountry, setSelectedPayCountry] = useState<string>('BD');
+
   // Automated Paynicorn Payment Gateway Processing States
   const [isPayingWithPaynicorn, setIsPayingWithPaynicorn] = useState<boolean>(false);
   const [payingMethod, setPayingMethod] = useState<string | null>(null);
@@ -1615,11 +1675,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
     setIsPayingWithPaynicorn(true);
 
-    // Exchange rate: default 128 BDT/USD ($5 USD = 640 BDT) or custom admin rate
-    const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
-      ? settings.smmUsdToBdtRate
-      : 128;
-    const bdtAmount = Math.round(amt * rate);
+    const countryObj = paynicornSupportedCountries.find(c => c.code === selectedPayCountry) || paynicornSupportedCountries[0];
+    const isUsd = countryObj.currency === 'USD';
+    const chargedAmount = isUsd ? Number(amt.toFixed(2)) : Math.round(amt * countryObj.ratePerUsd);
     const orderId = `SMM-DEP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
@@ -1627,17 +1685,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: bdtAmount,
+          amount: chargedAmount,
+          currency: countryObj.currency,
+          countryCode: countryObj.code,
           orderId: orderId,
-          subject: `DIH SMM Add Funds ($${amt.toFixed(2)} USD / ৳${bdtAmount} BDT)`,
+          subject: `DIH SMM Add Funds ($${amt.toFixed(2)} USD / ${countryObj.symbol}${chargedAmount} ${countryObj.currency})`,
           userEmail: userEmail,
           userId: userToUse?.id || userToUse?.uid || 999,
-          // No payMethod passed so Paynicorn renders cashier with all active methods
+          // No payMethod passed so Paynicorn renders cashier with all active methods for this country
           metadata: {
             type: 'smm_deposit',
             usdAmount: amt,
-            bdtAmount: bdtAmount,
-            exchangeRate: rate
+            localAmount: chargedAmount,
+            currency: countryObj.currency,
+            countryCode: countryObj.code,
+            countryName: countryObj.name,
+            ratePerUsd: countryObj.ratePerUsd
           }
         })
       });
@@ -3048,23 +3111,78 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       </div>
                     </div>
 
-                    {/* LIVE BDT CONVERSION */}
+                    {/* SELECT PAYMENT COUNTRY / REGION */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                          <span>🌐</span> Select Payment Country &amp; Method
+                        </span>
+                        <span className="text-[10px] text-blue-400 font-mono">
+                          {paynicornSupportedCountries.find(c => c.code === selectedPayCountry)?.methods}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {paynicornSupportedCountries.map((c) => {
+                          const isSelected = selectedPayCountry === c.code;
+                          return (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => {
+                                setSelectedPayCountry(c.code);
+                                setDepError(null);
+                              }}
+                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                                isSelected
+                                  ? 'bg-blue-600/20 border-blue-500 shadow-md shadow-blue-500/10 text-white'
+                                  : 'bg-[#0c0e14] border-[#1e2336] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="text-base">{c.flag}</span>
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 uppercase">
+                                  {c.currency}
+                                </span>
+                              </div>
+                              <div className="text-[11px] font-bold truncate">
+                                {c.name}
+                              </div>
+                              <div className="text-[9px] text-slate-500 truncate">
+                                {c.methods.split('/')[0]}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* LIVE LOCAL CURRENCY & EXCHANGE CONVERSION */}
                     {(() => {
                       const amt = parseFloat(depositAmount) || 0;
-                      const rate = settings.smmUsdToBdtRate !== undefined && settings.smmUsdToBdtRate > 0
-                        ? settings.smmUsdToBdtRate
-                        : 128;
-                      const bdt = Math.round(amt * rate);
+                      const activeCountry = paynicornSupportedCountries.find(c => c.code === selectedPayCountry) || paynicornSupportedCountries[0];
+                      const isUsd = activeCountry.currency === 'USD';
+                      const payable = isUsd ? amt.toFixed(2) : Math.round(amt * activeCountry.ratePerUsd);
+
                       return (
                         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] space-y-1.5 font-sans animate-in fade-in duration-200">
                           <div className="flex justify-between items-center text-xs text-slate-400">
-                            <span>Exchange Rate:</span>
-                            <span className="font-bold text-emerald-400 font-mono">1 USD = ৳{rate} BDT</span>
+                            <span>Selected Gateway Channel:</span>
+                            <span className="font-bold text-emerald-400">
+                              {activeCountry.flag} {activeCountry.name} ({activeCountry.methods})
+                            </span>
                           </div>
+                          {!isUsd && (
+                            <div className="flex justify-between items-center text-[11px] text-slate-500">
+                              <span>Rate:</span>
+                              <span className="font-mono">1 USD = {activeCountry.symbol}{activeCountry.ratePerUsd} {activeCountry.currency}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between items-center text-xs text-white border-t border-emerald-500/10 pt-1.5 mt-1">
-                            <span className="font-semibold text-slate-300">Total Payable via Paynicorn:</span>
+                            <span className="font-semibold text-slate-300">Total Payable at Paynicorn:</span>
                             <span className="text-sm font-black text-emerald-400 font-mono">
-                              ৳{bdt} BDT <span className="text-xs text-slate-400 font-normal">(${amt.toFixed(2)} USD)</span>
+                              {activeCountry.symbol}{payable} {activeCountry.currency}{' '}
+                              <span className="text-xs text-slate-400 font-normal">(${amt.toFixed(2)} USD)</span>
                             </span>
                           </div>
                         </div>

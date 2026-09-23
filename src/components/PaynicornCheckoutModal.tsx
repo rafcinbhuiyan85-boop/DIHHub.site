@@ -28,7 +28,19 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const countries = [
+    { code: 'BD', name: 'Bangladesh', flag: '🇧🇩', currency: 'BDT', symbol: '৳', methods: 'bKash, Nagad' },
+    { code: 'PK', name: 'Pakistan', flag: '🇵🇰', currency: 'PKR', symbol: '₨', methods: 'JazzCash, Easypaisa' },
+    { code: 'IN', name: 'India', flag: '🇮🇳', currency: 'INR', symbol: '₹', methods: 'UPI, Paytm, Cards' },
+    { code: 'US', name: 'Cards / Global', flag: '🌍', currency: 'USD', symbol: '$', methods: 'Visa, Mastercard' },
+    { code: 'ID', name: 'Indonesia', flag: '🇮🇩', currency: 'IDR', symbol: 'Rp', methods: 'QRIS, DANA' },
+    { code: 'MY', name: 'Malaysia', flag: '🇲🇾', currency: 'MYR', symbol: 'RM', methods: 'FPX, Touch n Go' },
+  ];
+  const [selectedCountry, setSelectedCountry] = useState<string>('BD');
+
   if (!isOpen) return null;
+
+  const currentCountryObj = countries.find(c => c.code === selectedCountry) || countries[0];
 
   const handlePayWithPaynicorn = async () => {
     const numericAmount = parseFloat(amount);
@@ -46,11 +58,13 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: numericAmount,
+          currency: currentCountryObj.currency,
+          countryCode: currentCountryObj.code,
           orderId: orderId,
           subject: orderTitle,
           userEmail: userEmail || undefined,
           userId: userId || undefined,
-          metadata: itemId ? { itemId } : undefined
+          metadata: itemId ? { itemId, countryCode: currentCountryObj.code, currency: currentCountryObj.currency } : { countryCode: currentCountryObj.code, currency: currentCountryObj.currency }
         })
       });
 
@@ -122,10 +136,41 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
             </div>
           </div>
 
+          {/* Country Selection */}
+          <div className="space-y-2 mb-5">
+            <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span>Select Payment Country</span>
+              <span className="text-emerald-400 font-mono text-[10px]">{currentCountryObj.methods}</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {countries.map(c => {
+                const isSelected = selectedCountry === c.code;
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => setSelectedCountry(c.code)}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-sm shadow-emerald-500/10'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">{c.flag}</span>
+                      <span className="text-[9px] font-mono font-bold uppercase">{c.currency}</span>
+                    </div>
+                    <div className="text-[10px] font-bold truncate mt-0.5">{c.name}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Amount input */}
           <div className="space-y-2 mb-6">
             <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
-              Payable Amount (BDT)
+              Payable Amount ({currentCountryObj.currency})
             </label>
             <div className="relative">
               <input
@@ -136,7 +181,7 @@ export const PaynicornCheckoutModal: React.FC<PaynicornCheckoutModalProps> = ({
                 className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-4 py-3 text-lg font-black text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 uppercase">
-                BDT
+                {currentCountryObj.currency} ({currentCountryObj.symbol})
               </span>
             </div>
           </div>
