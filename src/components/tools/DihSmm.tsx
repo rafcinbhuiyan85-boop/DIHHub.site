@@ -9,6 +9,9 @@ import {
   Gamepad2, ShieldCheck, Copy, Check, Mail, LogOut, ArrowLeft, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { QRCodeSVG } from 'qrcode.react';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
 import { useAppSettings } from '../../hooks/useAppSettings';
 
@@ -25,6 +28,10 @@ interface SMMService {
   refill?: string;
   providerId?: string | number;
   providerServiceId?: string | number;
+  disabled?: boolean;
+  originalPrice?: number;
+  profitMargin?: number;
+  priceAutoAdjusted?: boolean;
 }
 
 export function getCleanRefill(refill: any): string {
@@ -126,7 +133,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const userEmail = userToUse?.email || 'contact@dihhub.site';
   const userName = userToUse?.name || 'Guest User';
   const isLoggedIn = !!userToUse;
-  const isAdmin = userToUse?.role === 'admin' || userToUse?.isAdmin || userToUse?.email === 'rafcin.b';
+  const isAdmin = userToUse?.role === 'admin' || userToUse?.isAdmin || userToUse?.email === 'rafcin.b' || userToUse?.email?.toLowerCase() === 'rafcinbhuiyan85@gmail.com';
 
   // Scoped localStorage keys
   const balanceKey = isLoggedIn ? `dih_smm_balance_${userEmail}` : `dih_smm_balance_guest`;
@@ -173,6 +180,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [depositAmount, setDepositAmount] = useState<string>('5');
   const [depError, setDepError] = useState<string | null>(null);
   const [depSuccess, setDepSuccess] = useState<string | null>(null);
+
+  // Gateway Selector & USDT (BSC BEP-20) States
+  const [depositGatewayTab, setDepositGatewayTab] = useState<'paynicorn' | 'crypto'>('paynicorn');
+  const [cryptoTxId, setCryptoTxId] = useState<string>('');
+  const [cryptoCopiedField, setCryptoCopiedField] = useState<string | null>(null);
+  const [isVerifyingCrypto, setIsVerifyingCrypto] = useState<boolean>(false);
+  const [cryptoFeedback, setCryptoFeedback] = useState<{ type: 'success' | 'error' | 'pending'; message: string } | null>(null);
+
+  const bscDepositAddress = "0x09cb303036f305407df1e74614fbd894b988cdd4";
 
   // Supported Paynicorn Countries configured on your merchant account
   const paynicornSupportedCountries = useMemo(() => [
@@ -699,8 +715,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     return () => clearInterval(interval);
   }, [isLoggedIn, userEmail, balanceKey]);
 
-  // Periodic server synchronization to load any newly added/synced services, orders, or deposits from Admin
+  // Instant Real-Time Firebase Listeners for SMM Services, Orders, Deposits & Balances
   useEffect(() => {
+    // Initial fetch from server
     const syncWithServer = async () => {
       try {
         // 1. Services
@@ -742,14 +759,103 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
           }
         }
       } catch (err) {
-        console.error("Error fetching SMM data from server:", err);
+        console.error("Error fetching initial SMM data from server:", err);
       }
     };
 
     syncWithServer();
-    const interval = setInterval(syncWithServer, 10000); // sync every 10 seconds
-    return () => clearInterval(interval);
-  }, [ordersKey]);
+
+    // Attach Realtime onSnapshot Listeners
+    const unsubs: (() => void)[] = [];
+    if (db) {
+      try {
+        // 1. Instant Realtime SMM Services Listener (reflects rate updates & toggles instantly)
+        const unsubServices = onSnapshot(collection(db, 'dih_v3_smm_services_chunks'), (snapshot) => {
+          if (!snapshot.empty) {
+            const sortedDocs = [...snapshot.docs].sort((a, b) => {
+              const idxA = parseInt(a.id.replace('chunk_', '')) || 0;
+              const idxB = parseInt(b.id.replace('chunk_', '')) || 0;
+              return idxA - idxB;
+            });
+            const allItems: SMMService[] = [];
+            sortedDocs.forEach(d => {
+              const data = d.data();
+              if (data && Array.isArray(data.items)) {
+                allItems.push(...data.items);
+              }
+            });
+            if (allItems.length > 0) {
+              setServicesList(allItems);
+              localStorage.setItem('dih_smm_services_v2', JSON.stringify(allItems));
+            }
+          }
+        }, (err) => {
+          console.warn("[Firebase Realtime] Services chunk listener notice:", err.message);
+        });
+        unsubs.push(unsubServices);
+
+        // 2. Instant Realtime SMM Orders Listener (reflects order status changes & cancellations instantly)
+        const unsubOrders = onSnapshot(collection(db, 'dih_v3_smm_orders'), (snapshot) => {
+          if (!snapshot.empty) {
+            const allOrders: any[] = [];
+            snapshot.forEach(docSnap => {
+              allOrders.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (allOrders.length > 0) {
+              setOrders(allOrders);
+              localStorage.setItem(ordersKey, JSON.stringify(allOrders));
+            }
+          }
+        }, (err) => {
+          console.warn("[Firebase Realtime] Orders listener notice:", err.message);
+        });
+        unsubs.push(unsubOrders);
+
+        // 3. Instant Realtime Deposits Listener
+        const unsubDeposits = onSnapshot(collection(db, 'dih_v3_smm_deposits'), (snapshot) => {
+          if (!snapshot.empty) {
+            const allDeps: any[] = [];
+            snapshot.forEach(docSnap => {
+              allDeps.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (allDeps.length > 0) {
+              setLocalDeposits(allDeps);
+              localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(allDeps));
+            }
+          }
+        }, (err) => {
+          console.warn("[Firebase Realtime] Deposits listener notice:", err.message);
+        });
+        unsubs.push(unsubDeposits);
+
+        // 4. Instant Realtime User Balance Listener (reflects balance additions & deductions instantly)
+        if (isLoggedIn && userEmail) {
+          const unsubBalance = onSnapshot(collection(db, 'dih_v3_users'), (snapshot) => {
+            snapshot.forEach(docSnap => {
+              const uData = docSnap.data();
+              if (uData && (uData.email?.toLowerCase() === userEmail.toLowerCase() || docSnap.id === userToUse?.id)) {
+                if (uData.balance !== undefined && !isNaN(Number(uData.balance))) {
+                  const liveBal = Number(uData.balance);
+                  setBalance(liveBal);
+                  localStorage.setItem(balanceKey, liveBal.toFixed(2));
+                  localStorage.setItem('dih_smm_balance', liveBal.toFixed(2));
+                }
+              }
+            });
+          }, (err) => {
+            console.warn("[Firebase Realtime] User balance listener notice:", err.message);
+          });
+          unsubs.push(unsubBalance);
+        }
+      } catch (e) {
+        console.warn("[Firebase Realtime] Setup error:", e);
+      }
+    }
+
+    return () => {
+      unsubs.forEach(u => u());
+    };
+  }, [ordersKey, isLoggedIn, userEmail, userToUse?.id, balanceKey]);
 
   const updateBalance = (newBal: number) => {
     setBalance(newBal);
@@ -1418,6 +1524,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       setOrderError('Please select a service.');
       return;
     }
+    if (selectedService.disabled) {
+      setOrderError('This service is currently disabled by Zero-Loss Margin Protection. Please select another active service.');
+      return;
+    }
+    const qty = parseInt(orderQty) || 0;
+    if (selectedService.originalPrice && currentTotal < (qty / 1000) * Number(selectedService.originalPrice)) {
+      setOrderError('Zero-Loss Margin Safety: Pricing discrepancy detected. Order rejected to prevent loss.');
+      return;
+    }
     const isEmailInput = orderActivePlatform === 'GAME' || orderActivePlatform === 'Fb/Insta {OLD/ACC}';
     const link = orderLink.trim();
     if (!link) {
@@ -1431,7 +1546,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         return;
       }
     }
-    const qty = parseInt(orderQty) || 0;
     if (qty < selectedService.min || qty > selectedService.max) {
       setOrderError(`Quantity must be between ${fmt(selectedService.min)} and ${fmt(selectedService.max)}.`);
       return;
@@ -1701,6 +1815,73 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     setTimeout(() => {
       setOrderSuccess(null);
     }, 6000);
+  };
+
+  const handleCopyField = (text: string, fieldKey: string) => {
+    navigator.clipboard?.writeText(text);
+    setCryptoCopiedField(fieldKey);
+    setTimeout(() => {
+      setCryptoCopiedField(null);
+    }, 2000);
+  };
+
+  const handleVerifyCryptoDeposit = async () => {
+    if (!cryptoTxId.trim()) {
+      setCryptoFeedback({ type: 'error', message: 'Please enter your BSC Transaction Hash (TxHash).' });
+      return;
+    }
+    const amt = parseFloat(depositAmount) || 5;
+    setIsVerifyingCrypto(true);
+    setCryptoFeedback(null);
+
+    try {
+      const res = await fetch('/api/crypto/verify-deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          txid: cryptoTxId.trim(),
+          amount: amt,
+          method: 'usdt_bep20',
+          senderInfo: userName
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.verified && data.autoCredited) {
+          setCryptoFeedback({ type: 'success', message: data.message });
+          if (data.newBalance !== undefined) {
+            setBalance(data.newBalance);
+            localStorage.setItem(balanceKey, String(data.newBalance));
+          } else {
+            const nextBal = balance + (data.creditedAmount || amt);
+            setBalance(nextBal);
+            localStorage.setItem(balanceKey, String(nextBal));
+          }
+          setCryptoTxId('');
+        } else {
+          setCryptoFeedback({ type: 'pending', message: data.message });
+          setCryptoTxId('');
+        }
+        // Refresh deposits list from server
+        try {
+          const resDeps = await fetch(`/api/smm/deposits?t=${Date.now()}`);
+          if (resDeps.ok) {
+            const deps = await resDeps.json();
+            if (Array.isArray(deps)) {
+              localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(deps));
+              setLocalDeposits(deps);
+            }
+          }
+        } catch (syncErr) {}
+      } else {
+        setCryptoFeedback({ type: 'error', message: data.message || 'Verification failed. Please check your transaction hash.' });
+      }
+    } catch (e: any) {
+      setCryptoFeedback({ type: 'error', message: e.message || 'Failed to connect to verification server.' });
+    } finally {
+      setIsVerifyingCrypto(false);
+    }
   };
 
   const handlePayWithPaynicorn = async () => {
@@ -2348,15 +2529,56 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           </div>
 
                           <div className="flex items-center justify-between pt-3.5 mt-4 border-t border-[#1e2336] shrink-0">
-                            <div className="text-[15px] font-mono font-bold text-blue-500">
-                              ${s.price.toFixed(4)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
+                            <div>
+                              <div className="text-[15px] font-mono font-bold text-blue-500">
+                                ${s.price.toFixed(4)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
+                              </div>
+                              {s.disabled && (
+                                <span className="inline-block mt-0.5 text-[9px] font-bold text-amber-400/90 tracking-wide">
+                                  🛡️ Zero-Loss Safe (Disabled)
+                                </span>
+                              )}
                             </div>
-                            <button 
-                              onClick={() => goOrder(s.id)}
-                              className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-605 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer"
-                            >
-                              Order &rarr;
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {isAdmin && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const nextList = servicesList.map(item => item.id === s.id ? { ...item, disabled: !item.disabled } : item);
+                                    setServicesList(nextList);
+                                    await fetch('/api/smm/services', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(nextList)
+                                    });
+                                  }}
+                                  className={cn(
+                                    "px-2 py-1 text-[10px] font-extrabold rounded-md border transition cursor-pointer",
+                                    s.disabled
+                                      ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+                                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+                                  )}
+                                  title="Admin Instant Toggle: broadcasts to all dashboards via Firebase"
+                                >
+                                  {s.disabled ? 'Turn ON' : 'Turn OFF'}
+                                </button>
+                              )}
+                              {s.disabled ? (
+                                <button
+                                  disabled
+                                  className="bg-slate-800/80 text-slate-500 border border-slate-700/50 px-3 py-1.5 text-xs font-bold rounded-lg cursor-not-allowed opacity-60"
+                                >
+                                  Disabled
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => goOrder(s.id)}
+                                  className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-605 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                                >
+                                  Order &rarr;
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -3107,11 +3329,50 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                 {/* FORM PANEL */}
                 <div className="bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-xl">
-                  <div className="px-5 py-4 border-b border-[#1e2336] flex items-center justify-between">
+                  {/* HEADER WITH GATEWAY TABS */}
+                  <div className="px-5 py-3.5 border-b border-[#1e2336] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0d0f16]">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                       <ShieldCheck size={16} className="text-emerald-400" />
-                      <span>Payment Gateway</span>
+                      <span>Add Funds to Account</span>
                     </h3>
+
+                    <div className="inline-flex p-1 bg-[#141720] border border-[#1e2336] rounded-xl self-start sm:self-auto">
+                      {/* LOCAL / CARDS TAB (LEFT) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDepositGatewayTab('paynicorn');
+                          setDepError(null);
+                        }}
+                        className={cn(
+                          "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                          depositGatewayTab === 'paynicorn'
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-slate-400 hover:text-white"
+                        )}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Local / Cards</span>
+                      </button>
+
+                      {/* CRYPTO USDT BSC TAB (RIGHT) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDepositGatewayTab('crypto');
+                          setDepError(null);
+                        }}
+                        className={cn(
+                          "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                          depositGatewayTab === 'crypto'
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                            : "text-slate-400 hover:text-white"
+                        )}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        <span>Crypto USDT</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="p-5.5 space-y-5.5">
@@ -3121,7 +3382,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                           1. Select Amount (USD)
                         </label>
-                        <span className="text-[10px] text-blue-400 font-mono font-semibold">
+                        <span className={cn(
+                          "text-[10px] font-mono font-semibold",
+                          depositGatewayTab === 'crypto' ? "text-amber-400" : "text-blue-400"
+                        )}>
                           Instant Balance Credit
                         </span>
                       </div>
@@ -3139,7 +3403,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             className={cn(
                               "py-2.5 rounded-lg border text-xs font-semibold font-mono text-center transition-all duration-150 select-none outline-none cursor-pointer",
                               parseFloat(depositAmount) === val
-                                ? "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/20"
+                                ? (depositGatewayTab === 'crypto'
+                                    ? "bg-amber-500 text-black border-amber-500 font-bold shadow-md shadow-amber-500/20"
+                                    : "bg-blue-500 text-white border-blue-500 font-bold shadow-md shadow-blue-500/20")
                                 : "border-[#1e2336] bg-[#0c0e14]/60 text-slate-400 hover:text-white hover:border-[#3b82f6]/40"
                             )}
                           >
@@ -3151,7 +3417,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       {/* CUSTOM AMOUNT INPUT */}
                       <div className="pt-1.5">
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-blue-500 font-bold pointer-events-none">$</span>
+                          <span className={cn(
+                            "absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold pointer-events-none",
+                            depositGatewayTab === 'crypto' ? "text-amber-500" : "text-blue-500"
+                          )}>$</span>
                           <input
                             type="number"
                             min="1"
@@ -3162,139 +3431,264 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               setDepositAmount(e.target.value);
                               setDepError(null);
                             }}
-                            className="w-full bg-[#0c0e14] border border-[#1e2336] pl-9 pr-4 py-3 text-lg font-mono font-semibold text-white rounded-xl outline-none focus:border-blue-500 transition-colors"
+                            className={cn(
+                              "w-full bg-[#0c0e14] border border-[#1e2336] pl-9 pr-4 py-3 text-lg font-mono font-semibold text-white rounded-xl outline-none transition-colors",
+                              depositGatewayTab === 'crypto' ? "focus:border-amber-500" : "focus:border-blue-500"
+                            )}
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* SELECT PAYMENT COUNTRY / REGION */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                          <span>🌐</span> Select Payment Country &amp; Method
-                        </span>
-                        <span className="text-[10px] text-blue-400 font-mono">
-                          {paynicornSupportedCountries.find(c => c.code === selectedPayCountry)?.methods}
-                        </span>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                        {paynicornSupportedCountries.map((c) => {
-                          const isSelected = selectedPayCountry === c.code;
-                          return (
-                            <button
-                              key={c.code}
-                              type="button"
-                              onClick={() => {
-                                setSelectedPayCountry(c.code);
-                                setDepError(null);
-                              }}
-                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-                                isSelected
-                                  ? 'bg-blue-600/20 border-blue-500 shadow-md shadow-blue-500/10 text-white'
-                                  : 'bg-[#0c0e14] border-[#1e2336] text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="text-base">{c.flag}</span>
-                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 uppercase">
-                                  {c.currency}
+                    {/* GATEWAY: BINANCE / USDT (BSC BEP-20 AUTO) */}
+                    {depositGatewayTab === 'crypto' && (
+                      <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                        {/* DETAILS & QR CODE CARD */}
+                        <div className="p-4 rounded-xl border border-amber-500/20 bg-[#0a0c12] space-y-4">
+                          <div className="flex flex-col sm:flex-row items-center gap-4">
+                            {/* QR CODE */}
+                            <div className="p-2.5 bg-white rounded-xl shadow-md shrink-0 flex items-center justify-center">
+                              <QRCodeSVG
+                                value={bscDepositAddress}
+                                size={130}
+                                level="M"
+                                includeMargin={false}
+                              />
+                            </div>
+
+                            {/* DETAILS */}
+                            <div className="flex-1 min-w-0 space-y-2.5 text-left w-full">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 uppercase tracking-wider">
+                                  Network: BNB Smart Chain (BEP20)
+                                </span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                                  Asset: USDT
                                 </span>
                               </div>
-                              <div className="text-[11px] font-bold truncate">
-                                {c.name}
-                              </div>
-                              <div className="text-[9px] text-slate-500 truncate">
-                                {c.methods.split('/')[0]}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
 
-                    {/* LIVE LOCAL CURRENCY & EXCHANGE CONVERSION */}
-                    {(() => {
-                      const amt = parseFloat(depositAmount) || 0;
-                      const activeCountry = paynicornSupportedCountries.find(c => c.code === selectedPayCountry) || paynicornSupportedCountries[0];
-                      const isUsd = activeCountry.currency === 'USD';
-                      const payable = isUsd ? amt.toFixed(2) : Math.round(amt * activeCountry.ratePerUsd);
+                              <div className="space-y-1">
+                                <div className="text-[11px] text-slate-400 font-semibold flex items-center justify-between">
+                                  <span>USDT Deposit Address:</span>
+                                  <span className="text-[10px] text-amber-400 font-mono">Binance / Trust / Metamask</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-[#121520] border border-[#1e2336] p-2 rounded-lg">
+                                  <span className="text-xs font-mono text-amber-200 truncate select-all flex-1">
+                                    {bscDepositAddress}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyField(bscDepositAddress, 'bsc_address')}
+                                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                                  >
+                                    {cryptoCopiedField === 'bsc_address' ? (
+                                      <>
+                                        <Check size={12} className="text-emerald-400" />
+                                        <span className="text-emerald-400">Copied</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={12} />
+                                        <span>Copy</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
 
-                      return (
-                        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] space-y-1.5 font-sans animate-in fade-in duration-200">
-                          <div className="flex justify-between items-center text-xs text-slate-400">
-                            <span>Selected Gateway Channel:</span>
-                            <span className="font-bold text-emerald-400">
-                              {activeCountry.flag} {activeCountry.name} ({activeCountry.methods})
-                            </span>
-                          </div>
-                          {!isUsd && (
-                            <div className="flex justify-between items-center text-[11px] text-slate-500">
-                              <span>Rate:</span>
-                              <span className="font-mono">1 USD = {activeCountry.symbol}{activeCountry.ratePerUsd} {activeCountry.currency}</span>
+                              <p className="text-[10px] text-slate-400 leading-relaxed">
+                                💡 Send <strong className="text-amber-300">USDT via BNB Smart Chain (BEP20)</strong> from Binance or any crypto wallet. Minimum: $1.00 USD.
+                              </p>
                             </div>
-                          )}
-                          <div className="flex justify-between items-center text-xs text-white border-t border-emerald-500/10 pt-1.5 mt-1">
-                            <span className="font-semibold text-slate-300">Total Payable:</span>
-                            <span className="text-sm font-black text-emerald-400 font-mono">
-                              {activeCountry.symbol}{payable} {activeCountry.currency}{' '}
-                              <span className="text-xs text-slate-400 font-normal">(${amt.toFixed(2)} USD)</span>
-                            </span>
                           </div>
                         </div>
-                      );
-                    })()}
 
-                    {/* DEPOSIT ALERTS */}
-                    {depError && (
-                      <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
-                        <AlertCircle size={15} className="shrink-0" />
-                        {depError}
-                      </div>
-                    )}
+                        {/* VERIFY & CLAIM BALANCE */}
+                        <div className="space-y-2 pt-1">
+                          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                            2. Paste Transaction ID for Auto-Credit
+                          </label>
 
-                    {depSuccess && (
-                      <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
-                        <CheckCircle2 size={15} className="shrink-0" />
-                        {depSuccess}
-                      </div>
-                    )}
-
-                    {/* UNIFIED INSTANT PAYMENT BUTTON */}
-                    <button 
-                      type="button"
-                      onClick={handlePayWithPaynicorn}
-                      disabled={isPayingWithPaynicorn}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-sm tracking-wide rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-150 active:scale-[0.985] flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      {isPayingWithPaynicorn ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                          <span>Connecting to Secure Gateway...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck size={18} className="text-blue-200" />
-                          <span>Proceed to Payment</span>
-                          <span className="text-xs">➔</span>
-                        </>
-                      )}
-                    </button>
-
-                    {directPaymentUrl && (
-                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center space-y-2">
-                        <div className="flex items-center justify-center gap-2 text-xs text-emerald-400 font-bold">
-                          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span>Gateway Ready! Redirecting to Cashier...</span>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={cryptoTxId}
+                              onChange={(e) => {
+                                setCryptoTxId(e.target.value);
+                                setCryptoFeedback(null);
+                              }}
+                              placeholder="Paste BSC TxID (e.g. 0x...)"
+                              className="flex-1 bg-[#0c0e14] border border-[#1e2336] px-3.5 py-3 text-xs font-mono text-white rounded-xl outline-none focus:border-amber-500 transition-colors"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleVerifyCryptoDeposit}
+                              disabled={isVerifyingCrypto}
+                              className="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
+                            >
+                              {isVerifyingCrypto ? (
+                                <>
+                                  <div className="w-3.5 h-3.5 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+                                  <span>Verifying...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>⚡ Verify &amp; Credit</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <a
-                          href={directPaymentUrl}
-                          target="_top"
-                          className="inline-flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/30"
+
+                        {/* FEEDBACK ALERTS */}
+                        {cryptoFeedback && (
+                          <div className={cn(
+                            "flex items-center gap-2.5 px-4 py-3 border rounded-lg text-xs leading-relaxed animate-in fade-in duration-150",
+                            cryptoFeedback.type === 'success' ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" :
+                            cryptoFeedback.type === 'pending' ? "border-amber-500/30 bg-amber-500/10 text-amber-300" :
+                            "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                          )}>
+                            {cryptoFeedback.type === 'success' ? <CheckCircle2 size={16} className="shrink-0 text-emerald-400" /> :
+                             cryptoFeedback.type === 'pending' ? <Clock size={16} className="shrink-0 text-amber-400 animate-spin" /> :
+                             <AlertCircle size={16} className="shrink-0 text-rose-400" />}
+                            <span>{cryptoFeedback.message}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* GATEWAY 2: PAYNICORN LOCAL / CARDS */}
+                    {depositGatewayTab === 'paynicorn' && (
+                      <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                        {/* SELECT PAYMENT COUNTRY / REGION */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                              <span>🌐</span> Select Payment Country &amp; Method
+                            </span>
+                            <span className="text-[10px] text-blue-400 font-mono">
+                              {paynicornSupportedCountries.find(c => c.code === selectedPayCountry)?.methods}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {paynicornSupportedCountries.map((c) => {
+                              const isSelected = selectedPayCountry === c.code;
+                              return (
+                                <button
+                                  key={c.code}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedPayCountry(c.code);
+                                    setDepError(null);
+                                  }}
+                                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                                    isSelected
+                                      ? 'bg-blue-600/20 border-blue-500 shadow-md shadow-blue-500/10 text-white'
+                                      : 'bg-[#0c0e14] border-[#1e2336] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="text-base">{c.flag}</span>
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 uppercase">
+                                      {c.currency}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] font-bold truncate">
+                                    {c.name}
+                                  </div>
+                                  <div className="text-[9px] text-slate-500 truncate">
+                                    {c.methods.split('/')[0]}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* LIVE LOCAL CURRENCY & EXCHANGE CONVERSION */}
+                        {(() => {
+                          const amt = parseFloat(depositAmount) || 0;
+                          const activeCountry = paynicornSupportedCountries.find(c => c.code === selectedPayCountry) || paynicornSupportedCountries[0];
+                          const isUsd = activeCountry.currency === 'USD';
+                          const payable = isUsd ? amt.toFixed(2) : Math.round(amt * activeCountry.ratePerUsd);
+
+                          return (
+                            <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] space-y-1.5 font-sans animate-in fade-in duration-200">
+                              <div className="flex justify-between items-center text-xs text-slate-400">
+                                <span>Selected Gateway Channel:</span>
+                                <span className="font-bold text-emerald-400">
+                                  {activeCountry.flag} {activeCountry.name} ({activeCountry.methods})
+                                </span>
+                              </div>
+                              {!isUsd && (
+                                <div className="flex justify-between items-center text-[11px] text-slate-500">
+                                  <span>Rate:</span>
+                                  <span className="font-mono">1 USD = {activeCountry.symbol}{activeCountry.ratePerUsd} {activeCountry.currency}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between items-center text-xs text-white border-t border-emerald-500/10 pt-1.5 mt-1">
+                                <span className="font-semibold text-slate-300">Total Payable:</span>
+                                <span className="text-sm font-black text-emerald-400 font-mono">
+                                  {activeCountry.symbol}{payable} {activeCountry.currency}{' '}
+                                  <span className="text-xs text-slate-400 font-normal">(${amt.toFixed(2)} USD)</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* DEPOSIT ALERTS */}
+                        {depError && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-red-500/20 bg-red-500/[0.04] text-red-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
+                            <AlertCircle size={15} className="shrink-0" />
+                            {depError}
+                          </div>
+                        )}
+
+                        {depSuccess && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-400 rounded-lg text-xs leading-relaxed animate-in fade-in duration-150">
+                            <CheckCircle2 size={15} className="shrink-0" />
+                            {depSuccess}
+                          </div>
+                        )}
+
+                        {/* UNIFIED INSTANT PAYMENT BUTTON */}
+                        <button 
+                          type="button"
+                          onClick={handlePayWithPaynicorn}
+                          disabled={isPayingWithPaynicorn}
+                          className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-sm tracking-wide rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-150 active:scale-[0.985] flex items-center justify-center gap-2.5 cursor-pointer"
                         >
-                          Click to Open Cashier Now ➔
-                        </a>
+                          {isPayingWithPaynicorn ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                              <span>Connecting to Secure Gateway...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={18} className="text-blue-200" />
+                              <span>Proceed to Payment</span>
+                              <span className="text-xs">➔</span>
+                            </>
+                          )}
+                        </button>
+
+                        {directPaymentUrl && (
+                          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center space-y-2">
+                            <div className="flex items-center justify-center gap-2 text-xs text-emerald-400 font-bold">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                              <span>Gateway Ready! Redirecting to Cashier...</span>
+                            </div>
+                            <a
+                              href={directPaymentUrl}
+                              target="_top"
+                              className="inline-flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-600/30"
+                            >
+                              Click to Open Cashier Now ➔
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -3310,12 +3704,24 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       </div>
 
                       {(() => {
-                        const myDeps = localDeposits.filter((d: any) => d.userEmail === userEmail || d.userId === userToUse?.id);
+                        const formatGatewayName = (methodStr: string) => {
+                          const s = String(methodStr || '').toLowerCase();
+                          if (s.includes('crypto') || s.includes('binance') || s.includes('usdt') || s.includes('bsc') || s.includes('bep20')) {
+                            return 'CRYPTO USDT';
+                          }
+                          return 'LOCAL / CARDS';
+                        };
+
+                        // Only show transactions once they are approved / completed
+                        const myDeps = localDeposits.filter((d: any) => 
+                          (d.userEmail === userEmail || d.userId === userToUse?.id) &&
+                          (d.status === 'approved' || d.status === 'success')
+                        );
 
                         if (myDeps.length === 0) {
                           return (
                             <div className="text-center py-6 border border-dashed border-[#1e2336] rounded-xl text-xs text-slate-500 bg-[#0d0f16]/30">
-                              No deposit transactions submitted yet for <span className="font-mono text-slate-400 font-medium">{userEmail}</span>.
+                              No approved deposit transactions yet for <span className="font-mono text-slate-400 font-medium">{userEmail}</span>.
                             </div>
                           );
                         }
@@ -3335,21 +3741,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               <tbody className="divide-y divide-[#1e2336]/40">
                                 {myDeps.slice().reverse().map((d: any) => (
                                   <tr key={d.id} className="hover:bg-[#151926]/30 transition-colors">
-                                    <td className="px-3.5 py-3 text-slate-400">{d.date || 'Pending'}</td>
-                                    <td className="px-3.5 py-3 font-semibold uppercase">{d.method}</td>
-                                    <td className="px-3.5 py-3 font-mono text-[10px] text-slate-500 truncate max-w-[100px]" title={d.txid}>
+                                    <td className="px-3.5 py-3 text-slate-400">{d.date || 'Today'}</td>
+                                    <td className="px-3.5 py-3 font-bold text-white tracking-wide">
+                                      {formatGatewayName(d.method)}
+                                    </td>
+                                    <td className="px-3.5 py-3 font-mono text-[10px] text-slate-400 truncate max-w-[120px]" title={d.txid}>
                                       {d.txid}
                                     </td>
                                     <td className="px-3.5 py-3 text-right font-bold text-emerald-400">
                                       ${parseFloat(d.amount).toFixed(2)}
                                     </td>
                                     <td className="px-3.5 py-3 text-center">
-                                      <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                                        d.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                        d.status === 'rejected' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
-                                        'bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse'
-                                      }`}>
-                                        {d.status || 'pending'}
+                                      <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                        APPROVED
                                       </span>
                                     </td>
                                   </tr>

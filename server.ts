@@ -1113,6 +1113,27 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       ordersList = loadData(SMM_ORDERS_FILE, []);
     }
 
+    // Zero-Loss / Automatic Profit Margin Safety Check for new orders
+    const allServices = loadData(SMM_SERVICES_FILE, []);
+    for (const order of ordersList) {
+      if (order.serviceId && (!order.status || order.status === 'Pending') && !order.zeroLossVerified) {
+        const svc = allServices.find((s: any) => s.id === order.serviceId);
+        if (svc) {
+          if (svc.disabled) {
+            return res.status(400).json({ error: `Service "${svc.name}" is currently disabled by Zero-Loss Margin Safety.` });
+          }
+          const providerCost = (Number(order.quantity) / 1000) * (Number(svc.originalPrice) || 0);
+          const userCharge = Number(order.charge || order.amount || 0);
+          if (userCharge < providerCost) {
+            return res.status(400).json({ 
+              error: `Zero-Loss Safety Violation: Order price ($${userCharge.toFixed(4)}) is below provider cost ($${providerCost.toFixed(4)}). Order rejected.` 
+            });
+          }
+          order.zeroLossVerified = true;
+        }
+      }
+    }
+
     // Process manual or automated refunds for cancelled SMM orders
     for (const order of ordersList) {
       if (order.status === 'cancelled' && !order.isRefunded && (order.amount || 0) > 0) {
@@ -1544,10 +1565,11 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
     }
   }
 
-  async function syncSmmServicesWithProviders(): Promise<{ added: number, updated: number, errors: string[] }> {
-    console.log("[SMM Background Sync] Starting automatic SMM services sync...");
+  async function syncSmmServicesWithProviders(): Promise<{ added: number, updated: number, zeroLossAdjusted: number, errors: string[] }> {
+    console.log("[SMM Background Sync] Starting automated SMM provider services sync (Strict Real API & Zero-Loss Margin Safety)...");
     let addedCount = 0;
     let updatedCount = 0;
+    let zeroLossAdjusted = 0;
     const errors: string[] = [];
 
     try {
@@ -1555,11 +1577,32 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       const activeProviders = providers.filter((p: any) => p.status === 'active');
       if (activeProviders.length === 0) {
         console.log("[SMM Background Sync] No active SMM providers found. Skipping.");
-        return { added: 0, updated: 0, errors: ["No active SMM providers found."] };
+        return { added: 0, updated: 0, zeroLossAdjusted: 0, errors: ["No active SMM providers found."] };
       }
 
-      const smmServices = loadData(SMM_SERVICES_FILE, []);
+      const settings = loadData(SETTINGS_FILE, {});
+      const globalMargin = Number(settings.smmProfitMargin ?? 20); // Default 20% margin if not configured
+
+      let smmServices = loadData(SMM_SERVICES_FILE, []);
       let modified = false;
+
+      // Rule 1: Strictly reject any fake, random, or local fallback mock services
+      const preCleanCount = smmServices.length;
+      smmServices = smmServices.filter((s: any) => {
+        if (!s || typeof s !== 'object') return false;
+        // Must belong to a valid provider and have provider service ID
+        if (!s.providerId || !s.providerServiceId) return false;
+        // Must not match mock or dummy patterns
+        const nameLower = String(s.name || '').toLowerCase();
+        if (/mock|fake|dummy|test\s*service|placeholder|sample/.test(nameLower)) return false;
+        // Must have valid rate > 0
+        if (typeof s.price !== 'number' || s.price <= 0) return false;
+        return true;
+      });
+      if (smmServices.length !== preCleanCount) {
+        console.log(`[SMM Background Sync] Cleaned out ${preCleanCount - smmServices.length} fake/unverified services from database.`);
+        modified = true;
+      }
 
       let maxId = 0;
       smmServices.forEach((s: any) => {
@@ -1570,15 +1613,28 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
       for (const provider of activeProviders) {
         try {
-          console.log(`[SMM Background Sync] Fetching services from provider: ${provider.name} (${provider.apiUrl})`);
+          console.log(`[SMM Background Sync] Connecting to official SMM Provider API: ${provider.name} (${provider.apiUrl})...`);
           const apiServices = await getProviderServicesInternal(provider.apiUrl, provider.apiKey);
-          if (!apiServices || apiServices.length === 0) {
-            console.log(`[SMM Background Sync] No services found or failed to fetch for ${provider.name}.`);
+          if (!apiServices || !Array.isArray(apiServices) || apiServices.length === 0) {
+            console.log(`[SMM Background Sync] No services returned or failed connection for ${provider.name}.`);
             errors.push(`Failed to fetch services for ${provider.name}.`);
             continue;
           }
 
-          console.log(`[SMM Background Sync] Found ${apiServices.length} services from provider: ${provider.name}`);
+          // Rule 1: Strictly filter out and reject fake, random or mock services from provider response
+          const validApiServices = apiServices.filter((svc: any) => {
+            if (!svc || typeof svc !== 'object') return false;
+            const provSvcId = String(svc.id || svc.service || '').trim();
+            if (!provSvcId || provSvcId === '0' || provSvcId === 'undefined') return false;
+            const name = String(svc.name || '').trim();
+            if (name.length < 3) return false;
+            if (/^(mock|fake|dummy|test\s*service|sample|placeholder)/i.test(name)) return false;
+            const rate = parseFloat(String(svc.originalPrice ?? svc.rate ?? 0));
+            if (isNaN(rate) || rate <= 0) return false;
+            return true;
+          });
+
+          console.log(`[SMM Background Sync] Provider ${provider.name}: received ${validApiServices.length} verified services.`);
 
           const existingProviderServices = new Map<string, any>();
           smmServices.forEach((s: any) => {
@@ -1587,43 +1643,70 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
             }
           });
 
-          for (const apiSvc of apiServices) {
+          // Rule 2: Zero-Loss / Automatic Profit Margin Safety
+          // My Price = Provider API Price + (Profit Margin %)
+          // Minimum margin guarantee: at least 5% under any condition
+          const providerMargin = Number(provider.profitMargin ?? globalMargin);
+          const safeMarginPct = Math.max(providerMargin, 5);
+
+          for (const apiSvc of validApiServices) {
             const provSvcId = apiSvc.id.toString();
             const existingSvc = existingProviderServices.get(provSvcId);
+            const providerCost = parseFloat(Number(apiSvc.originalPrice).toFixed(6));
+
+            // Dynamic Selling Price Calculation with Zero-Loss safety
+            const dynamicPrice = parseFloat((providerCost * (1 + safeMarginPct / 100)).toFixed(4));
+            // Invariant: Selling price must NEVER be lower than or equal to the Provider API rate
+            const minimumSafeSellingPrice = Math.max(dynamicPrice, parseFloat((providerCost * 1.05 + 0.001).toFixed(4)));
 
             if (existingSvc) {
-              const providerPrice = apiSvc.originalPrice;
-              const ourNewPrice = parseFloat((providerPrice * 1.17).toFixed(4));
+              const currentSellingPrice = parseFloat(Number(existingSvc.price).toFixed(4));
+              const currentRecordedCost = parseFloat(Number(existingSvc.originalPrice || 0).toFixed(4));
+              
+              existingSvc.min = apiSvc.min;
+              existingSvc.max = apiSvc.max;
+              existingSvc.refill = apiSvc.refill;
+              existingSvc.originalPrice = providerCost;
 
-              if (existingSvc.price !== ourNewPrice) {
-                console.log(`[SMM Background Sync] Price update for Service #${existingSvc.id} (Provider: ${provider.name}, Svc ID: ${provSvcId}): $${existingSvc.price} -> $${ourNewPrice}`);
-                existingSvc.price = ourNewPrice;
-                existingSvc.min = apiSvc.min;
-                existingSvc.max = apiSvc.max;
-                existingSvc.refill = apiSvc.refill;
+              // Rule 2 Safety: If provider increased their price or selling price <= provider cost
+              if (currentSellingPrice <= providerCost || currentSellingPrice < minimumSafeSellingPrice) {
+                console.log(`[Zero-Loss Safety] Provider price increased for #${existingSvc.id} (${existingSvc.name}). Old selling price: $${currentSellingPrice}, New provider cost: $${providerCost}. Auto-adjusting to safe price: $${minimumSafeSellingPrice}`);
+                existingSvc.price = minimumSafeSellingPrice;
+                existingSvc.priceAutoAdjusted = true;
+                existingSvc.lastAdjustedAt = new Date().toISOString();
+                existingSvc.disabled = false;
+                zeroLossAdjusted++;
+                updatedCount++;
+                modified = true;
+              } else if (apiSvc.name !== existingSvc.name || apiSvc.category !== existingSvc.category) {
+                existingSvc.name = apiSvc.name;
+                existingSvc.category = apiSvc.category;
                 updatedCount++;
                 modified = true;
               }
             } else {
+              // Brand new service from verified provider API
               maxId++;
-              const calculatedPrice = parseFloat((apiSvc.originalPrice * 1.17).toFixed(4));
               const newSvc = {
                 id: maxId,
                 name: apiSvc.name,
                 category: apiSvc.category,
-                price: calculatedPrice,
+                price: minimumSafeSellingPrice,
+                originalPrice: providerCost,
+                profitMargin: safeMarginPct,
                 min: apiSvc.min,
                 max: apiSvc.max,
-                desc: apiSvc.desc || "Automatically imported service.",
+                desc: apiSvc.desc || "Verified live service directly connected to external provider API.",
                 time: apiSvc.time || "0-24 hours",
                 quality: apiSvc.quality || "Standard",
                 refill: apiSvc.refill || "No Refill",
                 providerId: provider.id.toString(),
-                providerServiceId: provSvcId
+                providerServiceId: provSvcId,
+                disabled: false,
+                syncedAt: new Date().toISOString()
               };
 
               smmServices.push(newSvc);
-              console.log(`[SMM Background Sync] Auto-added new Service #${maxId} (Provider: ${provider.name}, Svc ID: ${provSvcId}): ${apiSvc.name} at price $${calculatedPrice}`);
               addedCount++;
               modified = true;
             }
@@ -1642,16 +1725,16 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
       if (modified) {
         await saveData(SMM_SERVICES_FILE, smmServices);
-        console.log("[SMM Background Sync] Auto-sync completed and SMM services file updated.");
+        console.log(`[SMM Background Sync] Sync complete. Added: ${addedCount}, Updated: ${updatedCount}, Zero-Loss Adjusted: ${zeroLossAdjusted}.`);
       } else {
-        console.log("[SMM Background Sync] SMM services are already up to date.");
+        console.log("[SMM Background Sync] SMM services are already 100% up to date.");
       }
     } catch (err: any) {
       console.error("[SMM Background Sync] Error during background SMM sync:", err);
       errors.push(`Global sync error: ${err.message}`);
     }
 
-    return { added: addedCount, updated: updatedCount, errors };
+    return { added: addedCount, updated: updatedCount, zeroLossAdjusted, errors };
   }
 
   app.post("/api/admin/smm/sync", async (req, res) => {
@@ -4167,7 +4250,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
       createFirestoreOrder({
         orderId: safeOrderId,
         merchant_order_no: safeOrderId,
-        amount: finalAmount,
+        amount: Number(finalAmount) || 0,
         usdAmount: usdAmount,
         status: 'PENDING',
         userId: userId ? String(userId) : null,
@@ -4329,7 +4412,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
                       userEmail: user.email || targetEmail,
                       userName: user.name || 'User',
                       amount: creditAmount,
-                      method: `Paynicorn (${(updatedOrder?.metadata?.method || 'Automated').toUpperCase()})`,
+                      method: 'Local / Cards',
                       sender: 'Paynicorn Gateway',
                       txid: trade_no || orderIdStr,
                       status: 'approved',
@@ -4414,10 +4497,10 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
         // Create an active entry so user can see it verified
         existing = {
           orderId: orderIdStr,
-          txnId: req.body?.txnId || orderIdStr,
+          tradeNo: req.body?.txnId || orderIdStr,
           status: 'PAID',
           tradeStatus: 'SUCCESS',
-          amount: req.body?.amount || '100',
+          amount: Number(req.body?.amount) || 100,
           currency: 'BDT',
           userEmail: req.body?.email || 'test@dihhub.site',
           paidAt: new Date().toISOString()
@@ -4454,7 +4537,7 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
                 userEmail: user.email || targetEmail,
                 userName: user.name || 'User',
                 amount: creditAmount,
-                method: `Paynicorn (${(existing?.metadata?.method || 'Automated').toUpperCase()})`,
+                method: 'Local / Cards',
                 sender: 'Paynicorn Gateway (Test)',
                 txid: 'SIM-' + Date.now(),
                 status: 'approved',
@@ -4475,6 +4558,195 @@ FOLLOW THESE STRICT PHOTOCOMPOSITION AND QUALITY PRESERVATION RULES:
     } catch (e: any) {
       console.error("[Paynicorn] Error confirming test order:", e);
       return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // Crypto / Binance Pay & BSC BEP-20 verification endpoints
+  app.get('/api/crypto/config', (req, res) => {
+    const settings = loadData(SETTINGS_FILE, {});
+    const manualGateways = settings.smmManualGateways || [];
+    const bscGw = manualGateways.find((g: any) => g.id === 'usdt' || g.type?.includes('BSC'));
+    const binanceGw = manualGateways.find((g: any) => g.id === 'binance');
+
+    res.json({
+      success: true,
+      bscAddress: bscGw?.numberOrAddress || "0x09cb303036f305407df1e74614fbd894b988cdd4",
+      binancePayId: binanceGw?.numberOrAddress || "495331860",
+      network: "BNB Smart Chain (BEP20)",
+      coin: "USDT",
+      minDeposit: 1.0,
+      usdtContract: "0x55d398326f99059fF775485246999027B3197955"
+    });
+  });
+
+  app.post('/api/crypto/verify-deposit', async (req, res) => {
+    try {
+      const { email, txid, amount, method, senderInfo } = req.body;
+      const cleanTxId = String(txid || '').trim();
+      const userEmail = String(email || '').trim().toLowerCase();
+      const numAmount = parseFloat(amount) || 0;
+
+      if (!cleanTxId) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid Transaction Hash or Binance Order ID.' });
+      }
+
+      if (!userEmail) {
+        return res.status(400).json({ success: false, message: 'User account email is required.' });
+      }
+
+      const smmDeps = loadData(SMM_DEPOSITS_FILE, []);
+      // Check if this txid was already used
+      const existing = smmDeps.find((d: any) => d.txid?.toLowerCase() === cleanTxId.toLowerCase() && d.status === 'approved');
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'This Transaction ID / Hash has already been claimed and credited.' });
+      }
+
+      const users = loadData(USERS_FILE, []);
+      const user = users.find((u: any) => u.email?.toLowerCase() === userEmail);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User account not found.' });
+      }
+
+      // Check if this is a BSC TxHash (0x followed by 64 hex chars = 66 chars)
+      const isBscHash = /^0x[a-fA-F0-9]{64}$/.test(cleanTxId);
+
+      if (isBscHash) {
+        // Query BSC RPC
+        const BSC_RPCS = [
+          'https://bsc-dataseed1.binance.org',
+          'https://bsc-dataseed2.binance.org',
+          'https://binance.llamarpc.com'
+        ];
+        const TARGET_ADDRESS = "0x09cb303036f305407df1e74614fbd894b988cdd4".toLowerCase();
+        const USDT_CONTRACT = "0x55d398326f99059ff775485246999027b3197955".toLowerCase();
+        const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+        let receipt: any = null;
+        for (const rpc of BSC_RPCS) {
+          try {
+            const resp = await axios.post(rpc, {
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'eth_getTransactionReceipt',
+              params: [cleanTxId]
+            }, { timeout: 8000 });
+            if (resp.data && resp.data.result) {
+              receipt = resp.data.result;
+              break;
+            }
+          } catch (rpcErr) {
+            // try next RPC
+          }
+        }
+
+        if (!receipt) {
+          return res.status(400).json({
+            success: false,
+            message: 'Transaction not found or still pending on BNB Smart Chain. Please wait 15-30 seconds and retry.'
+          });
+        }
+
+        if (receipt.status !== '0x1') {
+          return res.status(400).json({
+            success: false,
+            message: 'Transaction failed or reverted on BSC blockchain.'
+          });
+        }
+
+        // Search logs for USDT BEP20 transfer to user's target address
+        let detectedAmount = 0;
+        const cleanTarget = TARGET_ADDRESS.replace('0x', '');
+
+        if (Array.isArray(receipt.logs)) {
+          for (const log of receipt.logs) {
+            const isUsdt = log.address?.toLowerCase() === USDT_CONTRACT;
+            const isTransfer = log.topics && log.topics[0]?.toLowerCase() === TRANSFER_TOPIC;
+            if (isUsdt && isTransfer) {
+              const toTopic = log.topics[2]?.toLowerCase() || '';
+              if (toTopic.includes(cleanTarget)) {
+                try {
+                  const valWei = BigInt(log.data);
+                  detectedAmount = Number(valWei) / 1e18;
+                  break;
+                } catch (numErr) {
+                  console.error('[BSC Parse Log Error]', numErr);
+                }
+              }
+            }
+          }
+        }
+
+        if (detectedAmount <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Transaction was found, but no USDT transfer to deposit address (' + TARGET_ADDRESS + ') was detected.'
+          });
+        }
+
+        // Automatic Credit!
+        user.balance = (Number(user.balance) || 0) + detectedAmount;
+        await saveData(USERS_FILE, users);
+
+        const nextId = smmDeps.length ? Math.max(...smmDeps.map((d: any) => d.id || 0)) + 1 : 1;
+        smmDeps.push({
+          id: nextId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name || 'User',
+          amount: detectedAmount,
+          method: 'Crypto USDT',
+          sender: senderInfo || receipt.from || 'BSC Wallet',
+          txid: cleanTxId,
+          status: 'approved',
+          screenshot: '',
+          aiReason: 'Automatic BSC On-Chain Verification Confirmed',
+          detectedTxId: cleanTxId,
+          date: new Date().toISOString().split('T')[0]
+        });
+        await saveData(SMM_DEPOSITS_FILE, smmDeps);
+
+        return res.json({
+          success: true,
+          verified: true,
+          autoCredited: true,
+          creditedAmount: detectedAmount,
+          newBalance: user.balance,
+          message: `Success! $${detectedAmount.toFixed(2)} USDT verified on BNB Smart Chain and credited to your account instantly!`
+        });
+      }
+
+      // Binance Pay Internal Transfer or Non-Hex Order ID
+      const nextId = smmDeps.length ? Math.max(...smmDeps.map((d: any) => d.id || 0)) + 1 : 1;
+      const claimedAmount = numAmount > 0 ? numAmount : 5;
+
+      // Add to deposits as pending for admin verification
+      smmDeps.push({
+        id: nextId,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name || 'User',
+        amount: claimedAmount,
+        method: method === 'binance' ? 'Binance Pay ID' : 'Binance Transfer',
+        sender: senderInfo || 'Binance User',
+        txid: cleanTxId,
+        status: 'pending',
+        screenshot: '',
+        aiReason: 'Binance Pay deposit submitted. Awaiting quick admin confirmation.',
+        detectedTxId: cleanTxId,
+        date: new Date().toISOString().split('T')[0]
+      });
+      await saveData(SMM_DEPOSITS_FILE, smmDeps);
+
+      return res.json({
+        success: true,
+        verified: false,
+        pending: true,
+        claimedAmount,
+        message: `Your Binance Pay deposit of $${claimedAmount.toFixed(2)} with Order ID #${cleanTxId} has been submitted! It will be approved shortly.`
+      });
+    } catch (err: any) {
+      console.error('[Crypto Verify Error]:', err);
+      return res.status(500).json({ success: false, message: err.message || 'Internal server error during verification.' });
     }
   });
 

@@ -96,6 +96,101 @@
         "amount",
         "status"
       ]
+    },
+    "SmmService": {
+      "title": "SMM Service",
+      "description": "An automated SMM panel service synced from external providers",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Service identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Service title"
+        },
+        "category": {
+          "type": "string",
+          "description": "Platform or service category"
+        },
+        "price": {
+          "type": "number",
+          "description": "Selling price per 1000 units with profit margin"
+        },
+        "originalPrice": {
+          "type": "number",
+          "description": "Provider API base cost"
+        },
+        "min": {
+          "type": "number",
+          "description": "Minimum order quantity"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum order quantity"
+        },
+        "providerId": {
+          "type": "string",
+          "description": "Identifier of the external provider"
+        },
+        "providerServiceId": {
+          "type": "string",
+          "description": "Service ID at provider"
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Whether service is disabled"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "category",
+        "price"
+      ]
+    },
+    "SmmOrder": {
+      "title": "SMM Order",
+      "description": "A customer SMM order record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Order ID"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Customer email"
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "Name of ordered service"
+        },
+        "link": {
+          "type": "string",
+          "description": "Target social media URL"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Ordered count"
+        },
+        "charge": {
+          "type": "number",
+          "description": "Amount charged to user"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "In progress", "Completed", "Partial", "Canceled", "Processing"],
+          "description": "Order fulfillment status"
+        }
+      },
+      "required": [
+        "id",
+        "userEmail",
+        "link",
+        "quantity"
+      ]
     }
   },
   "firestore": {

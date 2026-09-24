@@ -1,19 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+    // -------------------------------------------------------------
+    // Core Security Helper Functions
+    // -------------------------------------------------------------
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(email) {
-      return isSignedIn() && request.auth.token.email == email;
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
     }
 
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == 'rafcinbhuiyan85@gmail.com'
+        (request.auth.token.email == 'rafcinbhuiyan85@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isOwner(userId, userEmail) {
+      return isSignedIn() && (
+        request.auth.uid == userId ||
+        (request.auth.token.email != null && request.auth.token.email == userEmail)
       );
     }
 
@@ -21,82 +30,138 @@ service cloud.firestore {
        return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // Template Validation
-    function isValidTemplate(data) {
-      return data.id is string && data.id.size() <= 100 &&
-             data.name is string && data.name.size() <= 200 &&
-             data.htmlContent is string;
+    // Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    match /templates/{templateId} {
-      allow read, write: if true;
+    // -------------------------------------------------------------
+    // SMM Services Catalog (Read by all, Write strictly Admin)
+    // -------------------------------------------------------------
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
-    match /templates/{document=**} {
-      allow read, write: if true;
+    match /dih_v3_smm_services/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
-    
-    // Paynicorn orders collection
+    match /dih_v3_smm_services_chunks/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // SMM Providers Configuration (Strictly Admin only)
+    // -------------------------------------------------------------
+    match /dih_v3_smm_providers/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // SMM Orders (Read restricted to owner/admin, Write strictly Admin)
+    // -------------------------------------------------------------
     match /orders/{orderId} {
-      allow read, write: if true;
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.userEmail == request.auth.token.email
+      );
+      allow write: if isAdmin();
     }
-    match /orders/{document=**} {
-      allow read, write: if true;
+    match /dih_v3_smm_orders/{docId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.userEmail == request.auth.token.email
+      );
+      allow write: if isAdmin();
     }
-    
-    // Simple admin check collection
+
+    // -------------------------------------------------------------
+    // User Balances & Profiles (Tamper-Proof, Write strictly Admin)
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        resource.data.email == request.auth.token.email ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+    match /dih_v3_users/{docId} {
+      allow read: if isSignedIn() && (
+        resource.data.id == request.auth.uid ||
+        resource.data.email == request.auth.token.email ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // SMM Deposits Log
+    // -------------------------------------------------------------
+    match /dih_v3_smm_deposits/{docId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // System Settings & Maintenance
+    // -------------------------------------------------------------
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /dih_v3_settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /site/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /maintenance/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // Admin Management Collection
+    // -------------------------------------------------------------
     match /admins/{adminId} {
       allow read: if isSignedIn() && request.auth.uid == adminId;
       allow write: if false; // Only manageable via console or service account
     }
 
-    // CloudSync Server Backup and Restore Collections
-    match /site/{docId} {
-      allow read, write: if true;
-    }
-    match /site/{document=**} {
-      allow read, write: if true;
-    }
-    match /maintenance/{docId} {
-      allow read, write: if true;
-    }
-    match /maintenance/{document=**} {
-      allow read, write: if true;
-    }
-    match /dih_v3_settings/{docId} {
-      allow read, write: if true;
-    }
-    match /dih_v3_users/{docId} {
-      allow read, write: if true;
+    // -------------------------------------------------------------
+    // Templates and App Store
+    // -------------------------------------------------------------
+    match /templates/{templateId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /dih_v3_store/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /dih_v3_logs/{docId} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
     match /dih_v3_migrations/{docId} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
     match /dih_v3_hostinger/{docId} {
-      allow read, write: if true;
-    }
-    match /dih_v3_smm_services/{docId} {
-      allow read, write: if true;
-    }
-    match /dih_v3_smm_orders/{docId} {
-      allow read, write: if true;
-    }
-    match /dih_v3_smm_deposits/{docId} {
-      allow read, write: if true;
-    }
-    match /dih_v3_smm_providers/{docId} {
-      allow read, write: if true;
-    }
-    match /users/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /test/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

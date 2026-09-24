@@ -432,10 +432,11 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     }
   };
 
-  // SMM Server Synchronizer
+  // Instant Real-Time Firebase Listeners for SMM Services, Orders, and Deposits
   useEffect(() => {
     if (activeTab !== 'dih-smm' && !activeTab.startsWith('config-')) return;
     
+    // Initial bootstrap fetch
     const syncWithServer = async () => {
       try {
         const resSvcs = await fetch(`/api/smm/services?t=${Date.now()}`);
@@ -467,8 +468,77 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
     };
     syncWithServer();
-    const interval = setInterval(syncWithServer, 10000);
-    return () => clearInterval(interval);
+
+    // Attach Realtime onSnapshot Listeners
+    const unsubs: (() => void)[] = [];
+    if (db) {
+      try {
+        // 1. Realtime Services Chunks Listener
+        const unsubServices = onSnapshot(collection(db, 'dih_v3_smm_services_chunks'), (snapshot) => {
+          if (!snapshot.empty) {
+            const sortedDocs = [...snapshot.docs].sort((a, b) => {
+              const idxA = parseInt(a.id.replace('chunk_', '')) || 0;
+              const idxB = parseInt(b.id.replace('chunk_', '')) || 0;
+              return idxA - idxB;
+            });
+            const allItems: any[] = [];
+            sortedDocs.forEach(d => {
+              const data = d.data();
+              if (data && Array.isArray(data.items)) {
+                allItems.push(...data.items);
+              }
+            });
+            if (allItems.length > 0) {
+              setSmmServicesList(allItems);
+              localStorage.setItem('dih_smm_services_v2', JSON.stringify(allItems));
+            }
+          }
+        }, (err) => {
+          console.warn("[AdminPanel Realtime] Services chunk listener notice:", err.message);
+        });
+        unsubs.push(unsubServices);
+
+        // 2. Realtime Orders Listener
+        const unsubOrders = onSnapshot(collection(db, 'dih_v3_smm_orders'), (snapshot) => {
+          if (!snapshot.empty) {
+            const allOrders: any[] = [];
+            snapshot.forEach(docSnap => {
+              allOrders.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (allOrders.length > 0) {
+              setSmmOrders(allOrders);
+              localStorage.setItem('dih_smm_orders_v2', JSON.stringify(allOrders));
+            }
+          }
+        }, (err) => {
+          console.warn("[AdminPanel Realtime] Orders listener notice:", err.message);
+        });
+        unsubs.push(unsubOrders);
+
+        // 3. Realtime Deposits Listener
+        const unsubDeposits = onSnapshot(collection(db, 'dih_v3_smm_deposits'), (snapshot) => {
+          if (!snapshot.empty) {
+            const allDeps: any[] = [];
+            snapshot.forEach(docSnap => {
+              allDeps.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (allDeps.length > 0) {
+              setSmmDeposits(allDeps);
+              localStorage.setItem('dih_smm_deposits_v2', JSON.stringify(allDeps));
+            }
+          }
+        }, (err) => {
+          console.warn("[AdminPanel Realtime] Deposits listener notice:", err.message);
+        });
+        unsubs.push(unsubDeposits);
+      } catch (e) {
+        console.warn("[AdminPanel Realtime] Error attaching Firestore listeners:", e);
+      }
+    }
+
+    return () => {
+      unsubs.forEach(u => u());
+    };
   }, [activeTab]);
 
   // SMM Sync Effect
@@ -792,6 +862,22 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     saveSmmServices(nextList);
   };
 
+  const handleToggleSmmService = (svcId: any) => {
+    const nextList = smmServicesList.map(s => {
+      if (s.id.toString() === svcId.toString()) {
+        const nextDisabled = !s.disabled;
+        return { ...s, disabled: nextDisabled };
+      }
+      return s;
+    });
+    saveSmmServices(nextList);
+    const toggledSvc = nextList.find(s => s.id.toString() === svcId.toString());
+    setSmmToast({ 
+      message: `Service #${svcId} is now ${toggledSvc?.disabled ? 'Disabled (Zero-Loss Safe)' : 'Active & Live'}! Instant sync broadcasted.`, 
+      type: 'success' 
+    });
+  };
+
   const handleBulkDeleteServices = (svcIds: any[]) => {
     const idsAsStrings = svcIds.map(id => id.toString());
     const nextList = smmServicesList.filter(s => !idsAsStrings.includes(s.id.toString()));
@@ -824,6 +910,16 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const handleSaveSmmService = () => {
     if (!smmFormName.trim()) return;
 
+    const parsedPrice = parseFloat(smmFormPrice) || 0.0;
+    // Rule 2: Zero-loss safety enforcement
+    if (selectedSmmItem?.originalPrice && parsedPrice <= Number(selectedSmmItem.originalPrice)) {
+      setSmmToast({
+        message: `Zero-Loss Safety: Selling price ($${parsedPrice.toFixed(4)}) must strictly be higher than provider cost ($${Number(selectedSmmItem.originalPrice).toFixed(4)})!`,
+        type: 'error'
+      });
+      return;
+    }
+
     let updatedList = [];
     if (smmModalType === 'add-service') {
       const newSvc = {
@@ -831,14 +927,15 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         name: smmFormName,
         category: smmFormCategory,
         quality: smmFormQuality,
-        price: parseFloat(smmFormPrice) || 0.0,
+        price: parsedPrice,
         min: parseInt(smmFormMin) || 100,
         max: parseInt(smmFormMax) || 1000000,
         desc: smmFormDesc,
         time: smmFormTime,
         refill: smmFormRefill,
         providerId: smmFormSvcProviderId,
-        providerServiceId: smmFormSvcProviderServiceId
+        providerServiceId: smmFormSvcProviderServiceId,
+        disabled: false
       };
       updatedList = [...smmServicesList, newSvc];
     } else if (smmModalType === 'edit-service' && selectedSmmItem) {
@@ -849,7 +946,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             name: smmFormName,
             category: smmFormCategory,
             quality: smmFormQuality,
-            price: parseFloat(smmFormPrice) || 0.0,
+            price: parsedPrice,
             min: parseInt(smmFormMin) || 100,
             max: parseInt(smmFormMax) || 1000000,
             desc: smmFormDesc,
@@ -6669,6 +6766,21 @@ service cloud.firestore {
                                   <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex gap-1.5 justify-end items-center">
                                       <>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleSmmService(s.id);
+                                          }}
+                                          className={cn(
+                                            "px-2 py-1 rounded text-[10px] font-bold border transition cursor-pointer",
+                                            s.disabled
+                                              ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+                                              : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+                                          )}
+                                          title={s.disabled ? "Service is currently disabled by Zero-Loss. Click to activate." : "Service is active. Click to disable."}
+                                        >
+                                          {s.disabled ? 'Disabled' : 'Active'}
+                                        </button>
                                         <button
                                           onClick={() => {
                                             setSelectedSmmItem(s);
