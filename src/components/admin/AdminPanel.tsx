@@ -5924,7 +5924,7 @@ service cloud.firestore {
     import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyA1y75cejRurTaKOCnOKEN-eeJTTwcn5oU",
-      authDomain: "daddy-here-33965.firebaseapp.com",
+      authDomain: "auth.dihhub.site",
       projectId: "daddy-here-33965",
       storageBucket: "daddy-here-33965.firebasestorage.app",
       messagingSenderId: "41004496145",

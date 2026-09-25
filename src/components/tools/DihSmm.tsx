@@ -268,9 +268,12 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [orderActivePlatform, setOrderActivePlatform] = useState<string>('All');
   const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [serviceFilterQuery, setServiceFilterQuery] = useState<string>('');
   const catDropdownRef = useRef<HTMLDivElement>(null);
   const [catDropdownOpen, setCatDropdownOpen] = useState<boolean>(false);
   const [catSearchQuery, setCatSearchQuery] = useState<string>('');
+  const globalSearchRef = useRef<HTMLDivElement>(null);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState<boolean>(false);
   const [orderSearchQuery, setOrderSearchQuery] = useState<string>('');
   const [orderLink, setOrderLink] = useState<string>('');
   const [orderQty, setOrderQty] = useState<string>('');
@@ -627,28 +630,36 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     return sCat.includes(plat);
   };
 
-  const orderFilteredServices = useMemo(() => {
-    return activeServices.filter(s => {
-      if (orderActiveCat === 'All') return true;
-      return s.category === orderActiveCat;
-    });
+  // GLOBAL SEARCH: Matches across ALL services and categories globally
+  const globalSearchResults = useMemo(() => {
+    const q = orderSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return activeServices
+      .filter(s => 
+        s.name.toLowerCase().includes(q) || 
+        s.id.toString().includes(q) ||
+        (s.category && s.category.toLowerCase().includes(q))
+      )
+      .slice(0, 100);
+  }, [activeServices, orderSearchQuery]);
+
+  // STRICT CATEGORY-TO-SERVICE FILTERING:
+  // Services for dropdown MUST be strictly filtered by selected category only.
+  // Never bleed or include services from other categories!
+  const servicesForDropdown = useMemo(() => {
+    return activeServices.filter(s => s.category === orderActiveCat);
   }, [activeServices, orderActiveCat]);
 
+  // Filter within current category for in-dropdown search
   const filteredServicesForDropdown = useMemo(() => {
-    const query = orderSearchQuery.trim().toLowerCase();
-    if (!query) {
-      return orderFilteredServices;
+    const q = serviceFilterQuery.trim().toLowerCase();
+    if (!q) {
+      return servicesForDropdown;
     }
-    const inCurrentCategory = orderFilteredServices.filter(s => 
-      s.name.toLowerCase().includes(query) || s.id.toString().includes(query)
+    return servicesForDropdown.filter(s => 
+      s.name.toLowerCase().includes(q) || s.id.toString().includes(q)
     );
-    if (inCurrentCategory.length > 0) {
-      return inCurrentCategory;
-    }
-    return activeServices.filter(s => 
-      s.name.toLowerCase().includes(query) || s.id.toString().includes(query)
-    );
-  }, [orderFilteredServices, activeServices, orderSearchQuery]);
+  }, [servicesForDropdown, serviceFilterQuery]);
 
   useEffect(() => {
     if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways) && settings.smmManualGateways.length > 0) {
@@ -686,6 +697,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
       }
       if (catDropdownRef.current && !catDropdownRef.current.contains(event.target as Node)) {
         setCatDropdownOpen(false);
+      }
+      if (globalSearchRef.current && !globalSearchRef.current.contains(event.target as Node)) {
+        setGlobalSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -1490,7 +1504,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
   };
 
-  const handleCategoryChange = (catName: string) => {
+  const handleCategoryChange = (catName: string, explicitServiceId?: number) => {
     setOrderActiveCat(catName);
     
     // Auto-detect and sync the active platform shortcut highlight based on the selected category's platform
@@ -1525,15 +1539,25 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
     }
     setOrderActivePlatform(matchedPlat);
 
-    // Auto-select first service belonging to this exact category
+    // Auto-select first service belonging to this exact category (or explicitServiceId if specified)
     const svcsOfCat = activeServices.filter(s => s.category === catName);
     if (svcsOfCat.length > 0) {
-      setSelectedServiceId(svcsOfCat[0].id);
-      setOrderQty(svcsOfCat[0].min.toString());
+      const targetSvc = explicitServiceId ? (svcsOfCat.find(s => s.id === explicitServiceId) || svcsOfCat[0]) : svcsOfCat[0];
+      setSelectedServiceId(targetSvc.id);
+      setOrderQty(targetSvc.min.toString());
     } else {
       setSelectedServiceId(null);
       setOrderQty('');
     }
+  };
+
+  const handleSelectFromGlobalSearch = (svc: SMMService) => {
+    // a) Automatically set selectedCategory to that service's category
+    // b) Automatically set selectedService to that specific service
+    handleCategoryChange(svc.category, svc.id);
+    // c) Close the search dropdown and clear/sync the search input
+    setGlobalSearchOpen(false);
+    setOrderSearchQuery('');
   };
 
   const getAverageTimeText = (timeStr?: string, svcId?: number, categoryName?: string) => {
