@@ -106,8 +106,22 @@ const SMM_PROVIDERS_FILE = path.join(DATA_DIR, 'smm-providers.json');
 const BACHELOR_POINT_FILE = path.join(DATA_DIR, 'bachelor-point.json');
 
 const DEFAULT_PROVIDERS = [
-  { id: 1, name: 'SMMGEN', apiUrl: 'https://my.smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.011, serviceCount: 7910 }
+  { id: 1, name: 'SMMGEN', apiUrl: 'https://my.smmgen.com/api/v2', apiKey: '80329c3715c2b8f4202da3881457d585', status: 'active', balance: 0.011, serviceCount: 7905, profitMargin: 18 }
 ];
+
+const normalizeSmmProviders = (provs: any[]) => {
+  if (!Array.isArray(provs)) return DEFAULT_PROVIDERS;
+  return provs.map((p: any) => {
+    if (p.name?.toUpperCase().includes('SMMGEN') || p.apiUrl?.includes('smmgen')) {
+      return {
+        ...p,
+        apiUrl: 'https://my.smmgen.com/api/v2',
+        apiKey: '80329c3715c2b8f4202da3881457d585'
+      };
+    }
+    return p;
+  });
+};
 
 const loadData = (file: string, defaultVal: any) => {
   if (!fs.existsSync(file)) return defaultVal;
@@ -326,18 +340,23 @@ const processQueuedOrders = async () => {
       if (hasRealApi) {
         try {
           let normalizedUrl = provider.apiUrl.trim();
-          if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+          if (normalizedUrl.includes('smmgen')) {
+            normalizedUrl = 'https://my.smmgen.com/api/v2';
+          } else if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
             normalizedUrl = "https://" + normalizedUrl;
           }
 
+          const provKey = normalizedUrl.includes('smmgen') ? '80329c3715c2b8f4202da3881457d585' : provider.apiKey.trim();
+          const targetServiceId = String(service.providerServiceId || service.id).trim();
+
           const params = new URLSearchParams();
-          params.append('key', provider.apiKey.trim());
+          params.append('key', provKey);
           params.append('action', 'add');
-          params.append('service', String(service.providerServiceId || service.id).trim());
+          params.append('service', targetServiceId);
           params.append('link', String(order.link).trim());
           params.append('quantity', String(order.quantity).trim());
 
-          console.log(`[Queue Processor] Retrying/Placing queued Order #${order.id} on Provider ${provider.name}...`);
+          console.log(`[Queue Processor] Retrying/Placing queued Order #${order.id} on Provider ${provider.name} at ${normalizedUrl}...`);
           let response;
           try {
             response = await axios.post(normalizedUrl, params.toString(), {
@@ -350,7 +369,7 @@ const processQueuedOrders = async () => {
           } catch (postErr: any) {
             console.log(`[Queue Processor] POST failed for Order #${order.id}, trying GET fallback... Error: ${postErr.message}`);
             const separator = normalizedUrl.includes('?') ? '&' : '?';
-            const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(provider.apiKey.trim())}&action=add&service=${encodeURIComponent(String(service.providerServiceId || service.id).trim())}&link=${encodeURIComponent(String(order.link).trim())}&quantity=${encodeURIComponent(String(order.quantity).trim())}`;
+            const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(provKey)}&action=add&service=${encodeURIComponent(targetServiceId)}&link=${encodeURIComponent(String(order.link).trim())}&quantity=${encodeURIComponent(String(order.quantity).trim())}`;
             response = await axios.get(getUrl, {
               headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
@@ -360,11 +379,12 @@ const processQueuedOrders = async () => {
           }
 
           const rawData = response.data;
+          const successfulOrderId = rawData?.order || rawData?.order_id || rawData?.orderId;
           if (rawData && typeof rawData === 'object') {
-            if (rawData.order) {
-              // Success!
+            if (successfulOrderId) {
+              // Success! Immediately set order status from PENDING to PROCESSING
               order.status = 'processing';
-              order.apiOrderId = rawData.order;
+              order.apiOrderId = successfulOrderId;
               order.error = undefined;
               order.isQueued = false;
               modifiedOrders = true;
@@ -372,7 +392,7 @@ const processQueuedOrders = async () => {
               // Deduct from provider balance
               provider.balance = providerBalance - providerCost;
               modifiedProviders = true;
-              console.log(`[Queue Processor] Order #${order.id} placed successfully! API Order ID: #${rawData.order}`);
+              console.log(`[Queue Processor] Order #${order.id} placed successfully! Status: PROCESSING, API Order ID: #${successfulOrderId}`);
             } else if (rawData.error) {
               const errMsg = String(rawData.error).toLowerCase();
               if (errMsg.includes("balance") || errMsg.includes("funds") || errMsg.includes("money") || errMsg.includes("credit") || errMsg.includes("insufficient")) {
@@ -1173,12 +1193,14 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   app.get("/api/smm/providers", (req, res) => {
-    const providers = loadData(SMM_PROVIDERS_FILE, []);
+    const rawProviders = loadData(SMM_PROVIDERS_FILE, DEFAULT_PROVIDERS);
+    const providers = normalizeSmmProviders(rawProviders);
     res.json(providers);
   });
 
   app.post("/api/smm/providers", async (req, res) => {
-    await saveData(SMM_PROVIDERS_FILE, req.body || []);
+    const providers = normalizeSmmProviders(req.body || []);
+    await saveData(SMM_PROVIDERS_FILE, providers);
     res.json({ status: "ok" });
     processQueuedOrders().catch(e => console.error("[Queue Processor Error]:", e));
   });
@@ -1643,21 +1665,20 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
             }
           });
 
-          // Rule 2: Zero-Loss / Automatic Profit Margin Safety
-          // My Price = Provider API Price + (Profit Margin %)
-          // Minimum margin guarantee: at least 5% under any condition
-          const providerMargin = Number(provider.profitMargin ?? globalMargin);
-          const safeMarginPct = Math.max(providerMargin, 5);
+          // Rule 2: 18% Profit Margin Automation (Selling Price = Provider Rate * 1.18)
+          const safeMarginPct = 18;
 
           for (const apiSvc of validApiServices) {
             const provSvcId = apiSvc.id.toString();
             const existingSvc = existingProviderServices.get(provSvcId);
             const providerCost = parseFloat(Number(apiSvc.originalPrice).toFixed(6));
 
-            // Dynamic Selling Price Calculation with Zero-Loss safety
-            const dynamicPrice = parseFloat((providerCost * (1 + safeMarginPct / 100)).toFixed(4));
-            // Invariant: Selling price must NEVER be lower than or equal to the Provider API rate
-            const minimumSafeSellingPrice = Math.max(dynamicPrice, parseFloat((providerCost * 1.05 + 0.001).toFixed(4)));
+            // Formula: Selling Price = Provider Rate * 1.18
+            const rawSellingPrice = providerCost * 1.18;
+            const dynamicPrice = parseFloat(rawSellingPrice.toFixed(4)) > providerCost 
+              ? parseFloat(rawSellingPrice.toFixed(4)) 
+              : parseFloat(rawSellingPrice.toFixed(6));
+            const minimumSafeSellingPrice = dynamicPrice;
 
             if (existingSvc) {
               const currentSellingPrice = parseFloat(Number(existingSvc.price).toFixed(4));
@@ -1668,10 +1689,11 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
               existingSvc.refill = apiSvc.refill;
               existingSvc.originalPrice = providerCost;
 
-              // Rule 2 Safety: If provider increased their price or selling price <= provider cost
-              if (currentSellingPrice <= providerCost || currentSellingPrice < minimumSafeSellingPrice) {
-                console.log(`[Zero-Loss Safety] Provider price increased for #${existingSvc.id} (${existingSvc.name}). Old selling price: $${currentSellingPrice}, New provider cost: $${providerCost}. Auto-adjusting to safe price: $${minimumSafeSellingPrice}`);
+              // Rule 2 Safety: Auto-adjust to exact 18% profit margin
+              if (currentSellingPrice !== minimumSafeSellingPrice || currentSellingPrice <= providerCost) {
+                console.log(`[18% Profit Margin] Adjusting #${existingSvc.id} (${existingSvc.name}). Provider cost: $${providerCost}, Selling price: $${minimumSafeSellingPrice}`);
                 existingSvc.price = minimumSafeSellingPrice;
+                existingSvc.profitMargin = 18;
                 existingSvc.priceAutoAdjusted = true;
                 existingSvc.lastAdjustedAt = new Date().toISOString();
                 existingSvc.disabled = false;
@@ -1685,7 +1707,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
                 modified = true;
               }
             } else {
-              // Brand new service from verified provider API
+              // Brand new service from verified provider API with 18% profit margin
               maxId++;
               const newSvc = {
                 id: maxId,
@@ -1693,7 +1715,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
                 category: apiSvc.category,
                 price: minimumSafeSellingPrice,
                 originalPrice: providerCost,
-                profitMargin: safeMarginPct,
+                profitMargin: 18,
                 min: apiSvc.min,
                 max: apiSvc.max,
                 desc: apiSvc.desc || "Verified live service directly connected to external provider API.",
@@ -1715,6 +1737,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
           const count = smmServices.filter((s: any) => s.providerId === provider.id.toString()).length;
           if (provider.serviceCount !== count) {
             provider.serviceCount = count;
+            provider.profitMargin = 18;
             await saveData(SMM_PROVIDERS_FILE, providers);
           }
         } catch (provErr: any) {
@@ -1725,9 +1748,9 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
       if (modified) {
         await saveData(SMM_SERVICES_FILE, smmServices);
-        console.log(`[SMM Background Sync] Sync complete. Added: ${addedCount}, Updated: ${updatedCount}, Zero-Loss Adjusted: ${zeroLossAdjusted}.`);
+        console.log(`[SMM Background Sync] Sync complete. Added: ${addedCount}, Updated: ${updatedCount}, Margin Adjusted: ${zeroLossAdjusted}.`);
       } else {
-        console.log("[SMM Background Sync] SMM services are already 100% up to date.");
+        console.log("[SMM Background Sync] SMM services are already 100% up to date with 18% profit margin.");
       }
     } catch (err: any) {
       console.error("[SMM Background Sync] Error during background SMM sync:", err);
@@ -1736,6 +1759,102 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
     return { added: addedCount, updated: updatedCount, zeroLossAdjusted, errors };
   }
+
+  // --- COMPLETE SMM SERVICES RESET AND 18% PROFIT MARGIN IMPORT ---
+  async function resetAndImportSmmServices(marginPct: number = 18) {
+    console.log(`[SMM Reset & Import] Starting complete wipe of existing services and categories...`);
+    
+    // 1. Wipe current services from disk and cloud
+    await saveData(SMM_SERVICES_FILE, []);
+
+    // 2. Fetch fresh services from provider API (SMMGEN)
+    const providerUrl = 'https://my.smmgen.com/api/v2';
+    const providerKey = '80329c3715c2b8f4202da3881457d585';
+
+    console.log(`[SMM Reset & Import] Fetching fresh services from provider API: ${providerUrl}...`);
+    const apiServices = await getProviderServicesInternal(providerUrl, providerKey);
+    console.log(`[SMM Reset & Import] Received ${apiServices.length} raw services from SMMGen.`);
+
+    if (!apiServices || apiServices.length === 0) {
+      throw new Error("Provider SMMGen returned zero services or failed to connect.");
+    }
+
+    const marginMultiplier = 1 + (marginPct / 100); // 1.18 for 18% profit margin
+
+    const validServices = apiServices
+      .filter((svc: any) => {
+        if (!svc || typeof svc !== 'object') return false;
+        const provSvcId = String(svc.id || svc.service || '').trim();
+        if (!provSvcId || provSvcId === '0' || provSvcId === 'undefined') return false;
+        const name = String(svc.name || '').trim();
+        if (name.length < 3) return false;
+        if (/^(mock|fake|dummy|test\s*service|sample|placeholder)/i.test(name)) return false;
+        const rate = parseFloat(String(svc.originalPrice ?? svc.rate ?? 0));
+        if (isNaN(rate) || rate <= 0) return false;
+        return true;
+      })
+      .map((apiSvc: any, index: number) => {
+        const provSvcId = String(apiSvc.id || apiSvc.service).trim();
+        const providerCost = parseFloat(Number(apiSvc.originalPrice ?? apiSvc.rate ?? 0).toFixed(6));
+        
+        // Exact 18% profit margin: Selling Price = Provider Rate * 1.18
+        const calculatedPrice = providerCost * marginMultiplier;
+        const sellingPrice = parseFloat(calculatedPrice.toFixed(4)) > providerCost 
+          ? parseFloat(calculatedPrice.toFixed(4)) 
+          : parseFloat(calculatedPrice.toFixed(6));
+
+        return {
+          id: parseInt(provSvcId, 10) || (10000 + index),
+          name: apiSvc.name,
+          category: apiSvc.category || "Others",
+          price: sellingPrice,
+          originalPrice: providerCost,
+          profitMargin: marginPct,
+          min: apiSvc.min,
+          max: apiSvc.max,
+          desc: apiSvc.desc || "Verified live service directly connected to external provider API.",
+          time: apiSvc.time || "0-24 hours",
+          quality: apiSvc.quality || "Standard",
+          refill: apiSvc.refill || "No Refill",
+          providerId: "1",
+          providerServiceId: provSvcId,
+          disabled: false,
+          syncedAt: new Date().toISOString()
+        };
+      });
+
+    console.log(`[SMM Reset & Import] Prepared ${validServices.length} fresh services with ${marginPct}% profit margin.`);
+
+    // 3. Save directly to database & cloud
+    await saveData(SMM_SERVICES_FILE, validServices);
+
+    // 4. Update provider metadata
+    const providers = loadData(SMM_PROVIDERS_FILE, DEFAULT_PROVIDERS);
+    const prov = providers.find((p: any) => p.id?.toString() === '1' || p.name?.toUpperCase().includes('SMMGEN'));
+    if (prov) {
+      prov.serviceCount = validServices.length;
+      prov.profitMargin = marginPct;
+      await saveData(SMM_PROVIDERS_FILE, providers);
+    }
+
+    // 5. Update settings.smmProfitMargin
+    const settings = loadData(SETTINGS_FILE, {});
+    settings.smmProfitMargin = marginPct;
+    await saveData(SETTINGS_FILE, settings);
+
+    return { count: validServices.length, margin: marginPct };
+  }
+
+  app.post("/api/admin/smm/reset-and-import", async (req, res) => {
+    try {
+      const margin = Number(req.body?.margin || 18);
+      const result = await resetAndImportSmmServices(margin);
+      res.json({ status: "ok", message: `Successfully reset and imported ${result.count} services with ${result.margin}% profit margin.`, ...result });
+    } catch (err: any) {
+      console.error("[SMM Reset Error]:", err);
+      res.status(500).json({ error: `Reset & Import failed: ${err.message}` });
+    }
+  });
 
   app.post("/api/admin/smm/sync", async (req, res) => {
     try {
@@ -1747,25 +1866,32 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   });
 
   app.post("/api/admin/smm/place-order", async (req, res) => {
-    const { url, key, service, link, quantity } = req.body;
-    if (!url || !key || !service || !link || !quantity) {
-      return res.status(400).json({ error: "Provider url, key, service, link and quantity are required-fields." });
+    let { url, key, service, link, quantity, orderId, dihOrderId } = req.body;
+    if (!service || !link || !quantity) {
+      return res.status(400).json({ error: "Service, link and quantity are required fields." });
     }
 
     try {
-      let normalizedUrl = url.trim();
-      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+      let normalizedUrl = (url || '').trim();
+      if (!normalizedUrl || normalizedUrl.includes('smmgen')) {
+        normalizedUrl = 'https://my.smmgen.com/api/v2';
+      } else if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
         normalizedUrl = "https://" + normalizedUrl;
       }
 
+      let activeKey = (key || '').trim();
+      if (!activeKey || activeKey === 'f5846f314bba6ed87b2c025b2ef73790' || normalizedUrl.includes('smmgen')) {
+        activeKey = '80329c3715c2b8f4202da3881457d585';
+      }
+
       const params = new URLSearchParams();
-      params.append('key', key.trim());
+      params.append('key', activeKey);
       params.append('action', 'add');
       params.append('service', String(service).trim());
       params.append('link', String(link).trim());
       params.append('quantity', String(quantity).trim());
 
-      console.log(`[SMM Order Proxy] Forwarding order to SMM provider: ${normalizedUrl} with service: ${service}`);
+      console.log(`[SMM Order Proxy] Forwarding order to SMM provider: ${normalizedUrl} with service: ${service}, link: ${link}, quantity: ${quantity}`);
       let response;
       try {
         response = await axios.post(normalizedUrl, params.toString(), {
@@ -1778,7 +1904,7 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
       } catch (postErr: any) {
         console.log(`[SMM Order Proxy] POST request failed, trying GET fallback... Error: ${postErr.message}`);
         const separator = normalizedUrl.includes('?') ? '&' : '?';
-        const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(key.trim())}&action=add&service=${encodeURIComponent(String(service).trim())}&link=${encodeURIComponent(String(link).trim())}&quantity=${encodeURIComponent(String(quantity).trim())}`;
+        const getUrl = `${normalizedUrl}${separator}key=${encodeURIComponent(activeKey)}&action=add&service=${encodeURIComponent(String(service).trim())}&link=${encodeURIComponent(String(link).trim())}&quantity=${encodeURIComponent(String(quantity).trim())}`;
         response = await axios.get(getUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
@@ -1789,6 +1915,29 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
 
       const rawData = response.data;
       if (rawData && typeof rawData === 'object') {
+        const returnedOrderId = rawData.order || rawData.order_id || rawData.orderId;
+        if (returnedOrderId) {
+          // Immediately set order status from PENDING to PROCESSING
+          const targetDihId = dihOrderId || orderId;
+          if (targetDihId) {
+            try {
+              const allOrders = loadData(SMM_ORDERS_FILE, []);
+              const targetIdx = allOrders.findIndex((o: any) => o.id?.toString() === targetDihId?.toString());
+              if (targetIdx !== -1) {
+                allOrders[targetIdx].status = 'processing';
+                allOrders[targetIdx].apiOrderId = returnedOrderId;
+                allOrders[targetIdx].error = undefined;
+                allOrders[targetIdx].isQueued = false;
+                await saveData(SMM_ORDERS_FILE, allOrders);
+                console.log(`[SMM Order Proxy] Order #${targetDihId} status immediately updated to PROCESSING with Provider Order ID #${returnedOrderId}`);
+              }
+            } catch (saveErr) {
+              console.error("[SMM Order Proxy] Could not update order status in DB:", saveErr);
+            }
+          }
+          return res.json({ ...rawData, order: returnedOrderId, status: 'processing' });
+        }
+
         if (rawData.error) {
           const errMsg = String(rawData.error).toLowerCase();
           if (errMsg.includes("balance") || errMsg.includes("funds") || errMsg.includes("money") || errMsg.includes("credit") || errMsg.includes("insufficient")) {

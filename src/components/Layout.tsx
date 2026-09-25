@@ -29,11 +29,11 @@ const navItems = [
   { id: 'dih-movies' as ToolId, icon: Film, label: 'Dih Movies' },
   { id: 'bachelor-point' as ToolId, icon: Film, label: 'Bachelor Point S-5' },
   { id: 'mobile-bypass' as ToolId, icon: Smartphone, label: 'Mobile Bypass' },
+  { id: 'dih-art' as ToolId, icon: Palette, label: 'DIH ART' },
   { id: 'hosted-admin' as ToolId, icon: Globe, label: 'DIH Templates' },
   { id: 'dih-smm' as ToolId, icon: Flame, label: 'DIH SMM' },
   { id: 'dih-casino' as ToolId, icon: Dices, label: 'DIH CASINO' },
   { id: 'dih-invest' as ToolId, icon: Coins, label: 'DIH INVEST' },
-  { id: 'dih-art' as ToolId, icon: Palette, label: 'DIH ART' },
 ];
 
 declare global {
@@ -165,7 +165,27 @@ export default function Layout({
   const dihMoviesNavItem = unfilteredNavItems.find(i => i.id === 'dih-movies');
   const bachelorPointNavItem = unfilteredNavItems.find(i => i.id === 'bachelor-point');
   const isBachelorPointThemed = bachelorPointNavItem && settings.bachelorEnableColorTheme !== false;
-  const otherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies' && (isBachelorPointThemed ? i.id !== 'bachelor-point' : true));
+  const rawOtherNavItems = unfilteredNavItems.filter(i => i.id !== 'dih-movies' && (isBachelorPointThemed ? i.id !== 'bachelor-point' : true));
+
+  // Ensure "DIH ART" and "DIH TEMPLATES" are placed directly above "DIH SMM" in the options list
+  const otherNavItems: typeof rawOtherNavItems = [];
+  const artItem = rawOtherNavItems.find(i => i.id === 'dih-art');
+  const templatesItem = rawOtherNavItems.find(i => i.id === 'hosted-admin');
+
+  for (const item of rawOtherNavItems) {
+    if (item.id === 'dih-art' || item.id === 'hosted-admin') continue;
+    if (item.id === 'dih-smm') {
+      if (artItem) otherNavItems.push(artItem);
+      if (templatesItem) otherNavItems.push(templatesItem);
+      otherNavItems.push(item);
+    } else {
+      otherNavItems.push(item);
+    }
+  }
+  if (!rawOtherNavItems.some(i => i.id === 'dih-smm')) {
+    if (artItem) otherNavItems.push(artItem);
+    if (templatesItem) otherNavItems.push(templatesItem);
+  }
 
   const filteredNavItems = [
     navItems.find(i => i.id === 'dashboard')!,
@@ -245,7 +265,6 @@ export default function Layout({
               const isDihSmm = item.id === 'dih-smm';
               const isStakeHub = item.id === 'dih-casino';
               const isDihInvest = item.id === 'dih-invest';
-              const isDihArt = item.id === 'dih-art';
               const isBachelorPointThemedItem = isBachelorPoint && settings.bachelorEnableColorTheme !== false;
               const isStreamingTool = isDihMovies || isBachelorPointThemedItem;
 
@@ -312,15 +331,6 @@ export default function Layout({
                     </div>
                   )}
 
-                  {isDihArt && (
-                    <div className="px-3 pt-4 pb-1 mt-2">
-                      <p className="text-[9px] font-black tracking-[0.2em] text-rose-500 dark:text-rose-400 uppercase flex items-center gap-1.5 select-none">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
-                        DIH ART
-                      </p>
-                    </div>
-                  )}
-
                   <button
                     onClick={() => {
                       setActiveTool(item.id);
@@ -355,10 +365,6 @@ export default function Layout({
                               ? isActive
                                 ? "bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-500/35 scale-[1.01]"
                                 : "text-amber-700 dark:text-amber-400 hover:text-amber-300 dark:hover:text-amber-200 bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/5 dark:hover:bg-amber-500/15 border border-amber-500/10 hover:border-amber-500/30 font-extrabold hover:translate-x-1"
-                            : isDihArt
-                              ? isActive
-                                ? "bg-gradient-to-r from-rose-600 via-pink-600 to-red-600 text-white font-black shadow-lg shadow-rose-600/35 scale-[1.01]"
-                                : "text-rose-600 dark:text-rose-400 hover:text-rose-300 dark:hover:text-rose-200 bg-rose-500/5 hover:bg-rose-500/10 dark:bg-rose-500/5 dark:hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 font-extrabold hover:translate-x-1"
                               : isActive 
                                 ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-slate-900/5 dark:shadow-white/5 scale-[1.01]" 
                                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1",
@@ -372,11 +378,10 @@ export default function Layout({
                         isDihMovies && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse",
                         isDihSmm && !isActive && (settings.smmEnableColorTheme !== false ? "text-violet-500 dark:text-violet-400 animate-pulse" : "text-slate-400"),
                         isStakeHub && !isActive && "text-emerald-500 dark:text-emerald-400 animate-pulse",
-                        isDihInvest && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse",
-                        isDihArt && !isActive && "text-rose-500 dark:text-rose-400 animate-pulse"
+                        isDihInvest && !isActive && "text-amber-500 dark:text-amber-400 animate-pulse"
                       )} />
                     )}
-                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm || isStakeHub || isDihInvest || isDihArt) && "tracking-wide")}>{label}</span>
+                    <span className={cn("flex-1 text-left truncate uppercase", (isStreamingTool || isDihSmm || isStakeHub || isDihInvest) && "tracking-wide")}>{label}</span>
                     {isDisabled ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.6)]" title="Under Management / Offline" />
                     ) : isDihMovies ? (
@@ -401,12 +406,8 @@ export default function Layout({
                       <span className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
                         WEALTH
                       </span>
-                    ) : isDihArt ? (
-                      <span className="bg-gradient-to-r from-rose-600 to-red-600 text-white text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-md animate-pulse">
-                        GALLERY
-                      </span>
                     ) : null}
-                    {isActive && !isStreamingTool && !isDihSmm && !isStakeHub && !isDihInvest && !isDihArt && (
+                    {isActive && !isStreamingTool && !isDihSmm && !isStakeHub && !isDihInvest && (
                       <motion.div 
                         layoutId="active-pill"
                         className="absolute left-0 w-1 h-6 bg-primary rounded-r-full"

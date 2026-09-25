@@ -34,29 +34,136 @@ interface SMMService {
   priceAutoAdjusted?: boolean;
 }
 
-export function getCleanRefill(refill: any): string {
-  if (refill === undefined || refill === null) return 'No Refill';
-  const rawStr = String(refill).trim();
-  const str = rawStr.toLowerCase();
-  
-  if (!str || str === '0' || str === 'false' || str.includes('no refill') || str.includes('non') || str === 'no' || str === 'na') {
-    return 'No Refill';
-  }
-  
-  if (str.includes('life') || str.includes('lifetime') || str.includes('permanent')) {
-    return 'Lifetime Refill';
+export type RefillBadgeType = 'no-refill' | 'refill-period' | 'lifetime';
+
+export interface ParsedRefill {
+  label: string; // e.g. "REFILL 1D", "REFILL 30D", "REFILL 90D", "LifeTime", "NO REFILL"
+  type: RefillBadgeType;
+  days?: number;
+  hasRefill: boolean; // True for 1D, 30D, 90D, LifeTime; False for NO REFILL
+}
+
+/**
+ * Dynamically extracts the exact real refill indicator string directly from the provider's
+ * service object and/or service name (e.g. "REFILL 1D", "REFILL 30D", "REFILL 90D", "LifeTime", "NO REFILL").
+ * Preserves the provider's original data without mutating or overriding raw values.
+ */
+export function parseExactRefill(serviceOrRefill: any): ParsedRefill {
+  if (!serviceOrRefill) {
+    return { label: 'NO REFILL', type: 'no-refill', hasRefill: false };
   }
 
-  const numbersOnly = str.replace(/[^0-9]/g, '');
-  if (numbersOnly && !str.includes('yes')) {
-    return `Refill ${numbersOnly} Days`;
-  }
-  
-  if (str === '1' || str === 'true' || str === 'yes') {
-    return 'Yes Refill';
+  let rawName = '';
+  let rawRefill = '';
+
+  if (typeof serviceOrRefill === 'object') {
+    rawName = String(serviceOrRefill.name || '');
+    rawRefill = serviceOrRefill.refill !== undefined && serviceOrRefill.refill !== null ? String(serviceOrRefill.refill).trim() : '';
+  } else {
+    rawRefill = String(serviceOrRefill).trim();
+    rawName = rawRefill;
   }
 
-  return rawStr;
+  // Normalize Unicode mathematical / bold / sans-serif fonts (e.g., 𝐍𝐎 𝗥𝗘𝗙𝗜𝗟𝗟 -> NO REFILL, 𝗟𝗶𝗳𝗲𝗧𝗶𝗺𝗲 -> LifeTime)
+  const normName = rawName.normalize('NFKD');
+  const normRefill = rawRefill.normalize('NFKD');
+
+  // 1. Check for Lifetime indicators in name or refill
+  if (/life\s*time/i.test(normName) || /life\s*time/i.test(normRefill) || /permanent/i.test(normName)) {
+    return { label: 'LifeTime', type: 'lifetime', hasRefill: true };
+  }
+
+  // 2. Check for explicit refill with days/period (e.g. "REFILL 1D", "REFILL 30D", "REFILL 90D", "30 Days Refill")
+  const periodMatch = 
+    normName.match(/\brefill\s*[:\-~]?\s*(\d+)\s*d(?:ays?)?\b/i) ||
+    normName.match(/\b(\d+)\s*d(?:ays?)?\s*refill\b/i) ||
+    normName.match(/\brefill\s*(\d+)\s*days?\b/i) ||
+    normName.match(/\br(\d{1,4})\b/i) ||
+    normRefill.match(/\brefill\s*[:\-~]?\s*(\d+)\s*d(?:ays?)?\b/i) ||
+    normRefill.match(/\b(\d+)\s*d(?:ays?)?\s*refill\b/i) ||
+    normRefill.match(/\b(\d+)\s*d\b/i);
+
+  if (periodMatch && periodMatch[1]) {
+    const days = parseInt(periodMatch[1], 10);
+    if (!isNaN(days) && days > 0) {
+      return { label: `REFILL ${days}D`, type: 'refill-period', days, hasRefill: true };
+    }
+  }
+
+  if (/^\d+$/.test(normRefill)) {
+    const days = parseInt(normRefill, 10);
+    if (days > 0) return { label: `REFILL ${days}D`, type: 'refill-period', days, hasRefill: true };
+  }
+
+  // 3. Explicit NO REFILL in name
+  if (/\bno[n\s-]*refill\b|\bwithout\s*refill\b/i.test(normName)) {
+    return { label: 'NO REFILL', type: 'no-refill', hasRefill: false };
+  }
+
+  // 4. Check negative values in refill property
+  if (
+    normRefill.toLowerCase() === 'no refill' ||
+    normRefill.toLowerCase() === 'no' ||
+    normRefill === '0' ||
+    normRefill === 'false' ||
+    normRefill === 'na' ||
+    normRefill.toLowerCase().includes('non')
+  ) {
+    return { label: 'NO REFILL', type: 'no-refill', hasRefill: false };
+  }
+
+  // 5. Positive refill indicator in name or refill property
+  if (/refill/i.test(normName) || normRefill.toLowerCase().includes('yes') || normRefill === '1' || normRefill === 'true') {
+    return { label: 'REFILL', type: 'refill-period', hasRefill: true };
+  }
+
+  return { label: 'NO REFILL', type: 'no-refill', hasRefill: false };
+}
+
+export function getCleanRefill(refillOrService: any): string {
+  return parseExactRefill(refillOrService).label;
+}
+
+/**
+ * Visual Badging (Like Provider UI):
+ * - If "NO REFILL" -> Red Badge: [ NO REFILL ]
+ * - If "REFILL XD" (e.g. 1D, 30D, 90D) -> Blue Badge: [ REFILL 30D ]
+ * - If "LifeTime" / "Lifetime" -> Green Badge: [ LifeTime ]
+ */
+export function renderRefillBadge(serviceOrRefill: any, extraClass?: string) {
+  const parsed = parseExactRefill(serviceOrRefill);
+
+  if (parsed.type === 'no-refill') {
+    return (
+      <span className={cn(
+        "inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase tracking-wider border shrink-0 bg-red-500/10 text-red-400 border-red-500/25 select-none shadow-xs",
+        extraClass
+      )}>
+        [ {parsed.label} ]
+      </span>
+    );
+  }
+
+  if (parsed.type === 'lifetime') {
+    return (
+      <span className={cn(
+        "inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-mono font-black tracking-wider border shrink-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/25 select-none shadow-xs",
+        extraClass
+      )}>
+        [ {parsed.label} ]
+      </span>
+    );
+  }
+
+  // Blue Badge: [ REFILL XD ] (e.g. REFILL 1D, REFILL 30D, REFILL 90D)
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase tracking-wider border shrink-0 bg-blue-500/10 text-blue-400 border-blue-500/25 select-none shadow-xs",
+      extraClass
+    )}>
+      [ {parsed.label} ]
+    </span>
+  );
 }
 
 interface SMMOrder {
@@ -161,8 +268,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   const [orderActivePlatform, setOrderActivePlatform] = useState<string>('All');
   const [orderActiveCat, setOrderActiveCat] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  const [ddSearchQuery, setDdSearchQuery] = useState<string>('');
-  const [ddRefillFilter, setDdRefillFilter] = useState<'all' | 'refill' | 'non-refill'>('all');
   const catDropdownRef = useRef<HTMLDivElement>(null);
   const [catDropdownOpen, setCatDropdownOpen] = useState<boolean>(false);
   const [catSearchQuery, setCatSearchQuery] = useState<string>('');
@@ -530,18 +635,20 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
   }, [activeServices, orderActiveCat]);
 
   const filteredServicesForDropdown = useMemo(() => {
-    let result = orderFilteredServices;
-    if (ddSearchQuery) {
-      const query = ddSearchQuery.toLowerCase();
-      result = result.filter(s => s.name.toLowerCase().includes(query) || s.id.toString().includes(query));
+    const query = orderSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return orderFilteredServices;
     }
-    if (ddRefillFilter === 'refill') {
-      result = result.filter(s => s.refill && !s.refill.toLowerCase().includes('no') && !s.refill.toLowerCase().includes('non'));
-    } else if (ddRefillFilter === 'non-refill') {
-      result = result.filter(s => !s.refill || s.refill.toLowerCase().includes('no') || s.refill.toLowerCase().includes('non'));
+    const inCurrentCategory = orderFilteredServices.filter(s => 
+      s.name.toLowerCase().includes(query) || s.id.toString().includes(query)
+    );
+    if (inCurrentCategory.length > 0) {
+      return inCurrentCategory;
     }
-    return result;
-  }, [orderFilteredServices, ddSearchQuery, ddRefillFilter]);
+    return activeServices.filter(s => 
+      s.name.toLowerCase().includes(query) || s.id.toString().includes(query)
+    );
+  }, [orderFilteredServices, activeServices, orderSearchQuery]);
 
   useEffect(() => {
     if (settings.smmManualGateways && Array.isArray(settings.smmManualGateways) && settings.smmManualGateways.length > 0) {
@@ -1590,60 +1697,59 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
     // SMM Provider Real-Time Placement Proxy
     const provId = selectedService.providerId;
-    const prov = providers.find(p => p.id?.toString() === provId?.toString());
-    const providerBalance = prov ? (parseFloat(prov.balance) || 0) : 0;
-    const providerCost = (qty / 1000) * (selectedService.originalPrice || selectedService.price * 0.7);
-    const isProviderLowBalance = false; // Bypassed client-side local check to allow real API to process the order
-    const hasRealApi = prov && prov.apiUrl && prov.apiUrl.trim() !== "" && !prov.apiUrl.toLowerCase().includes("example.com") && prov.apiKey && prov.apiKey.trim() !== "";
+    let prov = providers.find(p => p.id?.toString() === provId?.toString());
+    if (!prov && providers.length > 0) {
+      prov = providers.find(p => p.name?.toUpperCase().includes('SMMGEN')) || providers[0];
+    }
+    const isSmmGen = !prov || prov.name?.toUpperCase().includes('SMMGEN') || (prov.apiUrl && prov.apiUrl.includes('smmgen'));
+    const targetProviderUrl = isSmmGen ? 'https://my.smmgen.com/api/v2' : (prov?.apiUrl || 'https://my.smmgen.com/api/v2');
+    const targetProviderKey = isSmmGen ? '80329c3715c2b8f4202da3881457d585' : (prov?.apiKey || '80329c3715c2b8f4202da3881457d585');
+    const targetServiceId = selectedService.providerServiceId || selectedService.id;
 
-    if (isProviderLowBalance) {
-      // SMM Provider has low balance! Queue it as pending instead of placing live
-      const queuedOrders = updatedOrdersList.map(o => {
-        if (o.id === newOrder.id) {
-          return { ...o, error: `Queued: DIH SMM is preparing your order. Will process shortly.`, isQueued: true, status: 'pending' as const };
-        }
-        return o;
-      });
-      saveOrders(queuedOrders);
-      setOrderSuccess(`Order #${newOrder.id} has been queued as PENDING. It will be processed automatically by DIH SMM shortly.`);
-      setOrderError(null);
-    } else if (hasRealApi) {
-      fetch('/api/admin/smm/place-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: prov.apiUrl,
-          key: prov.apiKey,
-          service: selectedService.providerServiceId || selectedService.id,
-          link: link,
-          quantity: qty
-        })
+    fetch('/api/admin/smm/place-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: targetProviderUrl,
+        key: targetProviderKey,
+        service: targetServiceId,
+        link: link,
+        quantity: qty,
+        dihOrderId: newOrder.id
       })
-      .then(async (res) => {
-        if (res.ok) {
-          const apiData = await res.json();
-          if (apiData.order) {
-            // Success! Update order with apiOrderId and set status to processing
-            const successOrders = updatedOrdersList.map(o => {
-              if (o.id === newOrder.id) {
-                return { ...o, apiOrderId: apiData.order, status: 'processing' as const };
-              }
-              return o;
-            });
-            saveOrders(successOrders);
-            setOrderSuccess(`Order #${newOrder.id} successfully placed! It is now processing under DIH SMM.`);
-          } else if (apiData.isLowBalance) {
-            // Insufficient SMM balance reported by external SMM panel! Queue it as pending
-            const queuedOrders = updatedOrdersList.map(o => {
-              if (o.id === newOrder.id) {
-                return { ...o, error: `Queued: DIH SMM is preparing your order. Will process shortly.`, isQueued: true, status: 'pending' as const };
-              }
-              return o;
-            });
-            saveOrders(queuedOrders);
-            setOrderSuccess(`Order #${newOrder.id} has been queued as PENDING. It will be processed automatically by DIH SMM shortly.`);
-            setOrderError(null);
-          } else if (apiData.error) {
+    })
+    .then(async (res) => {
+      if (res.ok) {
+        const apiData = await res.json();
+        const pOrderId = apiData.order || apiData.order_id || apiData.orderId;
+        if (pOrderId) {
+          // Success! Immediately set order status from PENDING to PROCESSING
+          const successOrders = updatedOrdersList.map(o => {
+            if (o.id === newOrder.id) {
+              return { 
+                ...o, 
+                apiOrderId: pOrderId, 
+                status: 'processing' as const, 
+                error: undefined, 
+                isQueued: false 
+              };
+            }
+            return o;
+          });
+          saveOrders(successOrders);
+          setOrderSuccess(`Order #${newOrder.id} successfully placed! Status: PROCESSING (Provider Order #${pOrderId}).`);
+        } else if (apiData.isLowBalance) {
+          // Insufficient SMM balance reported by external SMM panel! Queue it as pending
+          const queuedOrders = updatedOrdersList.map(o => {
+            if (o.id === newOrder.id) {
+              return { ...o, error: `Queued: DIH SMM is preparing your order. Will process shortly.`, isQueued: true, status: 'pending' as const };
+            }
+            return o;
+          });
+          saveOrders(queuedOrders);
+          setOrderSuccess(`Order #${newOrder.id} has been queued as PENDING. It will be processed automatically by DIH SMM shortly.`);
+          setOrderError(null);
+        } else if (apiData.error) {
             // Failed. Void order, mark as cancelled, refund balance
             const failedOrders = updatedOrdersList.map(o => {
               if (o.id === newOrder.id) {
@@ -1707,13 +1813,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
         setOrderError(`Connection failed: ${err.message}`);
         setOrderSuccess(null);
       });
-    } else {
-      // Offline/Manual mock flow completes instantly
-      setTimeout(() => {
-        setOrderSuccess(`Order #${newOrder.id} placed successfully!`);
-        setTimeout(() => setOrderSuccess(null), 4000);
-      }, 1000);
-    }
   };
 
   const handlePlaceMassOrder = () => {
@@ -2504,7 +2603,10 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.category}</span>
-                                <h4 className="text-[13px] font-bold text-white leading-snug mt-0.5">{s.name}</h4>
+                                <h4 className="text-[13px] font-bold text-white leading-snug mt-0.5 flex flex-wrap items-center gap-1.5">
+                                  <span>{s.name}</span>
+                                  {renderRefillBadge(s)}
+                                </h4>
                               </div>
                               <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-wider shrink-0", getQualityBadgeClass(s.quality))}>
                                 {s.quality}
@@ -2513,18 +2615,8 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             
                             <p className="text-slate-400 text-[11.5px] leading-relaxed">{s.desc}</p>
                             
-                            <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-500">
-                              <span>Min: {fmt(s.min)}</span>
-                              {s.refill && (
-                                <span className={cn(
-                                  "px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wide border shrink-0",
-                                  getCleanRefill(s.refill).toLowerCase().includes('no')
-                                    ? "bg-red-500/10 text-red-400 border-red-500/15"
-                                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15"
-                                )}>
-                                  🔄 Refill: {getCleanRefill(s.refill)}
-                                </span>
-                              )}
+                            <div className="flex items-center text-[11px] text-slate-500 font-mono">
+                              <span>Min: {fmt(s.min)} • Max: {fmt(s.max)}</span>
                             </div>
                           </div>
 
@@ -2533,52 +2625,13 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               <div className="text-[15px] font-mono font-bold text-blue-500">
                                 ${s.price.toFixed(4)} <span className="text-xs font-sans text-slate-400 font-normal">/ 1000</span>
                               </div>
-                              {s.disabled && (
-                                <span className="inline-block mt-0.5 text-[9px] font-bold text-amber-400/90 tracking-wide">
-                                  🛡️ Zero-Loss Safe (Disabled)
-                                </span>
-                              )}
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              {isAdmin && (
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const nextList = servicesList.map(item => item.id === s.id ? { ...item, disabled: !item.disabled } : item);
-                                    setServicesList(nextList);
-                                    await fetch('/api/smm/services', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify(nextList)
-                                    });
-                                  }}
-                                  className={cn(
-                                    "px-2 py-1 text-[10px] font-extrabold rounded-md border transition cursor-pointer",
-                                    s.disabled
-                                      ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
-                                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
-                                  )}
-                                  title="Admin Instant Toggle: broadcasts to all dashboards via Firebase"
-                                >
-                                  {s.disabled ? 'Turn ON' : 'Turn OFF'}
-                                </button>
-                              )}
-                              {s.disabled ? (
-                                <button
-                                  disabled
-                                  className="bg-slate-800/80 text-slate-500 border border-slate-700/50 px-3 py-1.5 text-xs font-bold rounded-lg cursor-not-allowed opacity-60"
-                                >
-                                  Disabled
-                                </button>
-                              ) : (
-                                <button 
-                                  onClick={() => goOrder(s.id)}
-                                  className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-605 hover:text-white hover:shadow-md hover:shadow-blue-500/10 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer"
-                                >
-                                  Order &rarr;
-                                </button>
-                              )}
-                            </div>
+                            <button 
+                              onClick={() => goOrder(s.id)}
+                              className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white hover:border-blue-600 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm"
+                            >
+                              Order &rarr;
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -2675,22 +2728,25 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                     
                     <div className="p-5.5 space-y-4">
                       
-                      {/* Fallback to restore defaults if empty */}
+                      {/* Loading/Refresh indicator if services list is loading */}
                       {activeServices.length === 0 && (
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4.5 text-xs text-blue-400 space-y-2.5">
-                          <p className="font-bold flex items-center gap-1.5">⚠️ SMM Catalog is currently empty!</p>
-                          <p className="text-slate-300 leading-relaxed">
-                            It looks like all SMM services were cleared or not initialized. Press the button below to instantly populate your browser storage with our high-speed default catalog of 24 SMM services.
-                          </p>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-xs text-blue-300 flex items-center justify-between gap-3">
+                          <span className="font-semibold">Loading live provider services catalog...</span>
                           <button 
                             type="button" 
-                            onClick={() => {
-                              localStorage.setItem('dih_smm_services_v2', JSON.stringify(SERVICES));
-                              setServicesList(SERVICES);
+                            onClick={async () => {
+                              const res = await fetch(`/api/smm/services?t=${Date.now()}`);
+                              if (res.ok) {
+                                const svcs = await res.json();
+                                if (Array.isArray(svcs) && svcs.length > 0) {
+                                  localStorage.setItem('dih_smm_services_v2', JSON.stringify(svcs));
+                                  setServicesList(svcs);
+                                }
+                              }
                             }}
-                            className="bg-blue-550 hover:bg-blue-600 text-white font-black px-4 py-2 rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md inline-flex items-center gap-2"
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors shrink-0"
                           >
-                            Restore Default 24 Services
+                            Refresh Services
                           </button>
                         </div>
                       )}
@@ -2824,16 +2880,9 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                       <span className="bg-blue-500/15 text-blue-500 text-[10px] font-black px-1.5 py-0.5 rounded border border-blue-500/25 font-mono">
                                         {selectedService.id}
                                       </span>
-                                      <span className="truncate font-semibold">{selectedService.name}</span>
-                                      {selectedService.refill && orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
-                                        <span className={cn(
-                                          "px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 font-mono tracking-wider border",
-                                          getCleanRefill(selectedService.refill).toLowerCase().includes('no') 
-                                            ? "bg-red-500/10 text-red-400 border-red-500/10" 
-                                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/10"
-                                        )}>
-                                          🔄 {getCleanRefill(selectedService.refill)}
-                                        </span>
+                                      <span className="truncate font-semibold text-white">{selectedService.name}</span>
+                                      {orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
+                                        renderRefillBadge(selectedService)
                                       )}
                                     </>
                                   ) : (
@@ -2852,117 +2901,49 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                     transition={{ duration: 0.12 }}
                                     className="absolute top-full left-0 right-0 mt-1 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-2xl z-50 origin-top"
                                   >
-                                    <div className="p-2 border-b border-[#1e2336] bg-[#0d0f17] flex flex-col gap-2">
-                                      <input
-                                        type="text"
-                                        placeholder="Search service by name or ID..."
-                                        value={ddSearchQuery}
-                                        onChange={(e) => setDdSearchQuery(e.target.value)}
-                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-blue-500"
-                                        autoFocus
-                                      />
-                                      {/* Quick Refill & Non-Refill Tabs */}
-                                      {orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
-                                        <div className="flex gap-1">
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setDdRefillFilter('all');
-                                            }}
-                                            className={cn(
-                                              "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center cursor-pointer",
-                                              ddRefillFilter === 'all'
-                                                ? "bg-blue-500/15 text-blue-500 border-blue-500/35"
-                                                : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
-                                            )}
-                                          >
-                                            All
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setDdRefillFilter('refill');
-                                            }}
-                                            className={cn(
-                                              "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
-                                              ddRefillFilter === 'refill'
-                                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/35"
-                                                : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
-                                            )}
-                                          >
-                                            🔄 Refill
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setDdRefillFilter('non-refill');
-                                            }}
-                                            className={cn(
-                                              "flex-1 py-1 rounded text-[9px] font-black uppercase tracking-wider border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer",
-                                              ddRefillFilter === 'non-refill'
-                                                ? "bg-red-500/15 text-red-400 border-red-500/35"
-                                                : "bg-[#141720] text-slate-500 border-slate-800/80 hover:text-slate-350"
-                                            )}
-                                          >
-                                            ⚠️ No Refill
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="max-h-64 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
-                                      {filteredServicesForDropdown.length === 0 ? (
-                                        <div className="text-center py-5 text-xs text-slate-500">No services match your search</div>
-                                      ) : (
-                                        filteredServicesForDropdown.map(s => {
-                                          const isSelected = s.id === selectedServiceId;
-                                          return (
-                                            <div
-                                              key={s.id}
-                                              onClick={() => {
-                                                setSelectedServiceId(s.id);
-                                                setOrderQty(s.min.toString());
-                                                setDropdownOpen(false);
-                                                setDdSearchQuery('');
-                                              }}
-                                              className={cn(
-                                                "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-[#0d0f17] cursor-pointer rounded-lg flex flex-col gap-1 transition-colors",
-                                                isSelected ? "bg-blue-500/10 text-blue-500 font-bold border-l-2 border-blue-500 bg-[#0d0f17]/30" : ""
-                                              )}
-                                            >
-                                              <div className="flex items-center justify-between gap-1.5">
-                                                <span className="font-semibold truncate">
-                                                  <span className="text-blue-500 font-mono font-black border border-blue-500/20 bg-blue-500/10 px-1 py-0.2 rounded text-[10px] mr-1.5">{s.id}</span>
-                                                  {s.name}
-                                                </span>
-                                                <span className="font-mono text-emerald-400 font-extrabold shrink-0">
-                                                  ${s.price.toFixed(4)}/1k
-                                                </span>
-                                              </div>
-                                              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 pl-8 font-mono">
-                                                <span>Min: {fmt(s.min)}</span>
-                                                <span>•</span>
-                                                <span>Max: {fmt(s.max)}</span>
-                                                {s.refill && orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
-                                                  <>
-                                                    <span>•</span>
-                                                    <span className={cn(
-                                                      "px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 transition-colors duration-150",
-                                                      getCleanRefill(s.refill).toLowerCase().includes('no') 
-                                                        ? "bg-red-500/10 text-red-400 border border-red-500/10" 
-                                                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/10"
-                                                    )}>
-                                                      🔄 {getCleanRefill(s.refill)}
-                                                    </span>
-                                                  </>
+                                    <div className="max-h-72 overflow-y-auto custom-scrollbar relative">
+                                      {/* Service Items List */}
+                                      <div className="p-1 space-y-0.5">
+                                        {filteredServicesForDropdown.length === 0 ? (
+                                          <div className="text-center py-6 text-xs text-slate-500">No services match your search</div>
+                                        ) : (
+                                          filteredServicesForDropdown.map(s => {
+                                            const isSelected = s.id === selectedServiceId;
+                                            return (
+                                              <div
+                                                key={s.id}
+                                                onClick={() => {
+                                                  setSelectedServiceId(s.id);
+                                                  setOrderQty(s.min.toString());
+                                                  setDropdownOpen(false);
+                                                }}
+                                                className={cn(
+                                                  "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-[#0d0f17] cursor-pointer rounded-lg flex flex-col gap-1 transition-colors",
+                                                  isSelected ? "bg-blue-500/10 text-blue-500 font-bold border-l-2 border-blue-500 bg-[#0d0f17]/30" : ""
                                                 )}
+                                              >
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <span className="font-semibold truncate flex items-center gap-1.5 min-w-0">
+                                                    <span className="text-blue-500 font-mono font-black border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.2 rounded text-[10px] shrink-0">{s.id}</span>
+                                                    <span className="truncate">{s.name}</span>
+                                                    {orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
+                                                      renderRefillBadge(s)
+                                                    )}
+                                                  </span>
+                                                  <span className="font-mono text-emerald-400 font-extrabold shrink-0 pl-2">
+                                                    ${s.price.toFixed(4)}/1k
+                                                  </span>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 pl-7 font-mono">
+                                                  <span>Min: {fmt(s.min)}</span>
+                                                  <span>•</span>
+                                                  <span>Max: {fmt(s.max)}</span>
+                                                </div>
                                               </div>
-                                            </div>
-                                          );
-                                        })
-                                      )}
+                                            );
+                                          })
+                                        )}
+                                      </div>
                                     </div>
                                   </motion.div>
                                 )}
@@ -3072,8 +3053,11 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                               Active Service
                             </span>
                           </div>
-                          <h4 className="text-[13px] font-black text-white leading-normal tracking-wide">
-                            {selectedService.id} - {selectedService.name}
+                          <h4 className="text-[13px] font-black text-white leading-normal tracking-wide flex flex-wrap items-center gap-2">
+                            <span>{selectedService.id} - {selectedService.name}</span>
+                            {orderActivePlatform !== 'GAME' && orderActivePlatform !== 'Fb/Insta {OLD/ACC}' && (
+                              renderRefillBadge(selectedService)
+                            )}
                           </h4>
                            <p className="text-[11px] text-emerald-400 font-extrabold mt-1.5 font-mono">
                             ${selectedService.price.toFixed(4)} per 1000
@@ -3107,20 +3091,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   </>
                                 ) : (
                                   <>
-                                    {/* Refill Status Prominent Card */}
-                                    <div className={cn(
-                                      "p-3 rounded-lg border flex flex-col gap-1 transition-colors duration-200",
-                                      getCleanRefill(selectedService.refill).toLowerCase().includes('no')
-                                        ? "bg-red-500/5 border-red-500/10 text-red-400"
-                                        : "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
-                                    )}>
-                                      <span className="text-[9px] font-black uppercase tracking-wider opacity-60">Refill Guarantee</span>
-                                      <span className="text-xs font-black flex items-center gap-1.5">
-                                        {getCleanRefill(selectedService.refill).toLowerCase().includes('no') ? '❌' : '🔄'}
-                                        {getCleanRefill(selectedService.refill)}
-                                      </span>
-                                    </div>
-
                                     {/* Target Link Type Card */}
                                     <div className="p-3 bg-[#0d0f17]/40 border border-[#1e2336]/80 rounded-lg flex flex-col gap-1 text-slate-200">
                                       <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Destination URL</span>
@@ -3261,7 +3231,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Charge</th>
                             <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Date</th>
                             <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Status</th>
-                            {isAdmin && <th className="px-4.5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right">Actions</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1e2336]/60">
@@ -3288,17 +3257,6 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   {o.status}
                                 </span>
                               </td>
-                              {isAdmin && (
-                                <td className="px-4.5 py-3 text-right">
-                                  <button
-                                    onClick={() => deleteOrder(o.id)}
-                                    className="p-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 transition cursor-pointer inline-flex items-center justify-center"
-                                    title="Delete Order Permanently"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </td>
-                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -3336,7 +3294,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                       <span>Add Funds to Account</span>
                     </h3>
 
-                    <div className="inline-flex p-1 bg-[#141720] border border-[#1e2336] rounded-xl self-start sm:self-auto">
+                    <div className="inline-flex p-1 bg-[#141720] border border-[#1e2336] rounded-xl self-start sm:self-auto gap-1">
                       {/* LOCAL / CARDS TAB (LEFT) */}
                       <button
                         type="button"
@@ -3345,13 +3303,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           setDepError(null);
                         }}
                         className={cn(
-                          "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                          "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border",
                           depositGatewayTab === 'paynicorn'
-                            ? "bg-blue-600 text-white shadow-sm"
-                            : "text-slate-400 hover:text-white"
+                            ? "bg-blue-600/20 text-blue-300 border-blue-500/40 shadow-sm"
+                            : "bg-transparent text-slate-400 border-transparent hover:text-white hover:border-[#1e2336]"
                         )}
                       >
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        {depositGatewayTab === 'paynicorn' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                        )}
                         <span>Local / Cards</span>
                       </button>
 
@@ -3363,13 +3323,15 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                           setDepError(null);
                         }}
                         className={cn(
-                          "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                          "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border",
                           depositGatewayTab === 'crypto'
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-                            : "text-slate-400 hover:text-white"
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
+                            : "bg-transparent text-slate-400 border-transparent hover:text-white hover:border-[#1e2336]"
                         )}
                       >
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        {depositGatewayTab === 'crypto' && (
+                          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        )}
                         <span>Crypto USDT</span>
                       </button>
                     </div>
@@ -3506,7 +3468,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                         {/* VERIFY & CLAIM BALANCE */}
                         <div className="space-y-2 pt-1">
                           <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                            2. Paste Transaction ID for Auto-Credit
+                            PASTE TRANSACTION ID
                           </label>
 
                           <div className="flex gap-2">
@@ -3517,7 +3479,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 setCryptoTxId(e.target.value);
                                 setCryptoFeedback(null);
                               }}
-                              placeholder="Paste BSC TxID (e.g. 0x...)"
+                              placeholder="Paste BSC TxID [ 0x... ]"
                               className="flex-1 bg-[#0c0e14] border border-[#1e2336] px-3.5 py-3 text-xs font-mono text-white rounded-xl outline-none focus:border-amber-500 transition-colors"
                             />
                             <button
@@ -3866,8 +3828,5 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
   function toggleDropdown() {
     setDropdownOpen(!dropdownOpen);
-    if (!dropdownOpen) {
-      setDdSearchQuery('');
-    }
   }
 }

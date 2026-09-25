@@ -172,8 +172,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: 'DIH HUB',
   appDescription: 'Digital Innovation House Hub — Next-Gen Professional Utility & Multimedia Suite',
   footerText: '© 2024 DIH HUB (Digital Innovation House Hub). All rights reserved.',
-  visibleTools: ['qr', 'encryption', 'to-base64', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-art'],
-  newTools: ['qr', 'encryption', 'to-base64', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'hosted-admin', 'dih-smm', 'dih-art'],
+  visibleTools: ['qr', 'encryption', 'to-base64', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'dih-art', 'hosted-admin', 'dih-smm'],
+  newTools: ['qr', 'encryption', 'to-base64', 'video', 'dex-protector', 'lib-encryptor', 'dih-movies', 'mobile-bypass', 'dih-art', 'hosted-admin', 'dih-smm'],
   newBadgeText: 'NEW',
   faviconUrl: '/favicon-dih.png',
   appLogoUrl: '',
@@ -361,7 +361,7 @@ const AppSettingsContext = createContext<AppSettingsContextType | undefined>(und
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
-      const isCleaned = localStorage.getItem('dih_options_cleaned_v6');
+      const isCleaned = localStorage.getItem('dih_options_cleaned_v7');
       const saved = localStorage.getItem('dh_v3_settings');
       if (!saved) return DEFAULT_SETTINGS;
       
@@ -369,14 +369,18 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       if (!parsed) return DEFAULT_SETTINGS;
 
       const toolsToTurnOff = ['bachelor-point', 'bg-remover', 'dih-casino', 'dih-invest', 'apk-store'];
-      const toolsToKeepOn = ['hosted-admin', 'dih-smm', 'dih-art'];
+      const toolsToKeepOn = ['dih-art', 'hosted-admin', 'dih-smm'];
       if (!isCleaned) {
-        localStorage.setItem('dih_options_cleaned_v6', 'true');
+        localStorage.setItem('dih_options_cleaned_v7', 'true');
         if (Array.isArray(parsed.visibleTools)) {
           parsed.visibleTools = parsed.visibleTools.filter((t: string) => !toolsToTurnOff.includes(t));
           toolsToKeepOn.forEach(t => {
             if (!parsed.visibleTools.includes(t)) parsed.visibleTools.push(t);
           });
+          const rest = parsed.visibleTools.filter((t: string) => t !== 'dih-art' && t !== 'hosted-admin' && t !== 'dih-smm');
+          const insertIdx = rest.includes('mobile-bypass') ? rest.indexOf('mobile-bypass') + 1 : rest.length;
+          rest.splice(insertIdx, 0, 'dih-art', 'hosted-admin', 'dih-smm');
+          parsed.visibleTools = rest;
         }
         parsed.disabledTools = (Array.isArray(parsed.disabledTools) ? parsed.disabledTools : [])
           .filter((t: string) => !['hosted-admin', 'dih-art', 'dih-smm'].includes(t));

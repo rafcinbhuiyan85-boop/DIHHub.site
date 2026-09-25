@@ -98,7 +98,7 @@ function MainApp() {
   }, [settings.tmdbApiKey]);
 
   useEffect(() => {
-    const isReset = localStorage.getItem('smm_clean_reset_v6');
+    const isReset = localStorage.getItem('smm_clean_reset_v7');
     if (!isReset) {
       // Clear out SMM services, deposits, orders, and demo users from local storage
       localStorage.removeItem('dih_smm_services_v2');
@@ -107,8 +107,7 @@ function MainApp() {
       localStorage.removeItem('dih_smm_users_v2');
 
       const specificProviders = [
-        { id: 1, name: 'TRENDWE', apiUrl: 'https://trendawe.com/api/v2', apiKey: 'be58cfbf6f7bef374660e39f00c8b113', status: 'active', balance: 0.00, serviceCount: 0 },
-        { id: 2, name: 'SMMGEN', apiUrl: 'https://smmgen.com/api/v2', apiKey: 'f5846f314bba6ed87b2c025b2ef73790', status: 'active', balance: 0.00, serviceCount: 0 }
+        { id: 1, name: 'SMMGEN', apiUrl: 'https://my.smmgen.com/api/v2', apiKey: '80329c3715c2b8f4202da3881457d585', status: 'active', balance: 0.011, serviceCount: 7910 }
       ];
       localStorage.setItem('dih_smm_providers_v2', JSON.stringify(specificProviders));
 
@@ -117,7 +116,7 @@ function MainApp() {
       localStorage.setItem('dih_smm_orders_v2', JSON.stringify([]));
 
       // Done reset
-      localStorage.setItem('smm_clean_reset_v6', 'true');
+      localStorage.setItem('smm_clean_reset_v7', 'true');
     }
   }, []);
 

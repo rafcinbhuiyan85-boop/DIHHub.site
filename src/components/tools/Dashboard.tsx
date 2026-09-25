@@ -31,11 +31,11 @@ const tools = [
   { id: 'dih-movies', icon: Film, label: 'Dih Movies', description: 'Exclusive Movie Experience by DIH TEMPLATE.', color: 'bg-indigo-600', isNew: true },
   { id: 'bachelor-point', icon: Film, label: 'Bachelor Point S-5', description: 'Manually managed high-fidelity exclusive streaming portal.', color: 'bg-red-600', isNew: true },
   { id: 'mobile-bypass', icon: Smartphone, label: 'Mobile Bypass Pro', description: 'Advanced FRP, MDM and Bootloader bypass utility.', color: 'bg-primary', isNew: true },
+  { id: 'dih-art', icon: Palette, label: 'DIH ART', description: 'Modern contemporary fine art gallery featuring curated masterpieces, high-definition canvas explorer, and sensory acoustics.', color: 'bg-rose-600', isNew: true },
   { id: 'hosted-admin', icon: Globe, label: 'DIH Templates', description: 'Premium quality landing page showcase and live deployment portal.', color: 'bg-orange-500', isNew: true },
   { id: 'dih-smm', icon: Flame, label: 'DIH SMM', description: 'Premium tier Social Media Marketing likes, views, followers booster panel.', color: 'bg-indigo-600', isNew: true },
   { id: 'dih-casino', icon: Dices, label: 'DIH CASINO', description: 'Official Stake partner portal with live iframe game play, interactive Mines simulator and odds calculator.', color: 'bg-emerald-600', isNew: true },
   { id: 'dih-invest', icon: Coins, label: 'DIH INVEST', description: 'Premium automated trading & investment pools with dynamic ROI calculator & live simulated returns.', color: 'bg-amber-600', isNew: true },
-  { id: 'dih-art', icon: Palette, label: 'DIH ART', description: 'Modern contemporary fine art gallery featuring curated masterpieces, high-definition canvas explorer, and sensory acoustics.', color: 'bg-rose-600', isNew: true },
 ];
 
 export default function Dashboard({ onSelectTool }: DashboardProps) {

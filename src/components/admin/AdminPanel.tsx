@@ -23,6 +23,7 @@ import { useAppSettings, Template, AppSettings, DEFAULT_SETTINGS } from '../../h
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import BachelorPointManager from './BachelorPointManager';
+import { renderRefillBadge, parseExactRefill } from '../tools/DihSmm';
 
 interface AdminPanelProps {
   onLogout: () => void;
@@ -1554,11 +1555,12 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          url: prov.url,
-          key: prov.key,
+          url: prov.apiUrl || prov.url || 'https://my.smmgen.com/api/v2',
+          key: prov.apiKey || prov.key || '80329c3715c2b8f4202da3881457d585',
           service: targetSvcId,
           link: smmFormLink,
-          quantity: parseInt(smmFormQty) || 100
+          quantity: parseInt(smmFormQty) || 100,
+          dihOrderId: selectedSmmItem?.id
         })
       });
 
@@ -3098,11 +3100,11 @@ p { color: #666; font-size: 1.5rem; max-width: 600px; margin: 20px auto; }
                   { id: 'dex-protector', label: 'DEX Protector', icon: Cpu },
                   { id: 'apk-store', label: 'APK Store', icon: Package },
                   { id: 'mobile-bypass', label: 'Mobile Bypass Pro', icon: ShieldAlert },
+                  { id: 'dih-art', label: 'DIH ART (KexArt Gallery)', icon: Palette },
                   { id: 'hosted-admin', label: 'DIH TEMPLATE (Hosted)', icon: Globe },
                   { id: 'dih-smm', label: 'DIH SMM (Social Media)', icon: Flame },
                   { id: 'dih-casino', label: 'DIH CASINO', icon: Dices },
                   { id: 'dih-invest', label: 'DIH INVEST', icon: Coins },
-                  { id: 'dih-art', label: 'DIH ART (KexArt Gallery)', icon: Palette },
                 ].map(tool => (
                   <div key={tool.id} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
@@ -6731,17 +6733,11 @@ service cloud.firestore {
                                   </td>
                                   <td className="py-3 font-mono text-slate-500 text-[11px] text-center">#{s.id}</td>
                                   <td className="py-3 text-left">
-                                    <p className="font-bold text-slate-200">{s.name}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <p className="font-bold text-slate-200">{s.name}</p>
+                                      {renderRefillBadge(s)}
+                                    </div>
                                     <div className="flex items-center gap-2 text-[10px] mt-1">
-                                      <span className={cn(
-                                        "px-2  py-0.5 rounded text-[10px] font-mono font-bold tracking-wide border inline-flex items-center gap-1 shrink-0",
-                                        (s.refill || 'No Refill').toLowerCase().includes('no')
-                                          ? "bg-red-500/10 text-red-400 border-red-500/15"
-                                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/15 font-medium"
-                                      )}>
-                                        🔄 Refill: {s.refill || "No Refill"}
-                                      </span>
-                                      <span className="text-slate-600">•</span>
                                       <span className="text-slate-500 truncate">{s.time || 'Instant'}</span>
                                     </div>
                                   </td>
@@ -9116,7 +9112,7 @@ service cloud.firestore {
             checked={settings.visibleTools !== undefined && settings.visibleTools.length > 0} 
             onChange={(e) => {
               if (e.target.checked) {
-                updateSettings({ visibleTools: ['qr', 'encryption', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'hosted-admin', 'dih-smm'] });
+                updateSettings({ visibleTools: ['qr', 'encryption', 'bg-remover', 'video', 'dex-protector', 'lib-encryptor', 'apk-store', 'dih-movies', 'bachelor-point', 'mobile-bypass', 'dih-art', 'hosted-admin', 'dih-smm'] });
               } else {
                 updateSettings({ visibleTools: [] });
               }
