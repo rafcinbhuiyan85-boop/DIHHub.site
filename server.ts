@@ -2065,6 +2065,15 @@ Ensure your response is valid JSON. Do not include any markdown tags like \`\`\`
   app.get('/favicon.ico', serveFavicon);
   app.get('/favicon.png', serveFavicon);
   app.get('/favicon-dih.png', serveFavicon);
+
+  app.get(['/policy.html', '/terms.html'], (req: any, res: any, next: any) => {
+    const filename = req.path.replace(/^\//, '');
+    const filePath = path.join(process.cwd(), 'public', filename);
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+    next();
+  });
   
   app.use('/api/uploads', express.static(UPLOADS_DIR));
 
