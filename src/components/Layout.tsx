@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame, Zap, Coins, Dices, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
@@ -62,6 +63,55 @@ export default function Layout({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Synchronize Legal Modal with URL (/Terms, /terms, /policy, /privacy, /disclaimer)
+  useEffect(() => {
+    const path = location.pathname.toLowerCase().replace(/^\//, '');
+    if (path === 'terms') {
+      setLegalModalTab('terms');
+    } else if (path === 'policy' || path === 'privacy') {
+      setLegalModalTab('privacy');
+    } else if (path === 'disclaimer') {
+      setLegalModalTab('disclaimer');
+    }
+  }, [location.pathname]);
+
+  const openLegal = (tab: LegalTab) => {
+    setLegalModalTab(tab);
+    if (tab === 'terms') {
+      navigate('/Terms');
+    } else if (tab === 'privacy') {
+      navigate('/policy');
+    } else if (tab === 'disclaimer') {
+      navigate('/disclaimer');
+    }
+  };
+
+  const handleLegalTabChange = (tab: LegalTab) => {
+    setLegalModalTab(tab);
+    if (tab === 'terms') {
+      navigate('/Terms', { replace: true });
+    } else if (tab === 'privacy') {
+      navigate('/policy', { replace: true });
+    } else if (tab === 'disclaimer') {
+      navigate('/disclaimer', { replace: true });
+    }
+  };
+
+  const closeLegal = () => {
+    setLegalModalTab(null);
+    const path = location.pathname.toLowerCase().replace(/^\//, '');
+    if (path === 'terms' || path === 'policy' || path === 'privacy' || path === 'disclaimer') {
+      if (activeTool && activeTool !== 'dashboard') {
+        navigate(`/${activeTool}`);
+      } else {
+        navigate('/');
+      }
+    }
+  };
+
   const [currentMovieSector, setCurrentMovieSector] = useState<'movie' | 'tv' | 'anime'>(() => {
     const saved = localStorage.getItem('dih_movies_sector');
     return (saved === 'movie' || saved === 'tv' || saved === 'anime') ? (saved as any) : 'movie';
@@ -623,7 +673,7 @@ export default function Layout({
                   {/* Disclaimer & Legal Notice Button */}
                   <button
                     type="button"
-                    onClick={() => setLegalModalTab('disclaimer')}
+                    onClick={() => openLegal('disclaimer')}
                     className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 hover:text-amber-400 dark:text-slate-500 dark:hover:text-amber-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer shadow-sm"
                     title="Read Disclaimer & Legal Notice"
                   >
@@ -634,7 +684,7 @@ export default function Layout({
                   {/* Privacy Policy Button */}
                   <button
                     type="button"
-                    onClick={() => setLegalModalTab('privacy')}
+                    onClick={() => openLegal('privacy')}
                     className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 hover:text-blue-400 dark:text-slate-500 dark:hover:text-blue-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer shadow-sm"
                     title="Read Privacy Policy"
                   >
@@ -645,7 +695,7 @@ export default function Layout({
                   {/* Terms & Conditions Button */}
                   <button
                     type="button"
-                    onClick={() => setLegalModalTab('terms')}
+                    onClick={() => openLegal('terms')}
                     className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 hover:text-emerald-400 dark:text-slate-500 dark:hover:text-emerald-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer shadow-sm"
                     title="Read Terms & Conditions"
                   >
@@ -779,7 +829,8 @@ export default function Layout({
       <LegalModal
         isOpen={legalModalTab !== null}
         initialTab={legalModalTab || 'terms'}
-        onClose={() => setLegalModalTab(null)}
+        onTabChange={handleLegalTabChange}
+        onClose={closeLegal}
       />
     </div>
   );

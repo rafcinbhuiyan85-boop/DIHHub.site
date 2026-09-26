@@ -51,7 +51,7 @@ function MainApp() {
       const rawPath = window.location.pathname;
       const cleanPath = rawPath.replace(/^\//, '').replace(/\/$/, '');
 
-      const ignorePaths = ['templates', 'movies', 'migration', 'payment'];
+      const ignorePaths = ['templates', 'movies', 'migration', 'payment', 'terms', 'policy', 'privacy', 'disclaimer'];
       if (!ignorePaths.some(p => cleanPath.startsWith(p)) && !rawPath.startsWith('/rb/')) {
         if (cleanPath === 'admin' || cleanPath === 'admin-login') {
           return 'admin-login';

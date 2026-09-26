@@ -9,9 +9,10 @@ interface LegalModalProps {
   isOpen: boolean;
   initialTab?: LegalTab;
   onClose: () => void;
+  onTabChange?: (tab: LegalTab) => void;
 }
 
-export default function LegalModal({ isOpen, initialTab = 'terms', onClose }: LegalModalProps) {
+export default function LegalModal({ isOpen, initialTab = 'terms', onClose, onTabChange }: LegalModalProps) {
   const [activeTab, setActiveTab] = useState<LegalTab>(initialTab);
 
   useEffect(() => {
@@ -19,6 +20,13 @@ export default function LegalModal({ isOpen, initialTab = 'terms', onClose }: Le
       setActiveTab(initialTab);
     }
   }, [initialTab, isOpen]);
+
+  const handleTabClick = (tab: LegalTab) => {
+    setActiveTab(tab);
+    if (onTabChange) {
+      onTabChange(tab);
+    }
+  };
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -90,7 +98,7 @@ export default function LegalModal({ isOpen, initialTab = 'terms', onClose }: Le
           <div className="flex items-center gap-1.5 px-6 pt-3 pb-2 border-b border-[#1e2336] bg-[#0d0f17]/90 overflow-x-auto custom-scrollbar">
             <button
               type="button"
-              onClick={() => setActiveTab('terms')}
+              onClick={() => handleTabClick('terms')}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap",
                 activeTab === 'terms'
@@ -104,7 +112,7 @@ export default function LegalModal({ isOpen, initialTab = 'terms', onClose }: Le
 
             <button
               type="button"
-              onClick={() => setActiveTab('privacy')}
+              onClick={() => handleTabClick('privacy')}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap",
                 activeTab === 'privacy'
@@ -118,7 +126,7 @@ export default function LegalModal({ isOpen, initialTab = 'terms', onClose }: Le
 
             <button
               type="button"
-              onClick={() => setActiveTab('disclaimer')}
+              onClick={() => handleTabClick('disclaimer')}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap",
                 activeTab === 'disclaimer'
