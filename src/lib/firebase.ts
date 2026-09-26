@@ -3,7 +3,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+// Use verified custom domain auth.dihhub.site for professional OAuth branding
+const activeConfig = {
+  ...firebaseConfig,
+  authDomain: (firebaseConfig as any).authDomain || 'auth.dihhub.site'
+};
+
+const app = initializeApp(activeConfig);
 export const db = (firebaseConfig as any).firestoreDatabaseId 
   ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId) 
   : getFirestore(app);
