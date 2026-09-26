@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame, Zap, Coins, Dices } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, QrCode, ShieldCheck, Image as ImageIcon, UserSquare2, Download, Palette, Menu, X, ShieldAlert, Cpu, ShieldAlert as Lock, Package, Film, Mail, MessageSquare, Scissors, Star, Users, Smartphone, RefreshCcw, Globe, Server, Instagram, User, LogIn, LogOut, Volume2, Tv, Cat, Flame, Zap, Coins, Dices, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { useAppSettings } from '@/src/hooks/useAppSettings';
 import DihLogo from './DihLogo';
+import LegalModal, { LegalTab } from './LegalModal';
 
 type ToolId = 'dashboard' | 'qr' | 'encryption' | 'to-base64' | 'bg-remover' | 'video' | 'admin-login' | 'admin-panel' | 'lib-encryptor' | 'dex-protector' | 'apk-store' | 'dih-movies' | 'bachelor-point' | 'mobile-bypass' | 'hosted-admin' | 'dih-smm' | 'dih-casino' | 'dih-invest' | 'dih-art';
 
@@ -60,6 +61,7 @@ export default function Layout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab | null>(null);
   const [currentMovieSector, setCurrentMovieSector] = useState<'movie' | 'tv' | 'anime'>(() => {
     const saved = localStorage.getItem('dih_movies_sector');
     return (saved === 'movie' || saved === 'tv' || saved === 'anime') ? (saved as any) : 'movie';
@@ -618,16 +620,43 @@ export default function Layout({
             <footer className="mt-20 pt-10 border-t border-slate-100 dark:border-slate-900 pb-28 md:pb-10 text-center max-w-7xl mx-auto px-4 w-full">
               <div className="flex flex-col items-center gap-4">
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  {/* Disclaimer Badge */}
-                  <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 dark:text-slate-500 font-extrabold uppercase bg-slate-50 dark:bg-slate-950/40 px-3 py-1 rounded-full border border-slate-200/50 dark:border-slate-800/80">
+                  {/* Disclaimer & Legal Notice Button */}
+                  <button
+                    type="button"
+                    onClick={() => setLegalModalTab('disclaimer')}
+                    className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 hover:text-amber-400 dark:text-slate-500 dark:hover:text-amber-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    title="Read Disclaimer & Legal Notice"
+                  >
                     <ShieldAlert size={11} className="text-amber-500 dark:text-amber-400" />
                     <span>Disclaimer & Legal Notice</span>
-                  </div>
+                  </button>
+
+                  {/* Privacy Policy Button */}
+                  <button
+                    type="button"
+                    onClick={() => setLegalModalTab('privacy')}
+                    className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 hover:text-blue-400 dark:text-slate-500 dark:hover:text-blue-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    title="Read Privacy Policy"
+                  >
+                    <ShieldCheck size={11} className="text-blue-500 dark:text-blue-400" />
+                    <span>Privacy Policy</span>
+                  </button>
+
+                  {/* Terms & Conditions Button */}
+                  <button
+                    type="button"
+                    onClick={() => setLegalModalTab('terms')}
+                    className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-400 hover:text-emerald-400 dark:text-slate-500 dark:hover:text-emerald-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    title="Read Terms & Conditions"
+                  >
+                    <FileText size={11} className="text-emerald-500 dark:text-emerald-400" />
+                    <span>Terms & Conditions</span>
+                  </button>
 
                   {/* Contact Email Badge */}
                   <a 
                     href="mailto:contact@dihhub.site?subject=Support%20%26%20Inquiry%20-%20DIH%20Hub&body=Dear%20DIH%20Hub%20Support%20Team%2C%0A%0AI%20am%20reaching%20out%20to%20you%20regarding%20the%2520following%2520inquiry%3A%0A%0A%5BPlease%20type%20your%20message%20here%5D%0A%0AThank%20you%2C%0A%5BYour%20Name%5D"
-                    className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 px-3 py-1 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 text-[9px] tracking-widest text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-extrabold uppercase bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 px-3 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-800/80 transition-all active:scale-95 cursor-pointer"
                     title="Click to Compose Support Email"
                   >
                     <Mail size={11} className="text-indigo-500 dark:text-indigo-400" />
@@ -745,6 +774,13 @@ export default function Layout({
           </div>
         </div>
       )}
+
+      {/* Global Terms, Policy & Legal Compliance Modal */}
+      <LegalModal
+        isOpen={legalModalTab !== null}
+        initialTab={legalModalTab || 'terms'}
+        onClose={() => setLegalModalTab(null)}
+      />
     </div>
   );
 }

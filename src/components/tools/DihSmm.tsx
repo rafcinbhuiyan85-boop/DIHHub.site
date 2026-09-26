@@ -2777,30 +2777,31 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
 
                       {true ? (
                         <>
-                          {/* Search Bar */}
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Search Service</label>
+                          {/* Search Bar - Global Search with Floating Autocomplete */}
+                          <div className="space-y-1.5" ref={globalSearchRef}>
+                            <div className="flex items-center justify-between pl-0.5">
+                              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Search Service</label>
+                              {orderSearchQuery && (
+                                <span className="text-[10px] text-blue-400 font-mono">
+                                  {globalSearchResults.length} found
+                                </span>
+                              )}
+                            </div>
                             <div className="relative">
                               <Search size={14} className="absolute left-3 w-4 h-4 text-slate-400 top-1/2 -translate-y-1/2 pointer-events-none" />
                               <input
                                 type="text"
                                 placeholder="Type to search service globally..."
                                 value={orderSearchQuery}
+                                onFocus={() => {
+                                  if (orderSearchQuery.trim()) {
+                                    setGlobalSearchOpen(true);
+                                  }
+                                }}
                                 onChange={(e) => {
                                   const query = e.target.value;
                                   setOrderSearchQuery(query);
-                                  
-                                  if (query) {
-                                    const match = activeServices.find(s => 
-                                      s.name.toLowerCase().includes(query.toLowerCase()) || 
-                                      s.id.toString().includes(query)
-                                    );
-                                    if (match) {
-                                      setOrderActiveCat(match.category);
-                                      setSelectedServiceId(match.id);
-                                      setOrderQty(match.min.toString());
-                                    }
-                                  }
+                                  setGlobalSearchOpen(query.trim().length > 0);
                                 }}
                                 className="w-full bg-[#0d0f17] border border-[#1e2336] pl-[#2.4rem] pr-8 py-3 text-xs text-white rounded-lg outline-none focus:border-blue-500 placeholder-[#64748b] transition-colors h-11"
                               />
@@ -2809,12 +2810,74 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                   type="button"
                                   onClick={() => {
                                     setOrderSearchQuery('');
+                                    setGlobalSearchOpen(false);
                                   }}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                                  title="Clear search"
                                 >
                                   <X size={14} />
                                 </button>
                               )}
+
+                              {/* Floating Global Search Results Dropdown */}
+                              <AnimatePresence>
+                                {globalSearchOpen && orderSearchQuery.trim() && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 5 }}
+                                    transition={{ duration: 0.12 }}
+                                    className="absolute top-full left-0 right-0 mt-1.5 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-2xl z-50 origin-top flex flex-col"
+                                  >
+                                    <div className="px-3.5 py-2 bg-[#0d0f17] border-b border-[#1e2336] flex items-center justify-between text-[11px] font-bold text-slate-400">
+                                      <span className="uppercase tracking-wider">Matching Services ({globalSearchResults.length})</span>
+                                      <span className="text-[10px] text-slate-500 font-mono">Global Autocomplete</span>
+                                    </div>
+
+                                    <div className="max-h-72 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+                                      {globalSearchResults.length === 0 ? (
+                                        <div className="py-7 text-center text-xs text-slate-500 space-y-1">
+                                          <p className="font-semibold text-slate-400">No services found</p>
+                                          <p className="text-[11px] text-slate-500">No matching service for &ldquo;{orderSearchQuery}&rdquo;</p>
+                                        </div>
+                                      ) : (
+                                        globalSearchResults.map(s => {
+                                          const isSelected = s.id === selectedServiceId;
+                                          return (
+                                            <div
+                                              key={s.id}
+                                              onClick={() => handleSelectFromGlobalSearch(s)}
+                                              className={cn(
+                                                "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-[#0d0f17] cursor-pointer rounded-lg flex flex-col gap-1 transition-colors border border-transparent hover:border-[#1e2336]",
+                                                isSelected ? "bg-blue-500/10 text-blue-400 border-blue-500/30" : ""
+                                              )}
+                                            >
+                                              <div className="flex items-center justify-between gap-2">
+                                                <span className="font-semibold truncate flex items-center gap-1.5 min-w-0">
+                                                  <span className="text-blue-400 font-mono font-black border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.2 rounded text-[10px] shrink-0">
+                                                    #{s.id}
+                                                  </span>
+                                                  <span className="truncate text-white font-medium">{s.name}</span>
+                                                  {renderRefillBadge(s)}
+                                                </span>
+                                                <span className="font-mono text-emerald-400 font-black shrink-0 pl-2 text-xs">
+                                                  ${s.price.toFixed(4)}/1k
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center justify-between text-[10px] text-slate-500 pl-6 font-mono">
+                                                <span className="truncate text-slate-400 max-w-[280px] font-sans">
+                                                  📁 {s.category}
+                                                </span>
+                                                <span>Min: {fmt(s.min)} • Max: {fmt(s.max)}</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           </div>
 
@@ -2827,6 +2890,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                 onClick={() => {
                                   setCatDropdownOpen(!catDropdownOpen);
                                   setDropdownOpen(false);
+                                  setGlobalSearchOpen(false);
                                 }}
                                 className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-blue-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
                               >
@@ -2868,6 +2932,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                                 handleCategoryChange(cat);
                                                 setCatDropdownOpen(false);
                                                 setCatSearchQuery('');
+                                                setServiceFilterQuery('');
                                               }}
                                               className={cn(
                                                 "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/[0.03] cursor-pointer rounded-lg flex items-center justify-between transition-colors",
@@ -2886,15 +2951,22 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                             </div>
                           </div>
 
-                          {/* Service Selector */}
+                          {/* Service Selector - Strictly filtered by selected category */}
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-0.5">Service</label>
+                            <div className="flex items-center justify-between pl-0.5">
+                              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Service</label>
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                {servicesForDropdown.length} in category
+                              </span>
+                            </div>
                             <div className="relative" ref={dropdownRef}>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setDropdownOpen(!dropdownOpen);
                                   setCatDropdownOpen(false);
+                                  setGlobalSearchOpen(false);
+                                  if (!dropdownOpen) setServiceFilterQuery('');
                                 }}
                                 className="w-full px-4 py-3 bg-[#0d0f17] border border-[#1e2336] text-left flex justify-between items-center text-xs rounded-lg focus:border-blue-500 hover:border-slate-800 text-white font-medium transition-all outline-none h-11 cursor-pointer"
                               >
@@ -2925,8 +2997,19 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                     transition={{ duration: 0.12 }}
                                     className="absolute top-full left-0 right-0 mt-1 bg-[#141720] border border-[#1e2336] rounded-xl overflow-hidden shadow-2xl z-50 origin-top"
                                   >
+                                    {/* In-category search filter */}
+                                    <div className="p-2 border-b border-[#1e2336] bg-[#0d0f17]">
+                                      <input
+                                        type="text"
+                                        placeholder="Search service in this category..."
+                                        value={serviceFilterQuery}
+                                        onChange={(e) => setServiceFilterQuery(e.target.value)}
+                                        className="w-full bg-[#141720] text-xs px-3 py-2 text-white border border-[#1e2336] rounded-lg outline-none focus:border-blue-500"
+                                        autoFocus
+                                      />
+                                    </div>
                                     <div className="max-h-72 overflow-y-auto custom-scrollbar relative">
-                                      {/* Service Items List */}
+                                      {/* Service Items List - strictly within category */}
                                       <div className="p-1 space-y-0.5">
                                         {filteredServicesForDropdown.length === 0 ? (
                                           <div className="text-center py-6 text-xs text-slate-500">No services match your search</div>
@@ -2940,6 +3023,7 @@ export default function DihSmm({ currentUser, onAuthClick }: DihSmmProps) {
                                                   setSelectedServiceId(s.id);
                                                   setOrderQty(s.min.toString());
                                                   setDropdownOpen(false);
+                                                  setServiceFilterQuery('');
                                                 }}
                                                 className={cn(
                                                   "px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-[#0d0f17] cursor-pointer rounded-lg flex flex-col gap-1 transition-colors",
